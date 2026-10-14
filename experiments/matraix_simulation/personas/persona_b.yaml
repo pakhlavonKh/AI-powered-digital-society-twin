@@ -1,0 +1,106 @@
+persona_id: ANK2025_000183
+version: '1.0'
+source: synthetic
+dimensions:
+  dst_residence_province: Ankara
+  dst_age_group: 80-84
+  dst_reference_year: '2025'
+  dst_marital_status_conditioning: gender_only
+  dst_evidence_limit: Marital status was sampled by gender only; no age-specific relationship
+    is established.
+  age_bracket: 75-84
+  demo_marital_status: Widowed
+metadata:
+  source_population: synthetic/ankara_population_1000_v2.csv
+  source_sha256: 879ebf85474dd9301c7926b5379826c5557985221bad555812c2e6d72c6524fe
+  source_csv_row: 184
+  source_attributes:
+    person_id: ANK2025_000183
+    age_group: 80-84
+    gender: female
+    marital_status: Eşi öldü
+    marital_status_conditioning: gender_only
+  reference_year: 2025
+  province: Ankara
+  generation_seed: 42
+  seed_provenance: Configured seed 42; confirmed generation history in this project,
+    not stored per resident
+  catalog_path: MatrAIx-Persona-8B/persona/schema/dimensions.json
+  catalog_sha256: cbf4db9d887dec057431aff409e1d28d83f345e7a31e29a4275a607212ecfca5
+  processed_sources:
+    ankara_age_gender.csv:
+      path: processed/ankara_age_gender.csv
+      sha256: b68f780646da63d88b128c25e004e763f6554756662047569ee81db08532d91a
+    ankara_marital_gender.csv:
+      path: processed/ankara_marital_gender.csv
+      sha256: 05e9934295eef2e08dc8372b5c7880f5073de5dddaef9d7900210d2750b7703c
+  field_provenance:
+    persona_id:
+      source_field: person_id
+      source_value: ANK2025_000183
+      source_type: synthetic_identifier
+      method: identity
+    dst_age_group:
+      source_field: age_group
+      source_value: 80-84
+      source_type: sampled_observed_distribution
+      dataset: T16
+      reference_year: 2025
+      method: identity; geography/year joined from processed input
+    dst_residence_province:
+      source_field: province
+      source_value: Ankara
+      source_type: sampled_observed_distribution
+      dataset: T16
+      reference_year: 2025
+      method: identity; geography/year joined from processed input
+    dst_reference_year:
+      source_field: year
+      source_value: '2025'
+      source_type: sampled_observed_distribution
+      dataset: T16
+      reference_year: 2025
+      method: identity; geography/year joined from processed input
+    age_bracket:
+      source_field: age_group
+      source_value: 80-84
+      source_type: sampled_observed_distribution
+      dataset: T16
+      reference_year: 2025
+      method: fully contained interval; original band retained
+    demo_marital_status:
+      source_field: marital_status
+      source_value: Eşi öldü
+      source_type: statistically_inferred
+      dataset: T10
+      reference_year: 2025
+      method: direct label translation; source assignment conditioned on gender only
+    dst_marital_status_conditioning:
+      source_field: marital_status_conditioning
+      source_value: gender_only
+      source_type: method_metadata
+      method: identity
+    dst_evidence_limit:
+      source_type: method_metadata
+      source_field: marital_status_conditioning
+      source_value: gender_only
+      method: explicit limitation
+  prompt_visible_fields:
+  - age_bracket
+  - demo_marital_status
+  - dst_age_group
+  - dst_evidence_limit
+  - dst_marital_status_conditioning
+  - dst_reference_year
+  - dst_residence_province
+  unassigned_fields:
+  - gender_identity
+  - region
+  - primary_language
+  - education
+  - employment
+  - personality
+  - values
+  - preferences
+  - communication_style
+  - exact_age

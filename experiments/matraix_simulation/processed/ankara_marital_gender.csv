@@ -1,0 +1,9 @@
+year,province,gender,marital_status,population,conditional_probability
+2025,Ankara,female,Hiç evlenmedi,633169,0.2548349367952656
+2025,Ankara,female,Evli,1453591,0.5850345967840607
+2025,Ankara,female,Boşandı,182966,0.0736393112197258
+2025,Ankara,female,Eşi öldü,214898,0.08649115520094791
+2025,Ankara,male,Hiç evlenmedi,771997,0.3255335693039205
+2025,Ankara,male,Evli,1438683,0.6066598860965422
+2025,Ankara,male,Boşandı,127592,0.053802643241652265
+2025,Ankara,male,Eşi öldü,33210,0.01400390135788507

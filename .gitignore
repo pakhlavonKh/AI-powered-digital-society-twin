@@ -37,6 +37,8 @@ data/**/*.gz
 # Experiment outputs (instruments and configurations stay tracked)
 experiments/outputs/
 experiments/results/
+experiments/matraix_simulation/runs/
+experiments/matraix_simulation/.env
 
 # Databases created by the registry or local analytics
 *.db

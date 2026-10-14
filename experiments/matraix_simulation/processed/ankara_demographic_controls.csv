@@ -1,0 +1,21 @@
+year,province,statistic,value,unit,source_workbook,source_sheet,source_row
+2023,Ankara,female_median_age,36.2746181715159,years,2024/İllere ve cinsiyete göre ortanca yaş.xls,t7,11
+2023,Ankara,male_median_age,34.52750219480797,years,2024/İllere ve cinsiyete göre ortanca yaş.xls,t7,11
+2023,Ankara,total_median_age,35.421691352334854,years,2024/İllere ve cinsiyete göre ortanca yaş.xls,t7,11
+2024,Ankara,female_median_age,36.797147871308795,years,2024/İllere ve cinsiyete göre ortanca yaş.xls,t7,11
+2024,Ankara,female_median_age,36.797147871308795,years,İllere ve cinsiyete göre ortanca yaş.xls,t7,11
+2024,Ankara,female_population,2975987,persons,"2024/İl ve cinsiyete göre il_ilçe merkezi, belde_köy nüfusu ve nüfus yoğunluğu.xls",t3,11
+2024,Ankara,male_median_age,35.040515220402796,years,2024/İllere ve cinsiyete göre ortanca yaş.xls,t7,11
+2024,Ankara,male_median_age,35.040515220402796,years,İllere ve cinsiyete göre ortanca yaş.xls,t7,11
+2024,Ankara,male_population,2888062,persons,"2024/İl ve cinsiyete göre il_ilçe merkezi, belde_köy nüfusu ve nüfus yoğunluğu.xls",t3,11
+2024,Ankara,population_density,236.0478448711452,persons/km2,"2024/İl ve cinsiyete göre il_ilçe merkezi, belde_köy nüfusu ve nüfus yoğunluğu.xls",t3,11
+2024,Ankara,total_median_age,35.93383819428382,years,2024/İllere ve cinsiyete göre ortanca yaş.xls,t7,11
+2024,Ankara,total_median_age,35.93383819428382,years,İllere ve cinsiyete göre ortanca yaş.xls,t7,11
+2024,Ankara,total_population,5864049,persons,"2024/İl ve cinsiyete göre il_ilçe merkezi, belde_köy nüfusu ve nüfus yoğunluğu.xls",t3,11
+2025,Ankara,female_median_age,37.2989896160972,years,İllere ve cinsiyete göre ortanca yaş.xls,t7,11
+2025,Ankara,female_population,2998467,persons,"İl ve cinsiyete göre il_ilçe merkezi, belde_köy nüfusu ve nüfus yoğunluğu.xls",t3,11
+2025,Ankara,male_median_age,35.45073391560859,years,İllere ve cinsiyete göre ortanca yaş.xls,t7,11
+2025,Ankara,male_population,2911853,persons,"İl ve cinsiyete göre il_ilçe merkezi, belde_köy nüfusu ve nüfus yoğunluğu.xls",t3,11
+2025,Ankara,population_density,237.91040942850697,persons/km2,"İl ve cinsiyete göre il_ilçe merkezi, belde_köy nüfusu ve nüfus yoğunluğu.xls",t3,11
+2025,Ankara,total_median_age,36.38900311471968,years,İllere ve cinsiyete göre ortanca yaş.xls,t7,11
+2025,Ankara,total_population,5910320,persons,"İl ve cinsiyete göre il_ilçe merkezi, belde_köy nüfusu ve nüfus yoğunluğu.xls",t3,11
