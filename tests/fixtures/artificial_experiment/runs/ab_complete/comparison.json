@@ -1,0 +1,88 @@
+{
+  "status": "completed",
+  "model": "fakeprov/artificial-model",
+  "temperature": 0,
+  "calls": 2,
+  "trials": [],
+  "answers_compared": [
+    {
+      "question_id": "q_pick",
+      "prompt": "artificial",
+      "answer_a": {
+        "questionId": "q_pick",
+        "value": "opt_a",
+        "rationale": "",
+        "confidence": null
+      },
+      "answer_b": {
+        "questionId": "q_pick",
+        "value": "opt_a",
+        "rationale": "",
+        "confidence": null
+      },
+      "value_differs": false
+    },
+    {
+      "question_id": "q_scale",
+      "prompt": "artificial",
+      "answer_a": {
+        "questionId": "q_scale",
+        "value": 4,
+        "rationale": "",
+        "confidence": null
+      },
+      "answer_b": {
+        "questionId": "q_scale",
+        "value": 2,
+        "rationale": "",
+        "confidence": null
+      },
+      "value_differs": true
+    },
+    {
+      "question_id": "q_beta",
+      "prompt": "artificial",
+      "answer_a": {
+        "questionId": "q_beta",
+        "value": "true",
+        "rationale": "",
+        "confidence": null
+      },
+      "answer_b": {
+        "questionId": "q_beta",
+        "value": "false",
+        "rationale": "",
+        "confidence": null
+      },
+      "value_differs": true
+    },
+    {
+      "question_id": "q_unlisted",
+      "prompt": "artificial",
+      "answer_a": {
+        "questionId": "q_unlisted",
+        "value": "mystery_code",
+        "rationale": "",
+        "confidence": null
+      },
+      "answer_b": {
+        "questionId": "q_unlisted",
+        "value": "mystery_code",
+        "rationale": "",
+        "confidence": null
+      },
+      "value_differs": false
+    }
+  ],
+  "differing_values": 2,
+  "usage": {
+    "n_input_tokens": 201,
+    "n_output_tokens": 41,
+    "n_cache_tokens": null,
+    "cost_usd": 0.0003
+  },
+  "runtime_seconds": 1.5,
+  "limitations": [
+    "Artificial limitation text."
+  ]
+}

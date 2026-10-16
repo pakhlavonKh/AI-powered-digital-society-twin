@@ -1,0 +1,8 @@
+{
+  "mode": "live",
+  "model": "fakeprov/artificial-model",
+  "temperature": 0,
+  "system": "You are persona-TST2099_000002. Artificial system prompt.",
+  "user": "Artificial task prompt.",
+  "status": "request_started"
+}

@@ -1,0 +1,40 @@
+{
+  "status": "prepared",
+  "model": "fakeprov/artificial-model",
+  "temperature": 0,
+  "provider": "fakeprov",
+  "required_env_any_of": [
+    "FAKEPROV_API_KEY"
+  ],
+  "credentials_present": true,
+  "task": "application/tasks/example-survey_product-feedback",
+  "calls_planned": 2,
+  "automatic_retries": 0,
+  "max_output_tokens_per_call": null,
+  "expected_answer_count": 4,
+  "trials": [
+    {
+      "label": "A",
+      "persona_id": "TST2099_000001",
+      "path": "C:\\Users\\someone\\persona_a.yaml",
+      "sha256": "499fa34ec5d6f809edc821a1580d8662288a2df8d7a4d2bade6c1267e1c913cc",
+      "dimensions": {},
+      "system": "You are persona-TST2099_000001. Artificial system prompt.",
+      "user": "Artificial task prompt.",
+      "estimated_input_tokens_chars_div_4": 20
+    },
+    {
+      "label": "B",
+      "persona_id": "TST2099_000002",
+      "path": "C:\\Users\\someone\\persona_b.yaml",
+      "sha256": "6f14dd7f79f908b39296326bcb68e6c9e996b44fb4bdfc0ba0dc300a94f4e131",
+      "dimensions": {},
+      "system": "You are persona-TST2099_000002. Artificial system prompt.",
+      "user": "Artificial task prompt.",
+      "estimated_input_tokens_chars_div_4": 20
+    }
+  ],
+  "limitations": [
+    "Artificial limitation text."
+  ]
+}

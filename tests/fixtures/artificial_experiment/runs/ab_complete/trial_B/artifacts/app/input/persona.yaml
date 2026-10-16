@@ -1,0 +1,41 @@
+persona_id: TST2099_000002
+version: '1.0'
+source: synthetic
+dimensions:
+  dst_residence_province: TESTLAND
+  dst_age_group: 80-84
+  dst_reference_year: '2099'
+  age_bracket: 75-84
+  demo_marital_status: Widowed
+metadata:
+  source_population: synthetic/testland_population_v2.csv
+  source_sha256: bb02dfde6c6db15053e283dc9a3f36dc9b61d9dab2b5ec838eb3928e0a254078
+  source_csv_row: 3
+  source_attributes:
+    person_id: TST2099_000002
+    age_group: 80-84
+    gender: female
+    marital_status: Eşi öldü
+    marital_status_conditioning: gender_only
+  reference_year: 2099
+  province: TESTLAND
+  generation_seed: 7
+  seed_provenance: artificial
+  catalog_path: ARTIFICIAL/dimensions.json
+  catalog_sha256: 0000000000000000000000000000000000000000000000000000000000000000
+  processed_sources:
+    testland_age_gender.csv:
+      path: processed/testland_age_gender.csv
+      sha256: 69532c206340d551fc93d69e8b6866c5ceb7c18ba970ff3e3ffa12608dbf057e
+    testland_marital_gender.csv:
+      path: processed/testland_marital_gender.csv
+      sha256: 853e00d37e5174083b7cc094f104cbf37ba078f72eb61fdd934a6b6d741429b1
+  field_provenance:
+    persona_id: {source_field: person_id, source_value: X, source_type: synthetic_identifier, method: identity}
+    dst_age_group: {source_field: age_group, source_type: sampled_observed_distribution, method: identity}
+    dst_residence_province: {source_field: province, source_type: sampled_observed_distribution, method: join}
+    dst_reference_year: {source_field: year, source_type: sampled_observed_distribution, method: join}
+    age_bracket: {source_field: age_group, source_type: sampled_observed_distribution, method: contained}
+    demo_marital_status: {source_field: marital_status, source_type: statistically_inferred, dataset: T10, method: translation}
+  prompt_visible_fields: [age_bracket, demo_marital_status, dst_age_group, dst_reference_year, dst_residence_province]
+  unassigned_fields: [gender_identity, education, exact_age]

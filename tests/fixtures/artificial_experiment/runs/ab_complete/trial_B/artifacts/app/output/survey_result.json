@@ -1,0 +1,42 @@
+{
+  "instrument": {
+    "id": "artificial_v1",
+    "title": "Artificial Survey"
+  },
+  "answers": [
+    {
+      "questionId": "q_pick",
+      "value": "opt_a",
+      "rationale": "",
+      "confidence": null
+    },
+    {
+      "questionId": "q_scale",
+      "value": 2,
+      "rationale": "",
+      "confidence": null
+    },
+    {
+      "questionId": "q_beta",
+      "value": "false",
+      "rationale": "",
+      "confidence": null
+    },
+    {
+      "questionId": "q_unlisted",
+      "value": "mystery_code",
+      "rationale": "",
+      "confidence": null
+    }
+  ],
+  "trajectory": [],
+  "usage": {
+    "n_input_tokens": 101,
+    "n_output_tokens": 21,
+    "cost_usd": 0.0002,
+    "request_id": "artificial-b",
+    "model": "artificial-model",
+    "provider": "fakeprov",
+    "cost_source": "estimated"
+  }
+}
