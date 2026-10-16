@@ -42,8 +42,10 @@ python3.12 -m venv .venv
 ./scripts/dev.sh            # API on 127.0.0.1:8000, UI on http://127.0.0.1:3000
 ```
 
-If a port is taken, set `SOCIETYTWIN_API_PORT` or `SOCIETYTWIN_WEB_PORT`. The script refuses busy ports instead of
-stopping other processes.
+If the workbench is already running, the script prints its address and exits instead of starting a second copy.
+Otherwise it takes the first free port from 8000 for the API and from 3000 for the UI, and prints the address. Ports set
+with `SOCIETYTWIN_API_PORT` or `SOCIETYTWIN_WEB_PORT` must be free. It never stops other processes. Next.js allows only
+one dev server per project, so stop a running copy before starting another.
 
 On macOS, Python may skip the editable install's `.pth` file because `.venv` carries the hidden flag. The scripts and
 pytest set `PYTHONPATH=src`, so this does not matter for them.
@@ -171,8 +173,8 @@ SOCIETYTWIN_TEST_MATRAIX_ROOT=... SOCIETYTWIN_TEST_RUNTIME_PYTHON=... .venv/bin/
   is unavailable.
 - The MatrAIx checkout used for verification had no git metadata; its persona catalog matched the fixtures' recorded
   catalog digest, but its revision could not be compared with the README's tested revision.
-- A single local worker is assumed. Two API processes sharing one state directory would each recover the other's
-  running jobs as interrupted.
+- One worker per state directory. On macOS and Linux an advisory lock stops a second API process from running or
+  recovering jobs; on Windows that lock is unavailable and only one API process should use a state directory.
 - Live execution is untested against a provider.
 
 ## Remaining work
