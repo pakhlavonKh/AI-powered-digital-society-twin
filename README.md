@@ -120,6 +120,8 @@ Details and justifications: [docs/architecture.md](docs/architecture.md).
 | Document | What it covers |
 |---|---|
 | [v2 architecture report](docs/societytwin-v2-architecture.md) | Full design, decisions, MVP, roadmap, open questions |
+| [v2.1 technical architecture](docs/societytwin-v2.1-architecture.md) | Proposed revision of v2 (reproducibility, validation, behaviour engines) |
+| [MatrAIx findings and roadmap](docs/matraix-findings-and-implementation-roadmap.md) | MatrAIx benchmark findings and implementation plan |
 | [Architecture reference](docs/architecture.md) | Modules, interfaces, technology |
 | [Project overview](docs/project-overview.md) | Problem, research questions, scope |
 | [Persona schema](docs/persona-schema.md) | Attributes, data sources, dependencies |
@@ -133,6 +135,7 @@ Details and justifications: [docs/architecture.md](docs/architecture.md).
 | [Team responsibilities](docs/team-responsibilities.md) and [research integration](docs/research-integration.md) | Research roles and how they fit together |
 | [Data handling](data/README.md) | Rules for the data folder |
 | [MatrAIx simulation experiment](experiments/matraix_simulation/README.md) | Setup and running of the Ankara proof-of-concept experiment |
+| [Experiment results](experiments/matraix_simulation/EXPERIMENT_RESULTS.md) | Results of the two-persona A/B run (gpt-4o) |
 
 ## Team
 
@@ -141,7 +144,7 @@ Current research-phase responsibilities:
 | Team member | Responsibility |
 |---|---|
 | Bejan | Project Manager / System Architect |
-| Sam | Literature Research |
+| Sam | Environment + Scenario/Task (previously Literature Research) |
 | Pakhlavon | Technical Architecture / Technologies |
 | Azra | Existing Systems / Similar Projects |
 | Koray | Data + Population + Simulation Research |

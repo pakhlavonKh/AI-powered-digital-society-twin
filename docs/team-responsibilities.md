@@ -2,7 +2,7 @@
 
 This document records the team's current task allocation, as set out in the Project Management document. Update it whenever roles or responsibilities change.
 
-> **v2 note.** The project direction changed after new instructor feedback (see the [v2 architecture report](societytwin-v2-architecture.md)). The roles below are unchanged. **Ownership of the new v2 modules** (for example the generator, sampling, experiments, and AI-agent runtime) **has not been assigned** and is an OPEN DECISION for the team.
+> **v2 note.** The project direction changed after new instructor feedback (see the [v2 architecture report](societytwin-v2-architecture.md)). The roles below are unchanged except Sam's, which moved from Literature Research to Environment + Scenario/Task. **Ownership of the new v2 modules** (for example the generator, sampling, experiments, and AI-agent runtime) **has not been assigned** and is an OPEN DECISION for the team.
 
 How the five research streams come together is described in [research-integration.md](research-integration.md).
 
@@ -11,7 +11,7 @@ How the five research streams come together is described in [research-integratio
 | Team member | Role | Main research responsibility | Expected deliverable |
 |---|---|---|---|
 | Bejan | Project Manager / System Architect | Define the system and integrate the team's work | Integrated system definition, architecture, scope, presentation structure, and TÜBİTAK form |
-| Sam | Literature Research | Academic foundations of the project | Approximately 8–10 reviewed sources, from which the team selects at least 5 |
+| Sam | Environment + Scenario/Task (previously Literature Research) | What world agents operate in and what situation they respond to; MatrAIx practical testing | SocietyTwin Scenario/Task/Environment experiment contract and first Türkiye-specific controlled experiment (earlier: 8–10 reviewed sources) |
 | Pakhlavon | Technical Architecture / Technologies | How the system could technically be built | Technology assessment in which every technology is justified |
 | Azra | Existing Systems / Similar Projects | Existing academic, industry, and open-source systems | Comparison of existing systems leading to SocietyTwin's gap and contribution |
 | Koray | Data + Population + Simulation Research | How the population, agents, simulation, and evaluation could work | Population Schema + Agent Schema + Simulation Concept |
@@ -42,7 +42,22 @@ How the five research streams come together is described in [research-integratio
 
 ## Sam
 
-**Role:** Literature Research
+**Current role:** Environment + Scenario/Task
+
+**Research question:** What world are agents operating inside, and what situation are they being asked to respond to?
+
+- **Scenario** — what is happening (event, policy change, condition).
+- **Task** — what the agent is supposed to do (response, decision, action).
+- **Environment** — where/how the action happens (controlled interface, observations, allowed actions, rules).
+
+**Current work:**
+
+- MatrAIx investigation and practical testing (persona-conditioned survey runs; see [experiments/matraix_simulation/](../experiments/matraix_simulation/)).
+- Repository-level trace of how MatrAIx loads personas, creates jobs, executes trials, and writes results.
+- Defining SocietyTwin's versioned Scenario/Task/Environment experiment contract.
+- Preparing the first Türkiye-specific controlled experiment (e.g. Ankara public transport fare increase).
+
+### Previous role: Literature Research
 
 **Main research responsibility:** Research the academic foundations behind the project.
 
