@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "societytwin"
+version = "0.1.0"
+description = "SocietyTwin research workbench: offline population browsing, cohorts, persona provenance and recorded MatrAIx results."
+requires-python = ">=3.12,<3.13"
+# Lower bounds only; the tested environment is pinned in requirements-api.lock.
+dependencies = [
+  "fastapi>=0.135",
+  "uvicorn>=0.37",
+  "pydantic>=2.12",
+  "PyYAML>=6.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.4", "httpx>=0.28"]
+
+[tool.setuptools.packages.find]
+# Only the societytwin package is installed. The research-phase placeholder
+# package at src/__init__.py and the experiment's own `src` package are never
+# importable through this distribution, which avoids the two `src` trees colliding.
+where = ["src"]
+include = ["societytwin*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-ra --strict-markers"
+markers = [
+  "local_fixture: regression checks against the supplied Ankara/run3 files; skipped when they are absent",
+  "matraix: integration checks that need an external MatrAIx checkout and runtime interpreter; skipped unless configured",
+]
