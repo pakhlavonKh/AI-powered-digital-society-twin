@@ -78,6 +78,7 @@ def test_smoke_execution_is_idempotent_and_recorded(fake_runtime_client):
     assert detail["display_state"] == "completed" and detail["jobs"][0]["state"] == "completed"
     results = c.get(f"{V1}/experiments/{d['experiment_id']}/results").json()
     assert results["origin"] == "managed" and results["evidence_kind"] == "fake" and results["display_state"] == "completed_fake"
+    assert results["display_name"].startswith("smoke · job_")
     assert c.runtime.provider_requests == 0
     assert c.post(f"{V1}/experiments/{d['experiment_id']}/execute", json=dict(body, mode="legacy_ab_live")).status_code == 409
 

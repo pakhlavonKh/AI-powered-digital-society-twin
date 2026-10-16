@@ -47,6 +47,13 @@ print(json.dumps({"ok": True, "python": sys.version.split()[0]}))
 """
 
 
+def _shape(arg: str) -> str:
+    """Log the shape of an argument: inline code is elided and paths are reduced to their last component."""
+    if "\n" in arg or len(arg) > 160:
+        return "<inline code>"
+    return Path(arg).name if os.sep in arg else arg
+
+
 class RuntimeUnavailable(Exception):
     code = "runtime_unavailable"
 
@@ -208,7 +215,7 @@ class MatraixRuntime:
         duration = time.monotonic() - started
         # The log never contains environment values: only the child's own output, already redacted.
         log_path.write_text(
-            json.dumps({"argv_shape": [Path(a).name if os.sep in a else a for a in argv[3:]],
+            json.dumps({"argv_shape": [_shape(a) for a in argv[3:]],
                         "returncode": returncode, "timed_out": timed_out, "duration_seconds": round(duration, 3),
                         "finished_at": utc_now()}, indent=2) + "\n--- stdout ---\n" + redact(stdout, max_length=200_000)
             + "\n--- stderr ---\n" + redact(stderr, max_length=200_000), encoding="utf-8")

@@ -207,7 +207,9 @@ def _comparison_rows(trials: list[dict], comparison: dict | None) -> tuple[list[
     a, b = ({x["question_id"]: x for x in t["answers"]} for t in trials)
     questionnaire = next((t["questionnaire"] for t in trials if t["questionnaire"]), None)
     order = [q["id"] for q in questionnaire["questions"]] if questionnaire else []
-    order += [qid for qid in list(a) + list(b) if qid not in order]
+    for qid in list(a) + list(b):  # answers missing from the snapshot are kept once, in recorded order
+        if qid not in order:
+            order.append(qid)
     prompts = {q["id"]: q for q in (questionnaire or {}).get("questions", [])}
     recorded = {}
     if isinstance(comparison, dict) and isinstance(comparison.get("answers_compared"), list):

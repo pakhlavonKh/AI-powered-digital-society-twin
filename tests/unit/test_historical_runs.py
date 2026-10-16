@@ -24,6 +24,8 @@ def test_completed_ab_run(settings):
     assert r["raw_statuses"]["preflight_status"] == "prepared"  # preserved even though the run completed
     assert r["differing_values_recorded"] == r["differing_values_recomputed"] == 2
     assert all(c["passed"] for c in r["consistency_checks"])
+    ids = [row["question_id"] for row in r["comparison_rows"]]
+    assert ids == ["q_pick", "q_scale", "q_beta", "q_unlisted"]  # unlisted IDs appear once, after the snapshot order
     rows = {row["question_id"]: row for row in r["comparison_rows"]}
     assert rows["q_pick"]["value_differs"] is False and rows["q_scale"]["value_differs"] is True
     assert rows["q_pick"]["answer_a"]["label"] == "Invented option A."

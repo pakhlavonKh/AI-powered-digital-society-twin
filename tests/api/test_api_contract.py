@@ -187,3 +187,13 @@ def test_openapi_snapshot_matches_frontend_client():
     assert snapshot.is_file(), "Run scripts/export_openapi.sh to create frontend/openapi.json"
     assert json.loads(snapshot.read_text(encoding="utf-8")) == openapi_document(), (
         "OpenAPI drift: run scripts/export_openapi.sh and regenerate the typed client")
+
+
+def test_persona_index_lists_only_stored_personas(client, v2_build):
+    body = client.get(f"{V1}/personas/{v2_build}").json()
+    assert [i["record_id"] for i in body["items"]] == ["TST2099_000001", "TST2099_000002"]
+    assert body["fixed_pair"] == ["TST2099_000001", "TST2099_000002"]
+    base = next(b["build_id"] for b in client.get(f"{V1}/builds").json()["items"] if b["variant"] == "base")
+    assert client.get(f"{V1}/personas/{base}").json()["items"] == []
+    caps = client.get(f"{V1}/capabilities").json()
+    assert caps["runner"]["provider_prefixes"] == ["fakeprov", "otherprov"]

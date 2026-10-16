@@ -116,6 +116,12 @@ class ApiStatus(Model):
     version: str
 
 
+class RunnerInfo(Model):
+    provider_prefixes: list[str]
+    fixed_persona_ids: list[str]
+    note: str
+
+
 class Capabilities(Model):
     api: ApiStatus
     data: DataCapabilities
@@ -123,6 +129,7 @@ class Capabilities(Model):
     credentials: CredentialPresence
     modes: Modes
     mutations: MutationPolicy
+    runner: RunnerInfo
 
 
 # ---------------------------------------------------------------- builds
@@ -411,6 +418,22 @@ class PersonaArtifact(Model):
     attribution_note: str | None = None
 
 
+class PersonaIndexItem(Model):
+    record_id: str
+    origin: Literal["fixture", "managed"]
+    persona_artifact_id: str
+    relpath: str
+    sha256: str
+    created_at: str | None
+
+
+class PersonaIndex(Model):
+    build_id: str
+    items: list[PersonaIndexItem]
+    fixed_pair: list[str]
+    note: str
+
+
 class SourceTableRef(Model):
     field: str
     table: str
@@ -682,6 +705,7 @@ class Results(Model):
     experiment_id: str
     origin: Literal["imported", "managed"]
     dirname: str
+    display_name: str
     kind: str
     evidence_kind: str
     display_state: DisplayState
@@ -824,6 +848,16 @@ class PreflightTrial(Model):
     input_token_estimate: int | None
 
 
+class DependencyReadiness(Model):
+    runtime_files_ready: bool
+    runtime_probe: str
+    probe_checked_at: str | None
+    matraix_root_source: str
+    provider_key_present: bool | None
+    live_execution_enabled: bool | None
+    note: str
+
+
 class Preflight(Model):
     preflight_hash: str
     experiment_id: str
@@ -852,6 +886,7 @@ class Preflight(Model):
     model_seed: None
     persona_artifact_hashes: list[FixtureHash]
     execution_blockers: list[Blocker]
+    dependency_readiness: DependencyReadiness | None = None
     warnings: list[str]
     stale_policy: str
     preflight_output_rel: str | None

@@ -1,6 +1,15 @@
 # Tests
 
-**Status:** Planned. No tests exist yet, because no code has been written.
+**Status:** Tests exist for the research workbench (`src/societytwin/`, `frontend/`); the rest of the v2 strategy below is still planned.
+
+| Suite | Command | Data |
+|---|---|---|
+| Unit and API (`tests/unit`, `tests/api`) | `.venv/bin/python -m pytest -m "not local_fixture and not matraix"` | Artificial fixture in `tests/fixtures/artificial_experiment/` |
+| Supplied-fixture regression (`tests/regression`) | `.venv/bin/python -m pytest -m local_fixture` | The tracked Ankara fixtures and, if present, the git-ignored run folders |
+| MatrAIx integration (`tests/integration`) | set `SOCIETYTWIN_TEST_MATRAIX_ROOT` and `SOCIETYTWIN_TEST_RUNTIME_PYTHON` | External MatrAIx checkout; no provider keys |
+| Frontend | `cd frontend && npx vitest run`, `./scripts/e2e.sh` | Mocked API / artificial fixture |
+
+Details: [docs/research-workbench.md](../docs/research-workbench.md#tests).
 
 The PROPOSED v2 testing strategy is in [report §28](../docs/societytwin-v2-architecture.md#28-testing-strategy). In summary:
 

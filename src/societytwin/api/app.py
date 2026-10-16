@@ -179,6 +179,10 @@ def create_app(settings: Settings | None = None, workbench: Workbench | None = N
     def cohort_get(cohort_id: str, w: WB):
         return w.cohort(cohort_id)
 
+    @app.get(f"{v1}/personas/{{build_id}}", response_model=S.PersonaIndex, responses=ERRORS, tags=["personas"])
+    def persona_index(build_id: str, w: WB):
+        return w.persona_index(build_id)
+
     @app.get(f"{v1}/personas/{{build_id}}/{{record_id}}", response_model=S.PersonaView, responses=ERRORS, tags=["personas"])
     def persona(build_id: str, record_id: str, w: WB):
         return w.persona_view(build_id, record_id)

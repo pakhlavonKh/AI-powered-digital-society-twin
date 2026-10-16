@@ -204,6 +204,10 @@ class Registry:
                 "VALUES (:persona_artifact_id, :build_id, :record_id, :path_rel, :sha256, :source_sha256, :catalog_sha256, :adapter_sha256, :created_at)",
                 record)
 
+    def personas_for_build(self, build_id: str) -> list[dict]:
+        rows = self.conn.execute("SELECT * FROM personas WHERE build_id = ? ORDER BY record_id, created_at DESC", (build_id,))
+        return [dict(r) for r in rows]
+
     def personas_for(self, build_id: str, record_id: str) -> list[dict]:
         rows = self.conn.execute("SELECT * FROM personas WHERE build_id = ? AND record_id = ? ORDER BY created_at DESC",
                                  (build_id, record_id))

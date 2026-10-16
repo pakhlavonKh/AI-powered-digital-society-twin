@@ -397,7 +397,7 @@ class Workbench:
         if not runtime_status["files_ready"]:
             reasons.extend(runtime_status["reasons"])
         elif runtime_status["probe"]["status"] != "passed":
-            reasons.append("Run the runtime import probe first (Capabilities) so the adapter's MatrAIx loader check can run.")
+            reasons.append("Run the runtime import probe first (Check runtime) so the adapter's MatrAIx loader check can run.")
         fixed = runner["expected_ids"] or []
         legacy_note = ("The fixed A/B runner loads only its two fixture files by path; other residents cannot run through it, "
                        "even after materialization.")
@@ -433,6 +433,22 @@ class Workbench:
             "notes": build_context_notes(),
             "synthetic_label": SYNTHETIC_RESPONSE_LABEL,
         }
+
+    def persona_index(self, build_id: str) -> dict:
+        build = self.load_build(build_id)
+        items = []
+        if build.source.variant == "v2":
+            for persona_id, paths in sorted(fixture_persona_index(self.settings).items()):
+                if persona_id in build.table.csv_rows:
+                    for path in paths:
+                        items.append({"record_id": persona_id, "origin": "fixture", "persona_artifact_id": f"fixture:{path.name}",
+                                      "relpath": f"{self.settings.layout.personas_dir}/{path.name}",
+                                      "sha256": sha256_bytes(path.read_bytes()), "created_at": None})
+            for rec in self.registry.personas_for_build(build_id):
+                items.append({"record_id": rec["record_id"], "origin": "managed", "persona_artifact_id": rec["persona_artifact_id"],
+                              "relpath": rec["path_rel"], "sha256": rec["sha256"], "created_at": rec["created_at"]})
+        return {"build_id": build_id, "items": items, "fixed_pair": runner_constants(self.settings)["expected_ids"] or [],
+                "note": "Stored persona YAMLs linked to this build. Every other resident has a read-only source card only."}
 
     def materialize_persona(self, build_id: str, record_id: str) -> dict:
         view = self.persona_view(build_id, record_id)
@@ -779,6 +795,7 @@ class Workbench:
                            "system_prompt": None, "user_prompt": None, "system_sha256": None, "user_sha256": None,
                            "input_token_estimate": None})
             warnings.append("Smoke prompts are captured at the fake transport boundary during the run; they are not rendered in advance.")
+        readiness = self.runtime.file_status()
         plan = {
             "experiment_id": experiment_id,
             "config_hash": config["config_hash"],
@@ -806,6 +823,15 @@ class Workbench:
             "model_seed": None,
             "persona_artifact_hashes": config["persona_artifact_hashes"],
             "execution_blockers": execution_blockers,
+            "dependency_readiness": {
+                "runtime_files_ready": True,
+                "runtime_probe": readiness["probe"]["status"],
+                "probe_checked_at": readiness["probe"]["checked_at"],
+                "matraix_root_source": readiness["matraix_root_source"],
+                "provider_key_present": self._provider_credentials_present(config["model"]) if mode == "legacy_ab_live" else None,
+                "live_execution_enabled": self.settings.live_execution_enabled if mode == "legacy_ab_live" else None,
+                "note": "Recorded when the plan was made; execution re-checks readiness and credentials.",
+            },
             "warnings": warnings,
             "stale_policy": "Invalid if the draft config, a fixture persona file or the external task content changes; "
                             "re-checked at execution. One reviewed plan executes at most once.",
@@ -933,6 +959,11 @@ class Workbench:
                 "runtime_seconds", "comparison_rows", "differing_values_recorded", "differing_values_recomputed",
                 "consistency_checks", "usage", "budget_file", "limitations", "warnings", "artifacts", "files", "evidence_drift")
         out = {k: run.get(k) for k in keys}
+        if run["origin"] == "managed":
+            config = self.registry.experiment(experiment_id) or {}
+            out["display_name"] = f"{config.get('name', experiment_id)} · {run.get('job_id')}"
+        else:
+            out["display_name"] = run["dirname"]
         out["trial_summaries"] = [{"label": t["label"], "persona_id": t["persona_id"], "state": t["state"],
                                    "boundary_status_raw": t["boundary_status_raw"], "answer_count": t["answer_count"],
                                    "usage": t["usage"], "coerced_answers": t["coerced_answers"],
@@ -1081,6 +1112,8 @@ class Workbench:
                 "export_parquet": {"available": False, "reasons": ["Only CSV and JSON exports are implemented."]},
             },
             "mutations": {"local_only": self.settings.local_mutations, "note": mutation_note},
+            "runner": {"provider_prefixes": runner["provider_prefixes"] or [], "fixed_persona_ids": runner["expected_ids"] or [],
+                       "note": "Read statically from the existing A/B runner source; this list does not show that any model is available."},
         }
 
 
