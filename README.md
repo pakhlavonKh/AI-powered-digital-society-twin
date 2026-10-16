@@ -7,7 +7,8 @@ SocietyTwin is an Engineering Design II research project that aims to build a sy
 - The Türkiye-only, large-scale direction comes from the latest instructor feedback.
 - The v2 architecture was drafted in response to that feedback ([docs/](docs/)).
 - Detailed architecture and implementation decisions still require instructor and team review.
-- Implementation has not started; the repository contains documentation and placeholder folders.
+- The main SocietyTwin v2 platform is not implemented yet; the repository mainly contains documentation and placeholder folders.
+- A first proof-of-concept experiment exists in [experiments/matraix_simulation/](experiments/matraix_simulation/): a 1,000-resident synthetic Ankara population built from TÜİK tables, with two personas run through a MatrAIx survey (see [MatrAIx Simulation Experiment](#matraix-simulation-experiment)).
 
 ## Why Türkiye
 
@@ -57,6 +58,50 @@ The MVP aims to show one complete path from data to results:
 
 A 1M-record build is an optional scalability benchmark if time allows; the final required population scale is still an open decision. Stretch goals and the roadmap are in the [architecture report](docs/societytwin-v2-architecture.md#29-mvp).
 
+## MatrAIx Simulation Experiment
+
+[experiments/matraix_simulation/](experiments/matraix_simulation/) is the first working end-to-end path from TÜİK data to persona-conditioned AI responses. It uses MatrAIx as an external framework (not vendored) and tracks only SocietyTwin-specific code and small fixtures.
+
+```mermaid
+flowchart LR
+    A["TÜİK Ankara 2025<br/>age × sex, marital status × sex"] --> B["1,000 synthetic Ankara residents<br/>(seed 42)"]
+    B --> C["Persona adapter<br/>MatrAIx persona YAML"]
+    C --> D["MatrAIx survey agent"]
+    D --> E["Structured answers,<br/>tokens and cost"]
+```
+
+| Folder | Contents |
+|---|---|
+| `src/data_processing/` | Extraction/validation of Ankara TÜİK-derived controls |
+| `src/synthetic_population/` | Deterministic Ankara population sampler and marital-status enrichment |
+| `src/persona_adapter/` | Converts a synthetic resident to a MatrAIx persona YAML |
+| `src/runtime/` | Smoke runner (no API calls) and two-persona A/B runner |
+| `processed/`, `synthetic/`, `personas/` | Small reproducibility fixtures |
+
+Quick start (Windows, Python 3.12, MatrAIx checked out next to this repository as `../MatrAIx-Persona-8B`):
+
+```powershell
+py -3.12 -m venv .venv
+.\.venv\Scripts\python -m pip install -r experiments\matraix_simulation\requirements.txt
+$env:MATRAIX_ROOT = (Resolve-Path ..\MatrAIx-Persona-8B).Path
+.\.venv\Scripts\python -m pip install -e "$env:MATRAIX_ROOT" -e "$env:MATRAIX_ROOT\packages\playground"
+
+# No API calls: verify persona/task wiring
+.\.venv\Scripts\python experiments\matraix_simulation\src\runtime\run_matraix_smoke.py --matraix-root "$env:MATRAIX_ROOT"
+
+# Prepare the A/B run (no calls); add --execute for exactly two live calls
+.\.venv\Scripts\python experiments\matraix_simulation\src\runtime\run_matraix_ab.py --matraix-root "$env:MATRAIX_ROOT" --model <provider/model>
+```
+
+Live runs need a provider key in `experiments/matraix_simulation/.env` (copy `.env.example`; the file is git-ignored). Full setup, model selection, and verification notes: [experiments/matraix_simulation/README.md](experiments/matraix_simulation/README.md).
+
+Current limitations of this experiment:
+
+- Only the two fixed test personas (`ANK2025_000001`, `ANK2025_000183`) can be run.
+- Marital status is sampled by sex only, not jointly with age; sex is not shown to the model.
+- The survey is MatrAIx's example product-feedback task, not a Türkiye-specific instrument.
+- Two trials are a pipeline proof-of-concept; they do not establish causality or behavioural realism.
+
 ## Technology
 
 Proposed high-level stack:
@@ -87,6 +132,7 @@ Details and justifications: [docs/architecture.md](docs/architecture.md).
 | [Migration plan](docs/migration-plan.md) | Changes from the earlier v1 design ([archived](docs/archive/architecture-v1-demographic.md)) |
 | [Team responsibilities](docs/team-responsibilities.md) and [research integration](docs/research-integration.md) | Research roles and how they fit together |
 | [Data handling](data/README.md) | Rules for the data folder |
+| [MatrAIx simulation experiment](experiments/matraix_simulation/README.md) | Setup and running of the Ankara proof-of-concept experiment |
 
 ## Team
 
@@ -108,6 +154,6 @@ Ownership of SocietyTwin v2 implementation modules has not yet been assigned.
 - Synthetic personas are fictional and identified by codes, not names. SocietyTwin does not reconstruct or represent real Turkish citizens.
 - SocietyTwin is for population-level research only; its results are not guaranteed predictions of real human behaviour.
 - The sensitive categories defined in Türkiye's data protection law (KVKK Article 6), such as ethnic origin, religion, political opinion, and health, are excluded from the persona schema.
-- No dataset, generated population, or experiment result is committed to this repository.
+- No raw dataset or experiment result is committed to this repository. The only committed data are small derived fixtures for the MatrAIx experiment (processed Ankara TÜİK controls, a 1,000-record synthetic Ankara population, and two persona YAMLs); generated run outputs under `runs/` are git-ignored.
 
 More detail: [ethics and limitations](docs/ethics-and-limitations.md) and [data/README.md](data/README.md).
