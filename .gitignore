@@ -111,3 +111,9 @@ Thumbs.db
 *.swo
 *~
 .claude/settings.local.json
+
+# ------------------------------------------------------------------
+# Research workbench (frontend test output)
+# ------------------------------------------------------------------
+frontend/test-results/
+frontend/playwright-report/

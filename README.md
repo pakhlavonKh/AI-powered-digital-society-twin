@@ -102,6 +102,18 @@ Current limitations of this experiment:
 - The survey is MatrAIx's example product-feedback task, not a Türkiye-specific instrument.
 - Two trials are a pipeline proof-of-concept; they do not establish causality or behavioural realism.
 
+## Research Workbench
+
+A local web UI and API over the Ankara experiment: browse the synthetic population, draw reproducible cohorts, inspect persona provenance, prepare experiments, and read recorded MatrAIx results and source-fit checks. Browsing works offline, without MatrAIx or API keys; MatrAIx-backed preflight, fake smoke runs and persona materialization need an external runtime; live provider runs are disabled by default.
+
+```bash
+python3.12 -m venv .venv && .venv/bin/pip install -r requirements-api.lock && .venv/bin/pip install -e . --no-deps
+(cd frontend && npm ci)
+./scripts/dev.sh   # http://127.0.0.1:3000
+```
+
+Setup, configuration, what is implemented versus gated, and known limits: [docs/research-workbench.md](docs/research-workbench.md).
+
 ## Technology
 
 Proposed high-level stack:
@@ -134,6 +146,7 @@ Details and justifications: [docs/architecture.md](docs/architecture.md).
 | [Migration plan](docs/migration-plan.md) | Changes from the earlier v1 design ([archived](docs/archive/architecture-v1-demographic.md)) |
 | [Team responsibilities](docs/team-responsibilities.md) and [research integration](docs/research-integration.md) | Research roles and how they fit together |
 | [Data handling](data/README.md) | Rules for the data folder |
+| [Research workbench](docs/research-workbench.md) | Local UI and API: setup, features, gated execution, limitations |
 | [MatrAIx simulation experiment](experiments/matraix_simulation/README.md) | Setup and running of the Ankara proof-of-concept experiment |
 | [Experiment results](experiments/matraix_simulation/EXPERIMENT_RESULTS.md) | Results of the two-persona A/B run (gpt-4o) |
 
