@@ -264,6 +264,9 @@ def create_app(settings: Settings | None = None, workbench: Workbench | None = N
             headers["X-SocietyTwin-Caveat"] = "historical-descriptive-report"
         return Response(data, media_type=media_type, headers=headers)
 
+    from societytwin.api.v2 import build_router
+
+    app.include_router(build_router())
     return app
 
 

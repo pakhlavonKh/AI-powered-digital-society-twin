@@ -845,7 +845,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CohortPreviewRequest"
+                "$ref": "#/components/schemas/societytwin__experiments__models__CohortPreviewRequest"
               }
             }
           },
@@ -2612,6 +2612,1796 @@
           }
         }
       }
+    },
+    "/api/v2/overview": {
+      "get": {
+        "tags": [
+          "national"
+        ],
+        "summary": "Overview",
+        "operationId": "overview_api_v2_overview_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/capabilities": {
+      "get": {
+        "tags": [
+          "national"
+        ],
+        "summary": "Capabilities",
+        "operationId": "capabilities_api_v2_capabilities_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/geography/provinces": {
+      "get": {
+        "tags": [
+          "national"
+        ],
+        "summary": "Provinces",
+        "operationId": "provinces_api_v2_geography_provinces_get",
+        "parameters": [
+          {
+            "name": "reference_year",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 2100,
+              "minimum": 1990,
+              "default": 2025,
+              "title": "Reference Year"
+            }
+          },
+          {
+            "name": "population_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Population Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/environments/{province_code}": {
+      "get": {
+        "tags": [
+          "national"
+        ],
+        "summary": "Environment",
+        "operationId": "environment_api_v2_environments__province_code__get",
+        "parameters": [
+          {
+            "name": "province_code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Province Code"
+            }
+          },
+          {
+            "name": "reference_year",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 2100,
+              "minimum": 1990,
+              "default": 2025,
+              "title": "Reference Year"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/controls": {
+      "get": {
+        "tags": [
+          "data"
+        ],
+        "summary": "Controls",
+        "operationId": "controls_api_v2_controls_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/controls/build": {
+      "post": {
+        "tags": [
+          "data"
+        ],
+        "summary": "Controls Build",
+        "description": "Normalise the available official tables into the control store.",
+        "operationId": "controls_build_api_v2_controls_build_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/data-sources": {
+      "get": {
+        "tags": [
+          "data"
+        ],
+        "summary": "Data Sources",
+        "operationId": "data_sources_api_v2_data_sources_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/populations": {
+      "get": {
+        "tags": [
+          "population"
+        ],
+        "summary": "Populations",
+        "operationId": "populations_api_v2_populations_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "population"
+        ],
+        "summary": "Generate",
+        "description": "Generate a synthetic population (or reuse the identical existing build) and validate it.",
+        "operationId": "generate_api_v2_populations_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/populations/{population_id}": {
+      "get": {
+        "tags": [
+          "population"
+        ],
+        "summary": "Population",
+        "operationId": "population_api_v2_populations__population_id__get",
+        "parameters": [
+          {
+            "name": "population_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Population Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/populations/{population_id}/summary": {
+      "get": {
+        "tags": [
+          "population"
+        ],
+        "summary": "Summary",
+        "operationId": "summary_api_v2_populations__population_id__summary_get",
+        "parameters": [
+          {
+            "name": "population_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Population Id"
+            }
+          },
+          {
+            "name": "province_codes",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Province Codes"
+            }
+          },
+          {
+            "name": "age_min",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "maximum": 120,
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Age Min"
+            }
+          },
+          {
+            "name": "age_max",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "maximum": 120,
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Age Max"
+            }
+          },
+          {
+            "name": "age_groups",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Age Groups"
+            }
+          },
+          {
+            "name": "sexes",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Sexes"
+            }
+          },
+          {
+            "name": "marital_statuses",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Marital Statuses"
+            }
+          },
+          {
+            "name": "education_levels",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Education Levels"
+            }
+          },
+          {
+            "name": "labour_statuses",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Labour Statuses"
+            }
+          },
+          {
+            "name": "household_size_classes",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Household Size Classes"
+            }
+          },
+          {
+            "name": "household_types",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Household Types"
+            }
+          },
+          {
+            "name": "urbanicities",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Urbanicities"
+            }
+          },
+          {
+            "name": "adult_only",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Adult Only"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/populations/{population_id}/records": {
+      "get": {
+        "tags": [
+          "population"
+        ],
+        "summary": "Records",
+        "operationId": "records_api_v2_populations__population_id__records_get",
+        "parameters": [
+          {
+            "name": "population_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Population Id"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "synthetic_id",
+                "province_code",
+                "age",
+                "age_group",
+                "sex",
+                "population_weight"
+              ],
+              "type": "string",
+              "default": "synthetic_id",
+              "title": "Sort"
+            }
+          },
+          {
+            "name": "direction",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "type": "string",
+              "default": "asc",
+              "title": "Direction"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "province_codes",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Province Codes"
+            }
+          },
+          {
+            "name": "age_min",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "maximum": 120,
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Age Min"
+            }
+          },
+          {
+            "name": "age_max",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "maximum": 120,
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Age Max"
+            }
+          },
+          {
+            "name": "age_groups",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Age Groups"
+            }
+          },
+          {
+            "name": "sexes",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Sexes"
+            }
+          },
+          {
+            "name": "marital_statuses",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Marital Statuses"
+            }
+          },
+          {
+            "name": "education_levels",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Education Levels"
+            }
+          },
+          {
+            "name": "labour_statuses",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Labour Statuses"
+            }
+          },
+          {
+            "name": "household_size_classes",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Household Size Classes"
+            }
+          },
+          {
+            "name": "household_types",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Household Types"
+            }
+          },
+          {
+            "name": "urbanicities",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Urbanicities"
+            }
+          },
+          {
+            "name": "adult_only",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Adult Only"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/populations/{population_id}/records/{synthetic_id}": {
+      "get": {
+        "tags": [
+          "population"
+        ],
+        "summary": "Record",
+        "operationId": "record_api_v2_populations__population_id__records__synthetic_id__get",
+        "parameters": [
+          {
+            "name": "population_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Population Id"
+            }
+          },
+          {
+            "name": "synthetic_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Synthetic Id"
+            }
+          },
+          {
+            "name": "visible_fields",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Visible Fields"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/populations/{population_id}/validation": {
+      "get": {
+        "tags": [
+          "validation"
+        ],
+        "summary": "Validation",
+        "operationId": "validation_api_v2_populations__population_id__validation_get",
+        "parameters": [
+          {
+            "name": "population_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Population Id"
+            }
+          },
+          {
+            "name": "province_code",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Province Code"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/cohorts/preview": {
+      "post": {
+        "tags": [
+          "cohorts"
+        ],
+        "summary": "Cohort Preview",
+        "description": "Counts only; nothing is saved.",
+        "operationId": "cohort_preview_api_v2_cohorts_preview_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/societytwin__api__v2__CohortPreviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/cohorts": {
+      "get": {
+        "tags": [
+          "cohorts"
+        ],
+        "summary": "Cohort List",
+        "operationId": "cohort_list_api_v2_cohorts_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "cohorts"
+        ],
+        "summary": "Cohort Create",
+        "operationId": "cohort_create_api_v2_cohorts_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CohortDefinitionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/cohorts/{cohort_id}": {
+      "get": {
+        "tags": [
+          "cohorts"
+        ],
+        "summary": "Cohort Get",
+        "operationId": "cohort_get_api_v2_cohorts__cohort_id__get",
+        "parameters": [
+          {
+            "name": "cohort_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Cohort Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/cohorts/{cohort_id}/samples": {
+      "post": {
+        "tags": [
+          "cohorts"
+        ],
+        "summary": "Cohort Sample",
+        "description": "Draw (or reuse the identical) seeded sample from the cohort.",
+        "operationId": "cohort_sample_api_v2_cohorts__cohort_id__samples_post",
+        "parameters": [
+          {
+            "name": "cohort_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Cohort Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CohortSampleRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/samples/{sample_id}": {
+      "get": {
+        "tags": [
+          "cohorts"
+        ],
+        "summary": "Sample",
+        "operationId": "sample_api_v2_samples__sample_id__get",
+        "parameters": [
+          {
+            "name": "sample_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Sample Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/samples/{sample_id}/personas": {
+      "get": {
+        "tags": [
+          "personas"
+        ],
+        "summary": "Sample Personas",
+        "operationId": "sample_personas_api_v2_samples__sample_id__personas_get",
+        "parameters": [
+          {
+            "name": "sample_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Sample Id"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 24,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "visible_fields",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Visible Fields"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/examples/fare-experiment": {
+      "get": {
+        "tags": [
+          "experiments"
+        ],
+        "summary": "Example",
+        "description": "The demonstration design with explicitly HYPOTHETICAL fare parameters.",
+        "operationId": "example_api_v2_examples_fare_experiment_get",
+        "parameters": [
+          {
+            "name": "cohort_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Cohort Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/experiments": {
+      "get": {
+        "tags": [
+          "experiments"
+        ],
+        "summary": "Experiment List",
+        "operationId": "experiment_list_api_v2_experiments_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "experiments"
+        ],
+        "summary": "Experiment Create",
+        "description": "Saves a definition. Nothing runs.",
+        "operationId": "experiment_create_api_v2_experiments_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExperimentDefinition"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/experiments/{experiment_id}": {
+      "get": {
+        "tags": [
+          "experiments"
+        ],
+        "summary": "Experiment Get",
+        "operationId": "experiment_get_api_v2_experiments__experiment_id__get",
+        "parameters": [
+          {
+            "name": "experiment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Experiment Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/experiments/{experiment_id}/plan": {
+      "post": {
+        "tags": [
+          "experiments"
+        ],
+        "summary": "Experiment Plan",
+        "description": "Reviewed plan: eligible records, sample, personas, calls, cost, warnings, blockers. Makes no calls.",
+        "operationId": "experiment_plan_api_v2_experiments__experiment_id__plan_post",
+        "parameters": [
+          {
+            "name": "experiment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Experiment Id"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/experiments/{experiment_id}/runs": {
+      "post": {
+        "tags": [
+          "experiments"
+        ],
+        "summary": "Experiment Run",
+        "description": "Executes a reviewed plan once. Stub runs complete in the request; MatrAIx runs are queued for the worker.",
+        "operationId": "experiment_run_api_v2_experiments__experiment_id__runs_post",
+        "parameters": [
+          {
+            "name": "experiment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Experiment Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/runs": {
+      "get": {
+        "tags": [
+          "results"
+        ],
+        "summary": "Runs",
+        "operationId": "runs_api_v2_runs_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/runs/{run_id}": {
+      "get": {
+        "tags": [
+          "results"
+        ],
+        "summary": "Run",
+        "operationId": "run_api_v2_runs__run_id__get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/runs/{run_id}/responses": {
+      "get": {
+        "tags": [
+          "results"
+        ],
+        "summary": "Run Responses",
+        "operationId": "run_responses_api_v2_runs__run_id__responses_get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "final_only",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Final Only"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/runs/{run_id}/aggregate": {
+      "get": {
+        "tags": [
+          "results"
+        ],
+        "summary": "Run Aggregate",
+        "operationId": "run_aggregate_api_v2_runs__run_id__aggregate_get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "group_by",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Group By"
+            }
+          },
+          {
+            "name": "min_group",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 1000,
+              "minimum": 1,
+              "default": 10,
+              "title": "Min Group"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/runs/{run_id}/replay": {
+      "post": {
+        "tags": [
+          "results"
+        ],
+        "summary": "Run Replay",
+        "description": "Reproduces a completed run exactly from the response cache; makes no backend calls.",
+        "operationId": "run_replay_api_v2_runs__run_id__replay_post",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplayRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -3264,6 +5054,44 @@
         ],
         "title": "CohortCreateRequest"
       },
+      "CohortDefinitionRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "population_id": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Population Id"
+          },
+          "filters": {
+            "$ref": "#/components/schemas/PopulationFilter"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "population_id"
+        ],
+        "title": "CohortDefinitionRequest"
+      },
       "CohortList": {
         "properties": {
           "items": {
@@ -3419,25 +5247,6 @@
         ],
         "title": "CohortPreview"
       },
-      "CohortPreviewRequest": {
-        "properties": {
-          "build_id": {
-            "type": "string",
-            "maxLength": 128,
-            "minLength": 1,
-            "title": "Build Id"
-          },
-          "filters": {
-            "$ref": "#/components/schemas/FilterSpec"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "build_id"
-        ],
-        "title": "CohortPreviewRequest"
-      },
       "CohortRealized": {
         "properties": {
           "record_ids": {
@@ -3524,6 +5333,95 @@
           "seed"
         ],
         "title": "CohortRequested"
+      },
+      "CohortSampleRequest": {
+        "properties": {
+          "size": {
+            "type": "integer",
+            "maximum": 10000.0,
+            "minimum": 1.0,
+            "title": "Size"
+          },
+          "method": {
+            "type": "string",
+            "pattern": "^(simple_random|weighted|stratified)$",
+            "title": "Method",
+            "default": "weighted"
+          },
+          "seed": {
+            "type": "integer",
+            "maximum": 9.223372036854776e+18,
+            "minimum": 0.0,
+            "title": "Seed"
+          },
+          "strata_field": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(province_code|sex|age_group|marital_status|education_level|labour_status|urbanicity)$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Strata Field"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "size",
+          "seed"
+        ],
+        "title": "CohortSampleRequest"
+      },
+      "CohortSpec": {
+        "properties": {
+          "cohort_id": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Cohort Id"
+          },
+          "sample_size": {
+            "type": "integer",
+            "maximum": 1000.0,
+            "minimum": 1.0,
+            "title": "Sample Size"
+          },
+          "sampling_method": {
+            "type": "string",
+            "pattern": "^(simple_random|weighted|stratified)$",
+            "title": "Sampling Method",
+            "default": "weighted"
+          },
+          "seed": {
+            "type": "integer",
+            "maximum": 9.223372036854776e+18,
+            "minimum": 0.0,
+            "title": "Seed"
+          },
+          "strata_field": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(province_code|sex|age_group|marital_status|education_level|labour_status|urbanicity)$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Strata Field"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "cohort_id",
+          "sample_size",
+          "seed"
+        ],
+        "title": "CohortSpec"
       },
       "CohortStatus": {
         "properties": {
@@ -4008,6 +5906,34 @@
         ],
         "title": "EnvironmentList"
       },
+      "EnvironmentSpec": {
+        "properties": {
+          "province_code": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\d{2}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Province Code",
+            "description": "Province whose context is shown; None means each persona's own province."
+          },
+          "context_indicators": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "title": "Context Indicators"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "EnvironmentSpec"
+      },
       "ErrorBody": {
         "properties": {
           "code": {
@@ -4229,6 +6155,52 @@
         ],
         "title": "ExecuteResponse"
       },
+      "ExecutionSpec": {
+        "properties": {
+          "repetitions": {
+            "type": "integer",
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Repetitions",
+            "description": "Independent responses per persona.",
+            "default": 1
+          },
+          "max_attempts": {
+            "type": "integer",
+            "maximum": 3.0,
+            "minimum": 1.0,
+            "title": "Max Attempts",
+            "description": "1 = no retry. Retries apply to failed or invalid responses only.",
+            "default": 1
+          },
+          "max_calls": {
+            "type": "integer",
+            "maximum": 5000.0,
+            "minimum": 1.0,
+            "title": "Max Calls",
+            "description": "Hard cap on backend calls, retries included."
+          },
+          "max_cost_usd": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1000.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Cost Usd"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "max_calls"
+        ],
+        "title": "ExecutionSpec"
+      },
       "ExperimentConfig": {
         "properties": {
           "experiment_id": {
@@ -4367,6 +6339,48 @@
           "created_at"
         ],
         "title": "ExperimentConfig"
+      },
+      "ExperimentDefinition": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "scenario": {
+            "$ref": "#/components/schemas/societytwin__national__experiments__ScenarioSpec"
+          },
+          "task": {
+            "$ref": "#/components/schemas/societytwin__national__experiments__TaskSpec"
+          },
+          "environment": {
+            "$ref": "#/components/schemas/EnvironmentSpec"
+          },
+          "cohort": {
+            "$ref": "#/components/schemas/CohortSpec"
+          },
+          "model": {
+            "$ref": "#/components/schemas/ModelSpec"
+          },
+          "execution": {
+            "$ref": "#/components/schemas/ExecutionSpec"
+          },
+          "persona": {
+            "$ref": "#/components/schemas/PersonaPolicy"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title",
+          "scenario",
+          "task",
+          "cohort",
+          "model",
+          "execution"
+        ],
+        "title": "ExperimentDefinition"
       },
       "ExperimentDetail": {
         "properties": {
@@ -4516,10 +6530,10 @@
             "title": "Cohort Id"
           },
           "scenario": {
-            "$ref": "#/components/schemas/ScenarioSpec"
+            "$ref": "#/components/schemas/societytwin__experiments__models__ScenarioSpec"
           },
           "task": {
-            "$ref": "#/components/schemas/TaskSpec"
+            "$ref": "#/components/schemas/societytwin__experiments__models__TaskSpec"
           },
           "environment": {
             "type": "string",
@@ -5058,6 +7072,61 @@
           "sha256"
         ],
         "title": "FixtureHash"
+      },
+      "GenerateRequest": {
+        "properties": {
+          "reference_year": {
+            "type": "integer",
+            "maximum": 2100.0,
+            "minimum": 1990.0,
+            "title": "Reference Year",
+            "default": 2025
+          },
+          "synthetic_size": {
+            "type": "integer",
+            "maximum": 1000000.0,
+            "minimum": 1.0,
+            "title": "Synthetic Size",
+            "default": 10000
+          },
+          "seed": {
+            "type": "integer",
+            "maximum": 9.223372036854776e+18,
+            "minimum": 0.0,
+            "title": "Seed",
+            "default": 42
+          },
+          "province_codes": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "maxItems": 81
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Province Codes"
+          },
+          "min_records_per_province": {
+            "type": "integer",
+            "maximum": 100000.0,
+            "minimum": 0.0,
+            "title": "Min Records Per Province",
+            "default": 0
+          },
+          "calibrate": {
+            "type": "boolean",
+            "title": "Calibrate",
+            "default": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "GenerateRequest"
       },
       "Generator": {
         "properties": {
@@ -5630,6 +7699,69 @@
         ],
         "title": "ModeCapability"
       },
+      "ModelSpec": {
+        "properties": {
+          "backend": {
+            "type": "string",
+            "pattern": "^(stub|matraix)$",
+            "title": "Backend",
+            "description": "stub: offline deterministic placeholder (not a model). matraix: MatrAIx survey agent."
+          },
+          "transport": {
+            "type": "string",
+            "pattern": "^(fake|live)$",
+            "title": "Transport",
+            "description": "matraix only: fake = MatrAIx's zero-cost smoke client; live = provider calls (gated).",
+            "default": "fake"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-z0-9]{2,32}/[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "temperature": {
+            "type": "number",
+            "maximum": 2.0,
+            "minimum": 0.0,
+            "title": "Temperature",
+            "default": 0.0
+          },
+          "seed": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 9.223372036854776e+18,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seed",
+            "description": "Passed to backends that support a sampling seed."
+          },
+          "max_output_tokens": {
+            "type": "integer",
+            "maximum": 4096.0,
+            "minimum": 16.0,
+            "title": "Max Output Tokens",
+            "default": 512
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "backend"
+        ],
+        "title": "ModelSpec"
+      },
       "Modes": {
         "properties": {
           "browse_offline": {
@@ -5997,6 +8129,28 @@
         ],
         "title": "PersonaIndexItem"
       },
+      "PersonaPolicy": {
+        "properties": {
+          "visible_fields": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visible Fields",
+            "description": "None = default policy (see personas.DEFAULT_VISIBLE)."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "PersonaPolicy"
+      },
       "PersonaSnapshot": {
         "properties": {
           "sha256": {
@@ -6150,6 +8304,182 @@
           "synthetic_label"
         ],
         "title": "PersonaView"
+      },
+      "PopulationFilter": {
+        "properties": {
+          "province_codes": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "maxItems": 81,
+                "minItems": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Province Codes"
+          },
+          "age_min": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 120.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Age Min"
+          },
+          "age_max": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 120.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Age Max"
+          },
+          "age_groups": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "minItems": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Age Groups"
+          },
+          "sexes": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "minItems": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sexes"
+          },
+          "marital_statuses": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "minItems": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Marital Statuses"
+          },
+          "education_levels": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "minItems": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Education Levels"
+          },
+          "labour_statuses": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "minItems": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Labour Statuses"
+          },
+          "household_size_classes": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "minItems": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Household Size Classes"
+          },
+          "household_types": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "minItems": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Household Types"
+          },
+          "urbanicities": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "minItems": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Urbanicities"
+          },
+          "adult_only": {
+            "type": "boolean",
+            "title": "Adult Only",
+            "description": "Only records aged 18 or over",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "PopulationFilter",
+        "description": "AND across fields, OR within a field. ``unavailable`` matches records without a source value."
       },
       "Preflight": {
         "properties": {
@@ -6942,6 +9272,23 @@
         ],
         "title": "ReferenceTableRef"
       },
+      "ReplayRequest": {
+        "properties": {
+          "idempotency_key": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 8,
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "title": "Idempotency Key"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "idempotency_key"
+        ],
+        "title": "ReplayRequest"
+      },
       "Resident": {
         "properties": {
           "person_id": {
@@ -7346,6 +9693,36 @@
         ],
         "title": "RowCheck"
       },
+      "RunRequest": {
+        "properties": {
+          "plan_hash": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Plan Hash"
+          },
+          "idempotency_key": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 8,
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "title": "Idempotency Key"
+          },
+          "confirm": {
+            "type": "boolean",
+            "const": true,
+            "title": "Confirm",
+            "description": "Explicit confirmation that the reviewed plan should execute."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "plan_hash",
+          "idempotency_key",
+          "confirm"
+        ],
+        "title": "RunRequest"
+      },
       "RunnerInfo": {
         "properties": {
           "provider_prefixes": {
@@ -7545,46 +9922,51 @@
         ],
         "title": "ScenarioOut"
       },
-      "ScenarioSpec": {
+      "ScenarioParameter": {
         "properties": {
-          "kind": {
+          "name": {
             "type": "string",
-            "enum": [
-              "none",
-              "draft"
-            ],
-            "title": "Kind",
-            "default": "none"
+            "pattern": "^[a-z][a-z0-9_]{0,40}$",
+            "title": "Name"
           },
-          "text": {
+          "label": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Label"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Value"
+          },
+          "unit": {
             "anyOf": [
               {
                 "type": "string",
-                "maxLength": 4000
+                "maxLength": 24
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Text"
-          },
-          "version": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 32,
-                "pattern": "^[A-Za-z0-9._-]+$"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Version"
+            "title": "Unit"
           }
         },
         "additionalProperties": false,
         "type": "object",
-        "title": "ScenarioSpec"
+        "required": [
+          "name",
+          "label",
+          "value"
+        ],
+        "title": "ScenarioParameter"
       },
       "Scope": {
         "properties": {
@@ -7896,6 +10278,28 @@
         ],
         "title": "TaskList"
       },
+      "TaskOption": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{0,48}$",
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Label"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "label"
+        ],
+        "title": "TaskOption"
+      },
       "TaskOut": {
         "properties": {
           "id": {
@@ -7930,22 +10334,6 @@
           "content_hash"
         ],
         "title": "TaskOut"
-      },
-      "TaskSpec": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "const": "product_feedback_v1",
-            "title": "Id",
-            "description": "The only verified task: MatrAIx example-survey_product-feedback."
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "id"
-        ],
-        "title": "TaskSpec"
       },
       "Trial": {
         "properties": {
@@ -8664,6 +11052,209 @@
           "attribution_note"
         ],
         "title": "ValidationReport"
+      },
+      "societytwin__api__v2__CohortPreviewRequest": {
+        "properties": {
+          "population_id": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Population Id"
+          },
+          "filters": {
+            "$ref": "#/components/schemas/PopulationFilter"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "population_id"
+        ],
+        "title": "CohortPreviewRequest"
+      },
+      "societytwin__experiments__models__CohortPreviewRequest": {
+        "properties": {
+          "build_id": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Build Id"
+          },
+          "filters": {
+            "$ref": "#/components/schemas/FilterSpec"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "build_id"
+        ],
+        "title": "CohortPreviewRequest"
+      },
+      "societytwin__experiments__models__ScenarioSpec": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "none",
+              "draft"
+            ],
+            "title": "Kind",
+            "default": "none"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 4000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 32,
+                "pattern": "^[A-Za-z0-9._-]+$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ScenarioSpec"
+      },
+      "societytwin__experiments__models__TaskSpec": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "const": "product_feedback_v1",
+            "title": "Id",
+            "description": "The only verified task: MatrAIx example-survey_product-feedback."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "title": "TaskSpec"
+      },
+      "societytwin__national__experiments__ScenarioSpec": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Description"
+          },
+          "parameters": {
+            "items": {
+              "$ref": "#/components/schemas/ScenarioParameter"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "title": "Parameters"
+          },
+          "hypothetical": {
+            "type": "boolean",
+            "title": "Hypothetical",
+            "default": true
+          },
+          "source_note": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Note",
+            "description": "Required when the scenario is presented as factual: where its values come from."
+          },
+          "version": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9._-]{1,32}$",
+            "title": "Version",
+            "default": "1"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title",
+          "description"
+        ],
+        "title": "ScenarioSpec"
+      },
+      "societytwin__national__experiments__TaskSpec": {
+        "properties": {
+          "instruction": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Instruction"
+          },
+          "response_type": {
+            "type": "string",
+            "pattern": "^single_choice$",
+            "title": "Response Type",
+            "default": "single_choice"
+          },
+          "options": {
+            "items": {
+              "$ref": "#/components/schemas/TaskOption"
+            },
+            "type": "array",
+            "maxItems": 12,
+            "minItems": 2,
+            "title": "Options"
+          },
+          "allow_other_text": {
+            "type": "boolean",
+            "title": "Allow Other Text",
+            "default": false
+          },
+          "ask_rationale": {
+            "type": "boolean",
+            "title": "Ask Rationale",
+            "default": true
+          },
+          "adult_only": {
+            "type": "boolean",
+            "title": "Adult Only",
+            "default": true
+          },
+          "version": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9._-]{1,32}$",
+            "title": "Version",
+            "default": "1"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "instruction",
+          "options"
+        ],
+        "title": "TaskSpec"
       }
     }
   }

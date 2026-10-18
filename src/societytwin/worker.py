@@ -52,14 +52,15 @@ class LocalWorker:
         # This deployment runs one local worker, so a job still 'running' at start-up belongs to a
         # worker that no longer exists. Its outcome is unknown; it is not retried.
         self.recovered = self.workbench.registry.recover_interrupted({self.worker_id})
+        self.recovered += self.workbench.national.recover()
         return self.recovered
 
     def run_once(self) -> bool:
         job = self.workbench.registry.claim_next_job(self.worker_id)
-        if job is None:
-            return False
-        self.workbench.run_job(job)
-        return True
+        if job is not None:
+            self.workbench.run_job(job)
+            return True
+        return self.workbench.national.claim_and_run(self.worker_id)
 
     def _loop(self) -> None:
         while not self._stop.is_set():

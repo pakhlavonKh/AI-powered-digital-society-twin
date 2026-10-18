@@ -40,6 +40,9 @@ class Workbench:
         settings.state_dir.mkdir(parents=True, exist_ok=True)
         self.registry = Registry(settings.registry_path)
         self.runtime = runtime or MatraixRuntime(settings)
+        from societytwin.national.service import NationalService
+
+        self.national = NationalService(settings, self.registry, self.runtime)
         self._run_cache: dict[str, tuple[str, dict]] = {}
         self._run_lock = threading.Lock()
         self.sync_builds()

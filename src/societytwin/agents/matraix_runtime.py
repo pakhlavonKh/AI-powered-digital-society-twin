@@ -195,8 +195,9 @@ class MatraixRuntime:
         return path
 
     def _invoke(self, args: list[str], *, log_path: Path, allow_network: bool,
-                extra_env: dict[str, str] | None = None, timeout: int | None = None) -> ProcessResult:
-        python, _ = self._require_ready_files()
+                extra_env: dict[str, str] | None = None, timeout: int | None = None, python: Path | None = None) -> ProcessResult:
+        if python is None:
+            python, _ = self._require_ready_files()
         log_path.parent.mkdir(parents=True, exist_ok=True)
         argv = [str(python), "-I", "-B", *args]
         started = time.monotonic()
@@ -234,6 +235,31 @@ class MatraixRuntime:
                 "log_relpath": result.log_relpath,
             }
             return dict(self._probe)
+
+    # ------------------------------------------------------------------ national runner
+    def national_status(self) -> dict:
+        """Readiness for the national MatrAIx backend, which needs only a checkout and a runtime interpreter
+        (not the historical experiment's fixed runners)."""
+        root, source = self.matraix_root()
+        python = self.settings.runtime_python
+        root_ok = bool(root and root.is_dir() and (root / "packages" / "playground").is_dir() and (root / "src" / "matraix").is_dir())
+        python_ok = bool(python and python.is_file() and os.access(python, os.X_OK))
+        reasons = []
+        if not root_ok:
+            reasons.append("No usable MatrAIx checkout (set MATRAIX_ROOT to a checkout with src/matraix and packages/playground).")
+        if not python_ok:
+            reasons.append("No runtime interpreter (set SOCIETYTWIN_RUNTIME_PYTHON to a Python 3.12 environment with MatrAIx installed editable).")
+        return {"available": root_ok and python_ok, "matraix_root_source": source, "probe": dict(self._probe), "reasons": reasons}
+
+    def run_script(self, script: Path, args: list[str], log_path: Path, *, live: bool, credentials: dict[str, str]) -> ProcessResult:
+        """Run a SocietyTwin-owned script under the runtime interpreter with the same isolation as the legacy runners."""
+        status = self.national_status()
+        if not status["available"]:
+            raise RuntimeUnavailable("; ".join(status["reasons"]))
+        if not is_within(log_path, self.settings.state_dir):
+            raise UnsafeOutput("Logs must be inside the managed state directory")
+        return self._invoke([str(script), *args], log_path=log_path, allow_network=live,
+                            extra_env=credentials if live else None, python=self.settings.runtime_python)
 
     # ------------------------------------------------------------------ actions
     def run_smoke(self, output_dir: Path, log_path: Path) -> ProcessResult:

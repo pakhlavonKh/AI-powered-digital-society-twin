@@ -488,6 +488,529 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Overview */
+        get: operations["overview_api_v2_overview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/capabilities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Capabilities */
+        get: operations["capabilities_api_v2_capabilities_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/geography/provinces": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Provinces */
+        get: operations["provinces_api_v2_geography_provinces_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/environments/{province_code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Environment */
+        get: operations["environment_api_v2_environments__province_code__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/controls": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Controls */
+        get: operations["controls_api_v2_controls_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/controls/build": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Controls Build
+         * @description Normalise the available official tables into the control store.
+         */
+        post: operations["controls_build_api_v2_controls_build_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/data-sources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Data Sources */
+        get: operations["data_sources_api_v2_data_sources_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/populations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Populations */
+        get: operations["populations_api_v2_populations_get"];
+        put?: never;
+        /**
+         * Generate
+         * @description Generate a synthetic population (or reuse the identical existing build) and validate it.
+         */
+        post: operations["generate_api_v2_populations_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/populations/{population_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Population */
+        get: operations["population_api_v2_populations__population_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/populations/{population_id}/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Summary */
+        get: operations["summary_api_v2_populations__population_id__summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/populations/{population_id}/records": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Records */
+        get: operations["records_api_v2_populations__population_id__records_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/populations/{population_id}/records/{synthetic_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Record */
+        get: operations["record_api_v2_populations__population_id__records__synthetic_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/populations/{population_id}/validation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Validation */
+        get: operations["validation_api_v2_populations__population_id__validation_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/cohorts/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cohort Preview
+         * @description Counts only; nothing is saved.
+         */
+        post: operations["cohort_preview_api_v2_cohorts_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/cohorts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Cohort List */
+        get: operations["cohort_list_api_v2_cohorts_get"];
+        put?: never;
+        /** Cohort Create */
+        post: operations["cohort_create_api_v2_cohorts_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/cohorts/{cohort_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Cohort Get */
+        get: operations["cohort_get_api_v2_cohorts__cohort_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/cohorts/{cohort_id}/samples": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cohort Sample
+         * @description Draw (or reuse the identical) seeded sample from the cohort.
+         */
+        post: operations["cohort_sample_api_v2_cohorts__cohort_id__samples_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/samples/{sample_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Sample */
+        get: operations["sample_api_v2_samples__sample_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/samples/{sample_id}/personas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Sample Personas */
+        get: operations["sample_personas_api_v2_samples__sample_id__personas_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/examples/fare-experiment": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Example
+         * @description The demonstration design with explicitly HYPOTHETICAL fare parameters.
+         */
+        get: operations["example_api_v2_examples_fare_experiment_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/experiments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Experiment List */
+        get: operations["experiment_list_api_v2_experiments_get"];
+        put?: never;
+        /**
+         * Experiment Create
+         * @description Saves a definition. Nothing runs.
+         */
+        post: operations["experiment_create_api_v2_experiments_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/experiments/{experiment_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Experiment Get */
+        get: operations["experiment_get_api_v2_experiments__experiment_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/experiments/{experiment_id}/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Experiment Plan
+         * @description Reviewed plan: eligible records, sample, personas, calls, cost, warnings, blockers. Makes no calls.
+         */
+        post: operations["experiment_plan_api_v2_experiments__experiment_id__plan_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/experiments/{experiment_id}/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Experiment Run
+         * @description Executes a reviewed plan once. Stub runs complete in the request; MatrAIx runs are queued for the worker.
+         */
+        post: operations["experiment_run_api_v2_experiments__experiment_id__runs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Runs */
+        get: operations["runs_api_v2_runs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/runs/{run_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Run */
+        get: operations["run_api_v2_runs__run_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/runs/{run_id}/responses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Run Responses */
+        get: operations["run_responses_api_v2_runs__run_id__responses_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/runs/{run_id}/aggregate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Run Aggregate */
+        get: operations["run_aggregate_api_v2_runs__run_id__aggregate_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/runs/{run_id}/replay": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Run Replay
+         * @description Reproduces a completed run exactly from the response cache; makes no backend calls.
+         */
+        post: operations["run_replay_api_v2_runs__run_id__replay_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -711,6 +1234,16 @@ export interface components {
             /** Name */
             name?: string | null;
         };
+        /** CohortDefinitionRequest */
+        CohortDefinitionRequest: {
+            /** Name */
+            name: string;
+            /** Description */
+            description?: string | null;
+            /** Population Id */
+            population_id: string;
+            filters?: components["schemas"]["PopulationFilter"];
+        };
         /** CohortList */
         CohortList: {
             /** Items */
@@ -765,12 +1298,6 @@ export interface components {
             /** Synthetic Label */
             synthetic_label: string;
         };
-        /** CohortPreviewRequest */
-        CohortPreviewRequest: {
-            /** Build Id */
-            build_id: string;
-            filters?: components["schemas"]["FilterSpec"];
-        };
         /** CohortRealized */
         CohortRealized: {
             /** Record Ids */
@@ -807,6 +1334,36 @@ export interface components {
             sampling: "simple_random";
             /** Seed */
             seed: number;
+        };
+        /** CohortSampleRequest */
+        CohortSampleRequest: {
+            /** Size */
+            size: number;
+            /**
+             * Method
+             * @default weighted
+             */
+            method: string;
+            /** Seed */
+            seed: number;
+            /** Strata Field */
+            strata_field?: string | null;
+        };
+        /** CohortSpec */
+        CohortSpec: {
+            /** Cohort Id */
+            cohort_id: string;
+            /** Sample Size */
+            sample_size: number;
+            /**
+             * Sampling Method
+             * @default weighted
+             */
+            sampling_method: string;
+            /** Seed */
+            seed: number;
+            /** Strata Field */
+            strata_field?: string | null;
         };
         /** CohortStatus */
         CohortStatus: {
@@ -960,6 +1517,16 @@ export interface components {
             /** Items */
             items: components["schemas"]["EnvironmentInfo"][];
         };
+        /** EnvironmentSpec */
+        EnvironmentSpec: {
+            /**
+             * Province Code
+             * @description Province whose context is shown; None means each persona's own province.
+             */
+            province_code?: string | null;
+            /** Context Indicators */
+            context_indicators?: string[];
+        };
         /** ErrorBody */
         ErrorBody: {
             /** Code */
@@ -1038,6 +1605,28 @@ export interface components {
             /** Created */
             created: boolean;
         };
+        /** ExecutionSpec */
+        ExecutionSpec: {
+            /**
+             * Repetitions
+             * @description Independent responses per persona.
+             * @default 1
+             */
+            repetitions: number;
+            /**
+             * Max Attempts
+             * @description 1 = no retry. Retries apply to failed or invalid responses only.
+             * @default 1
+             */
+            max_attempts: number;
+            /**
+             * Max Calls
+             * @description Hard cap on backend calls, retries included.
+             */
+            max_calls: number;
+            /** Max Cost Usd */
+            max_cost_usd?: number | null;
+        };
         /** ExperimentConfig */
         ExperimentConfig: {
             /** Experiment Id */
@@ -1079,6 +1668,18 @@ export interface components {
             config_hash: string;
             /** Created At */
             created_at: string;
+        };
+        /** ExperimentDefinition */
+        ExperimentDefinition: {
+            /** Title */
+            title: string;
+            scenario: components["schemas"]["societytwin__national__experiments__ScenarioSpec"];
+            task: components["schemas"]["societytwin__national__experiments__TaskSpec"];
+            environment?: components["schemas"]["EnvironmentSpec"];
+            cohort: components["schemas"]["CohortSpec"];
+            model: components["schemas"]["ModelSpec"];
+            execution: components["schemas"]["ExecutionSpec"];
+            persona?: components["schemas"]["PersonaPolicy"];
         };
         /** ExperimentDetail */
         ExperimentDetail: {
@@ -1126,8 +1727,8 @@ export interface components {
             persona_source: "cohort" | "legacy_fixture_pair" | "legacy_fixture_single";
             /** Cohort Id */
             cohort_id?: string | null;
-            scenario?: components["schemas"]["ScenarioSpec"];
-            task: components["schemas"]["TaskSpec"];
+            scenario?: components["schemas"]["societytwin__experiments__models__ScenarioSpec"];
+            task: components["schemas"]["societytwin__experiments__models__TaskSpec"];
             /**
              * Environment
              * @default SURVEY
@@ -1269,6 +1870,36 @@ export interface components {
             path: string;
             /** Sha256 */
             sha256: string | null;
+        };
+        /** GenerateRequest */
+        GenerateRequest: {
+            /**
+             * Reference Year
+             * @default 2025
+             */
+            reference_year: number;
+            /**
+             * Synthetic Size
+             * @default 10000
+             */
+            synthetic_size: number;
+            /**
+             * Seed
+             * @default 42
+             */
+            seed: number;
+            /** Province Codes */
+            province_codes?: string[] | null;
+            /**
+             * Min Records Per Province
+             * @default 0
+             */
+            min_records_per_province: number;
+            /**
+             * Calibrate
+             * @default true
+             */
+            calibrate: boolean;
         };
         /** Generator */
         Generator: {
@@ -1439,6 +2070,37 @@ export interface components {
             /** Reasons */
             reasons: string[];
         };
+        /** ModelSpec */
+        ModelSpec: {
+            /**
+             * Backend
+             * @description stub: offline deterministic placeholder (not a model). matraix: MatrAIx survey agent.
+             */
+            backend: string;
+            /**
+             * Transport
+             * @description matraix only: fake = MatrAIx's zero-cost smoke client; live = provider calls (gated).
+             * @default fake
+             */
+            transport: string;
+            /** Model */
+            model?: string | null;
+            /**
+             * Temperature
+             * @default 0
+             */
+            temperature: number;
+            /**
+             * Seed
+             * @description Passed to backends that support a sampling seed.
+             */
+            seed?: number | null;
+            /**
+             * Max Output Tokens
+             * @default 512
+             */
+            max_output_tokens: number;
+        };
         /** Modes */
         Modes: {
             browse_offline: components["schemas"]["ModeCapability"];
@@ -1577,6 +2239,14 @@ export interface components {
             /** Created At */
             created_at: string | null;
         };
+        /** PersonaPolicy */
+        PersonaPolicy: {
+            /**
+             * Visible Fields
+             * @description None = default policy (see personas.DEFAULT_VISIBLE).
+             */
+            visible_fields?: string[] | null;
+        };
         /** PersonaSnapshot */
         PersonaSnapshot: {
             /** Sha256 */
@@ -1632,6 +2302,40 @@ export interface components {
             };
             /** Synthetic Label */
             synthetic_label: string;
+        };
+        /**
+         * PopulationFilter
+         * @description AND across fields, OR within a field. ``unavailable`` matches records without a source value.
+         */
+        PopulationFilter: {
+            /** Province Codes */
+            province_codes?: string[] | null;
+            /** Age Min */
+            age_min?: number | null;
+            /** Age Max */
+            age_max?: number | null;
+            /** Age Groups */
+            age_groups?: string[] | null;
+            /** Sexes */
+            sexes?: string[] | null;
+            /** Marital Statuses */
+            marital_statuses?: string[] | null;
+            /** Education Levels */
+            education_levels?: string[] | null;
+            /** Labour Statuses */
+            labour_statuses?: string[] | null;
+            /** Household Size Classes */
+            household_size_classes?: string[] | null;
+            /** Household Types */
+            household_types?: string[] | null;
+            /** Urbanicities */
+            urbanicities?: string[] | null;
+            /**
+             * Adult Only
+             * @description Only records aged 18 or over
+             * @default false
+             */
+            adult_only: boolean;
         };
         /** Preflight */
         Preflight: {
@@ -1850,6 +2554,11 @@ export interface components {
             /** Rows */
             rows: number;
         };
+        /** ReplayRequest */
+        ReplayRequest: {
+            /** Idempotency Key */
+            idempotency_key: string;
+        };
         /** Resident */
         Resident: {
             /** Person Id */
@@ -1948,6 +2657,19 @@ export interface components {
             /** Detail */
             detail: string;
         };
+        /** RunRequest */
+        RunRequest: {
+            /** Plan Hash */
+            plan_hash: string;
+            /** Idempotency Key */
+            idempotency_key: string;
+            /**
+             * Confirm
+             * @description Explicit confirmation that the reviewed plan should execute.
+             * @constant
+             */
+            confirm: true;
+        };
         /** RunnerInfo */
         RunnerInfo: {
             /** Provider Prefixes */
@@ -2021,18 +2743,16 @@ export interface components {
             /** Version */
             version: string | null;
         };
-        /** ScenarioSpec */
-        ScenarioSpec: {
-            /**
-             * Kind
-             * @default none
-             * @enum {string}
-             */
-            kind: "none" | "draft";
-            /** Text */
-            text?: string | null;
-            /** Version */
-            version?: string | null;
+        /** ScenarioParameter */
+        ScenarioParameter: {
+            /** Name */
+            name: string;
+            /** Label */
+            label: string;
+            /** Value */
+            value: number | string;
+            /** Unit */
+            unit?: string | null;
         };
         /** Scope */
         Scope: {
@@ -2140,6 +2860,13 @@ export interface components {
             /** Scenario Kinds */
             scenario_kinds: components["schemas"]["ScenarioKind"][];
         };
+        /** TaskOption */
+        TaskOption: {
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
+        };
         /** TaskOut */
         TaskOut: {
             /** Id */
@@ -2150,15 +2877,6 @@ export interface components {
             task_path: string;
             /** Content Hash */
             content_hash: string | null;
-        };
-        /** TaskSpec */
-        TaskSpec: {
-            /**
-             * Id
-             * @description The only verified task: MatrAIx example-survey_product-feedback.
-             * @constant
-             */
-            id: "product_feedback_v1";
         };
         /** Trial */
         Trial: {
@@ -2337,6 +3055,96 @@ export interface components {
             synthetic_label: string;
             /** Attribution Note */
             attribution_note: string;
+        };
+        /** CohortPreviewRequest */
+        societytwin__api__v2__CohortPreviewRequest: {
+            /** Population Id */
+            population_id: string;
+            filters?: components["schemas"]["PopulationFilter"];
+        };
+        /** CohortPreviewRequest */
+        societytwin__experiments__models__CohortPreviewRequest: {
+            /** Build Id */
+            build_id: string;
+            filters?: components["schemas"]["FilterSpec"];
+        };
+        /** ScenarioSpec */
+        societytwin__experiments__models__ScenarioSpec: {
+            /**
+             * Kind
+             * @default none
+             * @enum {string}
+             */
+            kind: "none" | "draft";
+            /** Text */
+            text?: string | null;
+            /** Version */
+            version?: string | null;
+        };
+        /** TaskSpec */
+        societytwin__experiments__models__TaskSpec: {
+            /**
+             * Id
+             * @description The only verified task: MatrAIx example-survey_product-feedback.
+             * @constant
+             */
+            id: "product_feedback_v1";
+        };
+        /** ScenarioSpec */
+        societytwin__national__experiments__ScenarioSpec: {
+            /** Title */
+            title: string;
+            /** Description */
+            description: string;
+            /** Parameters */
+            parameters?: components["schemas"]["ScenarioParameter"][];
+            /**
+             * Hypothetical
+             * @default true
+             */
+            hypothetical: boolean;
+            /**
+             * Source Note
+             * @description Required when the scenario is presented as factual: where its values come from.
+             */
+            source_note?: string | null;
+            /**
+             * Version
+             * @default 1
+             */
+            version: string;
+        };
+        /** TaskSpec */
+        societytwin__national__experiments__TaskSpec: {
+            /** Instruction */
+            instruction: string;
+            /**
+             * Response Type
+             * @default single_choice
+             */
+            response_type: string;
+            /** Options */
+            options: components["schemas"]["TaskOption"][];
+            /**
+             * Allow Other Text
+             * @default false
+             */
+            allow_other_text: boolean;
+            /**
+             * Ask Rationale
+             * @default true
+             */
+            ask_rationale: boolean;
+            /**
+             * Adult Only
+             * @default true
+             */
+            adult_only: boolean;
+            /**
+             * Version
+             * @default 1
+             */
+            version: string;
         };
     };
     responses: never;
@@ -2816,7 +3624,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CohortPreviewRequest"];
+                "application/json": components["schemas"]["societytwin__experiments__models__CohortPreviewRequest"];
             };
         };
         responses: {
@@ -4187,6 +4995,968 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    overview_api_v2_overview_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    capabilities_api_v2_capabilities_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    provinces_api_v2_geography_provinces_get: {
+        parameters: {
+            query?: {
+                reference_year?: number;
+                population_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    environment_api_v2_environments__province_code__get: {
+        parameters: {
+            query?: {
+                reference_year?: number;
+            };
+            header?: never;
+            path: {
+                province_code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    controls_api_v2_controls_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    controls_build_api_v2_controls_build_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    data_sources_api_v2_data_sources_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    populations_api_v2_populations_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    generate_api_v2_populations_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GenerateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    population_api_v2_populations__population_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                population_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    summary_api_v2_populations__population_id__summary_get: {
+        parameters: {
+            query?: {
+                province_codes?: string[] | null;
+                age_min?: number | null;
+                age_max?: number | null;
+                age_groups?: string[] | null;
+                sexes?: string[] | null;
+                marital_statuses?: string[] | null;
+                education_levels?: string[] | null;
+                labour_statuses?: string[] | null;
+                household_size_classes?: string[] | null;
+                household_types?: string[] | null;
+                urbanicities?: string[] | null;
+                adult_only?: boolean;
+            };
+            header?: never;
+            path: {
+                population_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    records_api_v2_populations__population_id__records_get: {
+        parameters: {
+            query?: {
+                sort?: "synthetic_id" | "province_code" | "age" | "age_group" | "sex" | "population_weight";
+                direction?: "asc" | "desc";
+                offset?: number;
+                limit?: number;
+                province_codes?: string[] | null;
+                age_min?: number | null;
+                age_max?: number | null;
+                age_groups?: string[] | null;
+                sexes?: string[] | null;
+                marital_statuses?: string[] | null;
+                education_levels?: string[] | null;
+                labour_statuses?: string[] | null;
+                household_size_classes?: string[] | null;
+                household_types?: string[] | null;
+                urbanicities?: string[] | null;
+                adult_only?: boolean;
+            };
+            header?: never;
+            path: {
+                population_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    record_api_v2_populations__population_id__records__synthetic_id__get: {
+        parameters: {
+            query?: {
+                visible_fields?: string[] | null;
+            };
+            header?: never;
+            path: {
+                population_id: string;
+                synthetic_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    validation_api_v2_populations__population_id__validation_get: {
+        parameters: {
+            query?: {
+                province_code?: string | null;
+            };
+            header?: never;
+            path: {
+                population_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cohort_preview_api_v2_cohorts_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["societytwin__api__v2__CohortPreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cohort_list_api_v2_cohorts_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    cohort_create_api_v2_cohorts_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CohortDefinitionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cohort_get_api_v2_cohorts__cohort_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                cohort_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cohort_sample_api_v2_cohorts__cohort_id__samples_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                cohort_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CohortSampleRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sample_api_v2_samples__sample_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sample_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sample_personas_api_v2_samples__sample_id__personas_get: {
+        parameters: {
+            query?: {
+                offset?: number;
+                limit?: number;
+                visible_fields?: string[] | null;
+            };
+            header?: never;
+            path: {
+                sample_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    example_api_v2_examples_fare_experiment_get: {
+        parameters: {
+            query: {
+                cohort_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    experiment_list_api_v2_experiments_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    experiment_create_api_v2_experiments_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExperimentDefinition"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    experiment_get_api_v2_experiments__experiment_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                experiment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    experiment_plan_api_v2_experiments__experiment_id__plan_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                experiment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    experiment_run_api_v2_experiments__experiment_id__runs_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                experiment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RunRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    runs_api_v2_runs_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    run_api_v2_runs__run_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    run_responses_api_v2_runs__run_id__responses_get: {
+        parameters: {
+            query?: {
+                final_only?: boolean;
+                offset?: number;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    run_aggregate_api_v2_runs__run_id__aggregate_get: {
+        parameters: {
+            query?: {
+                group_by?: string[] | null;
+                min_group?: number;
+            };
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    run_replay_api_v2_runs__run_id__replay_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReplayRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

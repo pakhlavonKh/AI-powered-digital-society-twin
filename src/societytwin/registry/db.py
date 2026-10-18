@@ -75,6 +75,64 @@ MIGRATIONS: list[tuple[int, str, str]] = [
             first_seen_at TEXT NOT NULL
         );
     """),
+    (2, "national pipeline", """
+        CREATE TABLE national_cohorts (
+            cohort_id TEXT PRIMARY KEY,
+            population_id TEXT NOT NULL,
+            name TEXT NOT NULL,
+            definition_json TEXT NOT NULL,
+            definition_hash TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        );
+        CREATE TABLE national_cohort_samples (
+            sample_id TEXT PRIMARY KEY,
+            cohort_id TEXT NOT NULL REFERENCES national_cohorts(cohort_id),
+            config_hash TEXT NOT NULL,
+            sample_json TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            UNIQUE (cohort_id, config_hash)
+        );
+        CREATE TABLE national_experiments (
+            experiment_id TEXT PRIMARY KEY,
+            definition_json TEXT NOT NULL,
+            definition_hash TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        );
+        CREATE TABLE national_plans (
+            plan_hash TEXT PRIMARY KEY,
+            experiment_id TEXT NOT NULL REFERENCES national_experiments(experiment_id),
+            plan_json TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        );
+        CREATE TABLE national_runs (
+            run_id TEXT PRIMARY KEY,
+            experiment_id TEXT NOT NULL REFERENCES national_experiments(experiment_id),
+            plan_hash TEXT NOT NULL REFERENCES national_plans(plan_hash),
+            kind TEXT NOT NULL,
+            replay_of TEXT,
+            idempotency_key TEXT NOT NULL UNIQUE,
+            state TEXT NOT NULL,
+            worker_id TEXT,
+            created_at TEXT NOT NULL,
+            started_at TEXT,
+            finished_at TEXT,
+            summary_json TEXT,
+            error_code TEXT,
+            error_message TEXT
+        );
+        CREATE TABLE national_responses (
+            response_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            run_id TEXT NOT NULL REFERENCES national_runs(run_id),
+            is_final INTEGER NOT NULL,
+            row_json TEXT NOT NULL
+        );
+        CREATE INDEX national_responses_run ON national_responses(run_id, is_final);
+        CREATE TABLE response_cache (
+            cache_key TEXT PRIMARY KEY,
+            payload_json TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        );
+    """),
 ]
 
 
