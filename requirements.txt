@@ -1,6 +1,8 @@
 # SocietyTwin: Python dependencies
 #
-# No code has been written yet, so no packages are installed or pinned here.
+# The implemented workbench and national pipeline declare their dependencies in pyproject.toml; the tested
+# environment is pinned in requirements-api.lock (install that, not this file). The list below is the
+# original PROPOSED stack; pyarrow, pydantic, fastapi and pytest are in use, the others are not yet.
 #
 # Target Python version: 3.12 (3.11 minimum), per the PROPOSED v2 architecture
 # (docs/societytwin-v2-architecture.md, section 6.1). Dependencies will be

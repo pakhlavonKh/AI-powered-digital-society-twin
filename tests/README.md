@@ -1,10 +1,11 @@
 # Tests
 
-**Status:** Tests exist for the research workbench (`src/societytwin/`, `frontend/`); the rest of the v2 strategy below is still planned.
+**Status:** Tests exist for the workbench and the national pipeline (`src/societytwin/`, `frontend/`); property-based tests and scheduled benchmarks from the strategy below are still planned (`python -m societytwin.national benchmark` runs the benchmark manually).
 
 | Suite | Command | Data |
 |---|---|---|
 | Unit and API (`tests/unit`, `tests/api`) | `.venv/bin/python -m pytest -m "not local_fixture and not matraix"` | Artificial fixture in `tests/fixtures/artificial_experiment/` |
+| National pipeline (`tests/national`) | same command | Artificial long-format package in `tests/fixtures/artificial_tuik_package/` |
 | Supplied-fixture regression (`tests/regression`) | `.venv/bin/python -m pytest -m local_fixture` | The tracked Ankara fixtures and, if present, the git-ignored run folders |
 | MatrAIx integration (`tests/integration`) | set `SOCIETYTWIN_TEST_MATRAIX_ROOT` and `SOCIETYTWIN_TEST_RUNTIME_PYTHON` | External MatrAIx checkout; no provider keys |
 | Frontend | `cd frontend && npx vitest run`, `./scripts/e2e.sh` | Mocked API / artificial fixture |

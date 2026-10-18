@@ -1,19 +1,21 @@
 # SocietyTwin Research Workbench
 
-> **Status:** working local release. Offline browsing, cohorts, persona provenance, recorded results and validation work
-> without MatrAIx or provider keys. Fake smoke runs, A/B preflight and persona materialization work when an external
-> MatrAIx checkout and runtime interpreter are configured. Live provider execution is implemented but **disabled by
-> default** and has not been exercised against a provider.
+> **Status:** working local release. The main pages serve the **national pipeline** (`/api/v2`); see
+> [national-pipeline.md](national-pipeline.md) for what it implements. This document covers setup and configuration of
+> the whole workbench, and the **historical Ankara workbench** (`/api/v1`), which the UI keeps under **Historical**
+> (`/historical/...`). Live provider execution is implemented but **disabled by default** and has not been exercised
+> against a provider.
 
-The workbench is a local web UI and API over the Ankara proof-of-concept in
-[`experiments/matraix_simulation/`](../experiments/matraix_simulation/). It follows the workflow
-**Dashboard → Population Explorer → Cohorts → Persona Explorer → New Experiment → Results → Validation / Data Sources**.
+The historical workbench is a web UI and API over the Ankara proof-of-concept in
+[`experiments/matraix_simulation/`](../experiments/matraix_simulation/), with the workflow
+**Overview → Population Explorer → Cohorts → Persona Explorer → New Experiment → Results → Validation / Data Sources**
+under `/historical`.
 
 Everything it shows is computed from the actual fixture files and recorded run folders. It never calls a model to
 create population records or to fill persona fields, and it keeps population records, personas and active LLM agents
 separate, as in [persona-schema.md](persona-schema.md).
 
-## What works and what is gated
+## What works and what is gated (historical workbench)
 
 | Area | Status | Notes |
 |---|---|---|
@@ -28,7 +30,8 @@ separate, as in [persona-schema.md](persona-schema.md).
 | Live two-persona A/B | **Disabled by default** | Exactly the existing runner with `--execute` (two calls, zero retries), behind an explicit start, idempotency key and fresh output directory. Tested only with a fake runtime. |
 | Results | Works offline | Imported run folders and managed runs; side-by-side answers, usage marked as estimated, recorded prompts, consistency checks, artifacts, events, CSV/JSON export. |
 | Validation / Data Sources | Works offline | Integrity checks and source-table fit (marginal shares, joint age × sex TVD, marital-within-sex TVD). No thresholds or scores. |
-| Cohort execution, scenario execution, new environments, cache replay, stratified sampling, national generation, held-out or behavioural validation | Not implemented | Each is shown as unavailable with a reason. `POST /experiments/{id}/reproduce` returns 501. |
+| Cohort execution, scenario execution, new environments, cache replay, stratified sampling, national generation | Not in `/api/v1` | Implemented in the national pipeline (`/api/v2`). In v1 they stay unavailable; `POST /api/v1/experiments/{id}/reproduce` returns 501. |
+| Held-out or behavioural validation | Not implemented | Neither API implements it. |
 
 ## Quick start
 
@@ -39,8 +42,12 @@ python3.12 -m venv .venv
 .venv/bin/pip install -r requirements-api.lock
 .venv/bin/pip install -e . --no-deps
 (cd frontend && npm ci)
+PYTHONPATH=src .venv/bin/python -m societytwin.national build-controls    # optional: the UI offers the same buttons
+PYTHONPATH=src .venv/bin/python -m societytwin.national generate --size 10000 --seed 42
 ./scripts/dev.sh            # API on 127.0.0.1:8000, UI on http://127.0.0.1:3000
 ```
+
+Windows commands are in [national-pipeline.md](national-pipeline.md#2-quick-start).
 
 If the workbench is already running, the script prints its address and exits instead of starting a second copy.
 Otherwise it takes the first free port from 8000 for the API and from 3000 for the UI, and prints the address. Ports set
@@ -91,7 +98,13 @@ and the provider's terms before enabling it; it has not been run against a provi
 | `SOCIETYTWIN_ENABLE_LIVE_EXECUTION` | off | Allows the live A/B mode |
 | `SOCIETYTWIN_LOCAL_MUTATIONS` | on | POST endpoints, accepted from loopback clients only |
 | `SOCIETYTWIN_FRONTEND_ORIGINS` | `http://127.0.0.1:3000,http://localhost:3000` | CORS allowlist |
-| `SOCIETYTWIN_API_ORIGIN` (frontend) | `http://127.0.0.1:8000` | Where Next forwards `/api/v1`; server-side only, set at build time for `next build` |
+| `SOCIETYTWIN_API_ORIGIN` (frontend) | `http://127.0.0.1:8000` | Where Next forwards `/api/v1` and `/api/v2`; server-side only, set at build time for `next build` |
+| `SOCIETYTWIN_TUIK_PACKAGE` | `data/raw/tuik_package` | Long-format TÜİK package (national pipeline) |
+| `SOCIETYTWIN_TUIK_MAPPING` | `data/tuik_package_mapping.yaml` | Rules mapping package indicators to control tables |
+| `SOCIETYTWIN_CONTROLS_DIR` | `data/processed/national` | Built control store |
+| `SOCIETYTWIN_POPULATIONS_DIR` | `data/populations` | Generated populations |
+| `SOCIETYTWIN_MAX_AGENTS` | `200` | Maximum active personas per national run |
+| `SOCIETYTWIN_MODEL_PRICES` | unset | Optional YAML price table (`models: {provider/model: {input_per_mtok, output_per_mtok, source, as_of}}`); without it cost is unknown |
 
 This is a local development service. It has no authentication and must not be exposed beyond the machine.
 
@@ -153,12 +166,13 @@ The brief was written against `AI-powered-digital-society-twin-matraix-simulatio
 .venv/bin/python -m pytest -m "not local_fixture and not matraix"   # what CI runs
 SOCIETYTWIN_TEST_MATRAIX_ROOT=... SOCIETYTWIN_TEST_RUNTIME_PYTHON=... .venv/bin/python -m pytest tests/integration
 (cd frontend && npx tsc --noEmit && npx vitest run)
-./scripts/e2e.sh                                 # production build + Playwright against the artificial fixture
+./scripts/e2e.sh                                 # production build + Playwright (historical + national) on artificial fixtures
 ./scripts/check_bundle.sh                        # after a build: no server configuration in the client bundle
 ```
 
 - CI fixtures in `tests/fixtures/artificial_experiment/` are invented (TESTLAND, 2099, `TST2099_*`) and regenerated by
-  `tests/fixtures/build_artificial_fixtures.py`.
+  `tests/fixtures/build_artificial_fixtures.py`. The national tests use `tests/fixtures/artificial_tuik_package/`
+  (real plate codes, invented values), regenerated by `tests/fixtures/build_artificial_tuik_package.py`.
 - Every pytest test blocks non-loopback sockets and strips provider keys. The integration suite passes no keys to its
   subprocesses and asserts afterwards that the experiment folder is byte-identical.
 - `tests/regression/` re-runs the experiment's own seed-42 sampling in an isolated process and compares the rows.
@@ -180,8 +194,6 @@ SOCIETYTWIN_TEST_MATRAIX_ROOT=... SOCIETYTWIN_TEST_RUNTIME_PYTHON=... .venv/bin/
 ## Remaining work
 
 - Decide whether to port the archive's boolean-coercion runner change and report script into `main`.
-- Cohort execution: a runner that accepts arbitrary persona paths, with the per-persona preflight checks the A/B
-  runner performs, before cohorts can run.
-- A Türkiye-specific instrument and a scenario executor (SCENARIO environment).
+- Add the team's TÜİK package and its mapping rules (national pipeline, see national-pipeline.md).
 - Held-out validation tables, persona-adherence experiments and agreed thresholds.
 - Authentication and a non-local deployment, if the workbench is ever shared.
