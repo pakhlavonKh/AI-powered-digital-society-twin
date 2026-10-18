@@ -3,6 +3,9 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
+import { PersonaGallery } from "@/components/PersonaGallery";
+import { Icon } from "@/components/Icon";
+import { PersonaComparison } from "@/components/PersonaComparison";
 import { CopyId } from "@/components/CopyId";
 import { Notice, SyntheticNotice } from "@/components/Notices";
 import { PageHeader } from "@/components/PageHeader";
@@ -67,12 +70,12 @@ export default function PersonaPage() {
   return (
     <>
       <PageHeader title="Persona Explorer">
-        Every resident has a read-only source card. A persona is a separate MatrAIx-compatible YAML file; only some residents have one.
+        Synthetic resident cards created from demographic data. Explore their sources and model-visible attributes.
       </PageHeader>
       <SyntheticNotice kind="responses" />
       {missingBuildId ? <UnavailableState title={`Build ${missingBuildId} is not registered.`} /> : null}
 
-      <section className="card stack" aria-labelledby="lookup-h">
+      <section className={`card stack ${record ? "" : "persona-search"}`} aria-labelledby="lookup-h">
         <h2 id="lookup-h">Choose a resident</h2>
         <form className="row" onSubmit={(e) => { e.preventDefault(); if (lookup.trim()) open(lookup); }}>
           <label htmlFor="record-input">Resident ID</label>
@@ -93,7 +96,7 @@ export default function PersonaPage() {
         ) : null}
       </section>
 
-      {!record ? <EmptyState title="No resident selected.">Open a resident from the Population Explorer, a cohort, or the ID box above.</EmptyState> : null}
+      {!record && buildId ? <PersonaGallery buildId={buildId} linkBuild={linkBuild}/> : null}
       {view.loading && !v ? <Loading what="resident" /> : null}
       {view.error ? <ErrorState error={view.error} onRetry={view.reload} what={`resident ${record}`} /> : null}
 
@@ -104,7 +107,9 @@ export default function PersonaPage() {
             {status ? <Badge tone={status[1]} glyph={status[1] === "neutral" ? "·" : "◆"}>{status[0]}</Badge> : null}
           </div>
 
+          <div className="persona-detail-layout">
           <section className="card stack" aria-labelledby="card-h">
+            <div className="persona-detail-heading"><span className="persona-avatar"><Icon name="persona" size={36}/></span><div><h2>{v.record_id}</h2><span className="small muted">Fictional synthetic resident · {v.source_card.context.province}</span></div></div>
             <div className="card-head"><h3 id="card-h">Source card: the population row</h3><Badge tone="neutral" glyph="▤">Not a persona</Badge></div>
             <p className="small muted">{v.source_card.note}</p>
             <div className="table-wrap">
@@ -137,6 +142,8 @@ export default function PersonaPage() {
             </details>
           </section>
 
+          <PersonaComparison recordId={v.record_id} evidence={v.historical_prompt_evidence} linkBuild={linkBuild}/>
+          </div>
           {v.personas.map((p) => <PersonaArtifactCard key={p.persona_artifact_id} persona={p} sourceAttributes={v.source_card.attributes} />)}
 
           <div className="grid-2">

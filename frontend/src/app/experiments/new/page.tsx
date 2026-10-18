@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { Icon } from "@/components/Icon";
 import { CopyId } from "@/components/CopyId";
 import { Notice, SyntheticNotice } from "@/components/Notices";
 import { PageHeader } from "@/components/PageHeader";
@@ -46,8 +47,7 @@ export default function NewExperimentPage() {
   return (
     <>
       <PageHeader title="New Experiment">
-        Scenario, task and environment are separate choices. Drafts may describe things that cannot run yet; execution is offered only for
-        the exact paths that exist. Nothing contacts a model on this page until you press an explicit start button.
+        Define a scenario, task and environment for your synthetic personas.
       </PageHeader>
       <SyntheticNotice kind="responses" />
       {draftId ? <DraftView draftId={draftId} /> : <DraftForm />}
@@ -68,6 +68,7 @@ function DraftForm() {
     name: "", personaSource: cohortParam ? "cohort" : "legacy_fixture_pair", cohortId: cohortParam ?? "", scenarioKind: "none",
     scenarioText: "", environment: "SURVEY", mode: "preflight", model: "", temperature: "0", callsLimit: "0",
   });
+  const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<ApiError | undefined>();
   const set = <K extends keyof Form>(key: K, value: Form[K]) => setForm((f) => ({ ...f, [key]: value }));
@@ -115,9 +116,49 @@ function DraftForm() {
 
   return (
     <div className="stack">
-      <Steps current={0} done={0} />
       {caps.error ? <ErrorState error={caps.error} onRetry={caps.reload} what="capabilities" /> : null}
 
+      <ol className="steps reference-wizard" aria-label="Design experiment steps">
+        {[["Scenario","What is happening?"],["Task","What should personas do?"],["Environment","How will they respond?"],["Cohort","Who will participate?"]].map(([title,hint],i)=><li key={title} aria-current={step===i?"step":undefined} className={i<step?"done":undefined}><button type="button" aria-label={`Step ${i+1}: ${title}`} onClick={()=>setStep(i)}><span>{i<step?"✓":i+1}</span><span>{title}<small>{hint}</small></span></button></li>)}
+      </ol>
+      {step===0 ? <div className="wizard-panels"><section className="card stack wizard-panel"><h2><Icon name="sources"/> Scenario</h2><div className="field"><label htmlFor="scenario-title">Title</label><input id="scenario-title" type="text" maxLength={120} value={form.name} onChange={e=>set("name",e.target.value)} placeholder="Name your experiment"/></div><p className="small muted">Describe the situation presented to personas. Custom scenarios are saved as drafts until a compatible runner exists.</p>
+          <fieldset>
+            <legend>Scenario (the condition)</legend>
+            <label className="check"><input type="radio" name="scenario" checked={form.scenarioKind === "none"} onChange={() => set("scenarioKind", "none")} /> None: task unchanged</label>
+            <label className="check"><input type="radio" name="scenario" checked={form.scenarioKind === "draft"} onChange={() => set("scenarioKind", "draft")} /> Custom scenario (draft only)</label>
+            {form.scenarioKind === "draft" ? (
+              <div className="field" style={{ marginTop: 8 }}>
+                <label htmlFor="scenario-text">Scenario text</label>
+                <textarea id="scenario-text" maxLength={4000} value={form.scenarioText} onChange={(e) => set("scenarioText", e.target.value)} />
+                <span className="field-hint">Saved with the draft. Execution stays disabled: the fixed runner has no scenario input.</span>
+              </div>
+            ) : null}
+          </fieldset>
+      </section><section className="card stack wizard-panel"><h2>Scenario preview</h2><div className="scenario-preview"><span className="scenario-symbol"><Icon name={form.scenarioKind==='draft'?"location":"experiment"} size={40}/></span><h3>{form.name.trim() || (form.scenarioKind==='draft'?"Your research scenario":"Product feedback survey")}</h3><p>{form.scenarioKind==='draft'?(form.scenarioText||"Your scenario description will appear here."):"The existing survey task is used without a scenario manipulation."}</p><Badge tone={form.scenarioKind==='draft'?"warn":"info"} glyph="·">{form.scenarioKind==='draft'?"Draft only":"Existing task"}</Badge></div><p className="small muted">Illustrative preview. No responses have been generated.</p></section></div> : null}
+      {step===1 ? <section className="card stack wizard-panel"><h2><Icon name="sources"/> Task</h2>          <fieldset>
+            <legend>Task (instrument and response schema)</legend>
+            {tasks.data?.items.map((t) => (
+              <div key={t.id}>
+                <label className="check"><input type="radio" name="task" checked readOnly /> {t.title}</label>
+                <p className="small muted">Instrument <code>{t.instrument_id}</code>{t.question_count_from_snapshots ? `, ${t.question_count_from_snapshots} questions in recorded snapshots` : ""}.
+                  External task content: {t.external_content_available ? "available" : "not available in this environment"}.</p>
+                <ul className="small muted">{t.notes.map((n) => <li key={n}>{n}</li>)}</ul>
+              </div>
+            )) ?? <Loading what="tasks" />}
+          </fieldset></section> : null}
+      {step===2 ? <section className="card stack wizard-panel"><h2><Icon name="layers"/> Environment</h2>          <fieldset>
+            <legend>Environment (the execution mechanism)</legend>
+            {envs.data?.items.map((e) => (
+              <div key={e.name}>
+                <label className="check">
+                  <input type="radio" name="environment" checked={form.environment === e.name} onChange={() => set("environment", e.name as Form["environment"])} />
+                  {e.name} {e.status === "draft_only" ? <Badge tone="neutral" glyph="·">Draft only</Badge> : null}
+                </label>
+                <p className="small muted">{e.description}{e.reasons.length ? ` ${e.reasons.join(" ")}` : ""}</p>
+              </div>
+            )) ?? <Loading what="environments" />}
+          </fieldset></section> : null}
+      {step===3 ? <>
       <section className="card stack" aria-labelledby="s1">
         <h2 id="s1">1. Personas</h2>
         <fieldset>
@@ -161,50 +202,7 @@ function DraftForm() {
             ) : null}
           </div>
         ) : null}
-      </section>
-
-      <section className="card stack" aria-labelledby="s2">
-        <h2 id="s2">2. Scenario, task and environment</h2>
-        <div className="grid-3">
-          <fieldset>
-            <legend>Scenario (the condition)</legend>
-            <label className="check"><input type="radio" name="scenario" checked={form.scenarioKind === "none"} onChange={() => set("scenarioKind", "none")} /> None: task unchanged</label>
-            <label className="check"><input type="radio" name="scenario" checked={form.scenarioKind === "draft"} onChange={() => set("scenarioKind", "draft")} /> Custom scenario (draft only)</label>
-            {form.scenarioKind === "draft" ? (
-              <div className="field" style={{ marginTop: 8 }}>
-                <label htmlFor="scenario-text">Scenario text</label>
-                <textarea id="scenario-text" maxLength={4000} value={form.scenarioText} onChange={(e) => set("scenarioText", e.target.value)} />
-                <span className="field-hint">Saved with the draft. Execution stays disabled: the fixed runner has no scenario input.</span>
-              </div>
-            ) : null}
-          </fieldset>
-          <fieldset>
-            <legend>Task (instrument and response schema)</legend>
-            {tasks.data?.items.map((t) => (
-              <div key={t.id}>
-                <label className="check"><input type="radio" name="task" checked readOnly /> {t.title}</label>
-                <p className="small muted">Instrument <code>{t.instrument_id}</code>{t.question_count_from_snapshots ? `, ${t.question_count_from_snapshots} questions in recorded snapshots` : ""}.
-                  External task content: {t.external_content_available ? "available" : "not available in this environment"}.</p>
-                <ul className="small muted">{t.notes.map((n) => <li key={n}>{n}</li>)}</ul>
-              </div>
-            )) ?? <Loading what="tasks" />}
-          </fieldset>
-          <fieldset>
-            <legend>Environment (the execution mechanism)</legend>
-            {envs.data?.items.map((e) => (
-              <div key={e.name}>
-                <label className="check">
-                  <input type="radio" name="environment" checked={form.environment === e.name} onChange={() => set("environment", e.name as Form["environment"])} />
-                  {e.name} {e.status === "draft_only" ? <Badge tone="neutral" glyph="·">Draft only</Badge> : null}
-                </label>
-                <p className="small muted">{e.description}{e.reasons.length ? ` ${e.reasons.join(" ")}` : ""}</p>
-              </div>
-            )) ?? <Loading what="environments" />}
-          </fieldset>
-        </div>
-      </section>
-
-      <section className="card stack" aria-labelledby="s3">
+      </section>      <section className="card stack" aria-labelledby="s3">
         <h2 id="s3">3. Execution settings</h2>
         <fieldset>
           <legend>Mode</legend>
@@ -241,9 +239,7 @@ function DraftForm() {
             <span className="field-hint">The live A/B path makes exactly 2 calls; preflight and smoke make none.</span>
           </div>
         </div>
-      </section>
-
-      <section className="card stack" aria-labelledby="s4">
+      </section>      <section className="card stack" aria-labelledby="s4">
         <h2 id="s4">4. Save draft</h2>
         <div className="field">
           <label htmlFor="name">Draft name</label>
@@ -258,6 +254,8 @@ function DraftForm() {
           <span className="small muted">Saving records the configuration only. Nothing is queued or run.</span>
         </div>
       </section>
+      </> : null}
+      <div className="wizard-actions"><button type="button" className="button" disabled={step===0} onClick={()=>setStep(n=>n-1)}>Back</button><span className="small muted">Step {step+1} of 4 · Nothing is run when a draft is saved</span>{step<3?<button type="button" className="button primary" onClick={()=>setStep(n=>n+1)}>Next <Icon name="arrow" size={14}/></button>:<span/>}</div>
     </div>
   );
 }

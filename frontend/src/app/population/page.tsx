@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { BuildDetails } from "@/components/BuildDetails";
+import { DonutCard } from "@/components/charts/DonutCard";
+import { Icon } from "@/components/Icon";
 import { BarChartCard } from "@/components/charts/BarChartCard";
 import { FilterControls } from "@/components/FilterControls";
 import { SyntheticNotice } from "@/components/Notices";
@@ -80,7 +82,7 @@ export default function PopulationPage() {
   return (
     <>
       <PageHeader title="Population Explorer">
-        Browse the rows of the selected synthetic build. Filters, counts and charts are computed by the API over the actual rows.
+        Explore the synthetic population generated from TÜİK data.
       </PageHeader>
       <SyntheticNotice kind="population" />
       {buildError ? <ErrorState error={buildError} onRetry={reloadBuilds} what="builds" /> : null}
@@ -89,7 +91,8 @@ export default function PopulationPage() {
 
       {build && buildId ? (
         <>
-          <section className="card" aria-labelledby="filters-h">
+          <div className="explorer-layout">
+          <section className="card explorer-filters" aria-labelledby="filters-h">
             <div className="card-head">
               <h2 id="filters-h">Filters</h2>
               <div className="row">
@@ -108,7 +111,7 @@ export default function PopulationPage() {
           {summary.error ? <ErrorState error={summary.error} onRetry={summary.reload} what="summary" /> : null}
           {summary.loading && !s ? <Loading what="summary" /> : null}
           {s ? (
-            <section className={`card stack ${summary.loading ? "is-stale" : ""}`} aria-busy={summary.loading} aria-labelledby="summary-h">
+            <section className={`card stack explorer-summary ${summary.loading ? "is-stale" : ""}`} aria-busy={summary.loading} aria-labelledby="summary-h">
               <div className="card-head">
                 <h2 id="summary-h">{fmtInt(s.denominator)} of {fmtInt(s.total_records)} residents match</h2>
                 <span className="small muted">Denominator for every share below: {fmtInt(s.denominator)}</span>
@@ -118,19 +121,21 @@ export default function PopulationPage() {
               ) : (
                 <>
                   <div className="tiles">
+                    <StatTile label="Filtered population" value={fmtInt(s.denominator)} sub="Matching synthetic residents"/>
+                    <StatTile label="Current dataset" value={fmtInt(s.total_records)} sub="Residents before filters"/>
                     {(dist("gender")?.categories ?? []).map((c) => (
                       <StatTile key={c.value} label={`Sex: ${c.value}`} value={fmtInt(c.count)} sub={`${fmtPct(c.share)} of matching residents`} />
                     ))}
                   </div>
-                  <div className={available.includes("marital_status") ? "grid-2" : "stack"}>
-                    <BarChartCard title="Age group by sex" subtitle="residents" rows={ageRows}
+                  <div className="distribution-grid">
+                    <BarChartCard title="Age distribution" subtitle="by source age band and sex" orientation="columns" rows={ageRows}
                       series={[{ key: "male", label: "male", slot: "series-1" }, { key: "female", label: "female", slot: "series-2" }]}
                       valueLabel="residents" format={(v) => fmtInt(v)} />
                     {available.includes("marital_status") ? (
-                      <BarChartCard title="Marital status" subtitle="residents; not_applicable for under-15s by construction" rows={maritalRows}
-                        series={[{ key: "count", label: "Residents", slot: "series-1" }]} valueLabel="residents" format={(v) => fmtInt(v)}
-                        tableExtra={[{ header: "Share", render: (r) => fmtPct((r as unknown as { share: number | null }).share) }]} />
+                      <DonutCard title="Marital status" total={s.denominator} rows={maritalRows.map((r) => ({ category:r.category,label:r.label,count:r.values.count,share:r.share }))}/>
                     ) : null}
+                    <div className="unavailable-chart"><h3>Education level</h3><Icon name="chart" size={35}/><p>Education is not recorded in this population.</p><span>No source data</span></div>
+                    <div className="unavailable-chart"><h3>Employment status</h3><Icon name="chart" size={35}/><p>Employment is not recorded in this population.</p><span>No source data</span></div>
                   </div>
                   <details>
                     <summary>Method and limitations</summary>
@@ -153,6 +158,7 @@ export default function PopulationPage() {
             </section>
           ) : null}
 
+          </div>
           <section className="card stack" aria-labelledby="records-h">
             <div className="card-head">
               <h2 id="records-h">Residents</h2>

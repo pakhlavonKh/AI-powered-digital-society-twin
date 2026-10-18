@@ -9,9 +9,9 @@ async function heading(page: Page, name: string) {
 test("sidebar follows the requested workflow order and every page loads", async ({ page }) => {
   await page.goto("/");
   const links = page.getByRole("navigation", { name: "Workbench" }).getByRole("link");
-  await expect(links).toHaveText([/Dashboard/, /Population Explorer/, /Cohorts/, /Persona Explorer/, /New Experiment/, /Results/, /Validation \/ Data Sources/]);
+  await expect(links).toHaveText([/Dashboard/, /Population Explorer/, /Cohorts/, /Persona Explorer/, /New Experiment/, /Results/, /Validation/, /Data Sources/]);
   for (const [label, title] of [["Population Explorer", "Population Explorer"], ["Cohorts", "Cohorts"], ["Persona Explorer", "Persona Explorer"],
-    ["New Experiment", "New Experiment"], ["Results", "Results"], ["Validation / Data Sources", "Validation"], ["Dashboard", "Dashboard"]] as const) {
+    ["New Experiment", "New Experiment"], ["Results", "Results"], ["Validation", "Validation"], ["Data Sources", "Data Sources"], ["Dashboard", "Dashboard"]] as const) {
     await links.filter({ hasText: label }).click();
     await heading(page, title);
   }
@@ -82,12 +82,14 @@ test("persona explorer separates source cards from stored personas", async ({ pa
 
 test("experiment drafts save with exact blockers and cannot launch unsupported execution", async ({ page }) => {
   await page.goto("/experiments/new");
+  await page.getByRole("button", { name: "Step 4: Cohort" }).click();
   await page.getByLabel("Draft name").fill("e2e draft");
   await page.getByRole("button", { name: "Save draft" }).click();
   await expect(page.getByText("Saved as a draft. Execution is blocked:")).toBeVisible();
   await expect(page.getByText("model_required")).toBeVisible();
   await expect(page.getByRole("button", { name: "Run preflight" })).toBeDisabled();
   await page.getByRole("link", { name: "Start another draft" }).click();
+  await page.getByRole("button", { name: "Step 4: Cohort" }).click();
   await page.getByLabel("Model (provider/model)").fill("fakeprov/artificial-model");
   await page.getByLabel("Draft name").fill("e2e pair");
   await page.getByRole("button", { name: "Save draft" }).click();
@@ -121,4 +123,16 @@ test("validation keeps integrity separate from fit and invents no score", async 
   await expect(page.getByText(/held out table comparison/i)).toBeVisible();
   await page.getByRole("link", { name: "Data sources", exact: true }).click();
   await expect(page.getByText("No datasets are registered in the root manifest.")).toBeVisible();
+});
+
+
+test("experiment builder keeps the scenario title while moving between design steps", async ({ page }) => {
+  await page.goto("/experiments/new");
+  await page.getByLabel("Title", { exact: true }).fill("Local design draft");
+  await page.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Task", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Step 4: Cohort" }).click();
+  await expect(page.getByLabel("Draft name")).toHaveValue("Local design draft");
+  await page.getByRole("button", { name: "Step 1: Scenario" }).click();
+  await expect(page.getByLabel("Title", { exact: true })).toHaveValue("Local design draft");
 });

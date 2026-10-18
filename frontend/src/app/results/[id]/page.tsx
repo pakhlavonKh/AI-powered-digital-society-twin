@@ -8,7 +8,7 @@ import { SafeMarkdown } from "@/components/Markdown";
 import { Notice, SyntheticNotice } from "@/components/Notices";
 import { PageHeader } from "@/components/PageHeader";
 import { ErrorState, Loading } from "@/components/States";
-import { KeyValues } from "@/components/StatTile";
+import { KeyValues, StatTile } from "@/components/StatTile";
 import { Badge, CheckBadge, OriginBadge, RunStateBadge, TrialStateBadge } from "@/components/StatusBadge";
 import { UsageTable } from "@/components/UsageTable";
 import { api, unwrap, type Schemas } from "@/lib/api/client";
@@ -113,10 +113,17 @@ export default function ResultDetailPage() {
             {r.evidence_kind === "live" ? <Badge tone="info" glyph="◆">Live provider evidence (recorded)</Badge> : null}
             <span className="small muted"><code>{r.experiment_id}</code></span>
           </div>
+          <nav className="reference-tabs" aria-label="Result sections"><a href="#result-overview">Overview</a><a href="#cmp-h">Individual responses</a><a href="#usage-h">Usage &amp; cost</a><a href="#checks-h">Methodology</a><a href="#files-h">Export</a></nav>
+          <div className="result-overview" id="result-overview">
+            <StatTile label="Recorded results" value={r.trial_summaries.filter(t=>t.answers !== null).length} sub="Trials with saved answers"/>
+            <StatTile label="Total personas" value={r.trial_summaries.length} sub="Recorded in this experiment"/>
+            <StatTile label="Different answer values" value={r.differing_values_recomputed ?? "—"} sub={`${r.comparison_rows.length} questions compared`}/>
+            <StatTile label="Estimated cost (USD)" value={r.usage?.cost_usd == null ? "Unknown" : fmtUsd(r.usage.cost_usd)} sub="Provider-billed cost not recorded"/>
+          </div>
           <Notice tone="info" title="How to read this.">{r.inference_note}</Notice>
           {r.warnings.length ? <Notice tone="warn" title="Evidence warnings:"><ul>{r.warnings.map((w) => <li key={w}>{w}</li>)}</ul></Notice> : null}
 
-          <div className="stack">
+          <div className="grid-2">
             <section className="card" aria-labelledby="facts-h">
               <h2 id="facts-h">Run facts</h2>
               <KeyValues items={[

@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { PopulationMap } from "@/components/PopulationMap";
+import { RunSnapshot } from "@/components/RunSnapshot";
 import { BuildDetails } from "@/components/BuildDetails";
 import { SyntheticNotice } from "@/components/Notices";
 import { PageHeader } from "@/components/PageHeader";
@@ -32,6 +34,11 @@ export default function DashboardPage() {
   const datasets = useApi("datasets", (signal) => unwrap(api.GET("/api/v1/datasets", { signal })));
   const runs = useApi("experiments", (signal) => unwrap(api.GET("/api/v1/experiments", { signal })));
 
+  const personas = useApi(build ? `dashboard-personas:${build.build_id}` : null, (signal) => unwrap(api.GET("/api/v1/personas/{build_id}", { params: { path: { build_id: build!.build_id } }, signal })));
+  const completed = runs.data?.items.filter((r) => r.display_state === "completed") ?? [];
+  const featured = completed.at(-1);
+  const personaCount = personas.data ? new Set(personas.data.items.map((p) => p.record_id)).size : null;
+
   const counts = new Map<string, number>();
   for (const item of runs.data?.items ?? []) counts.set(item.display_state, (counts.get(item.display_state) ?? 0) + 1);
   const processed = datasets.data?.fixture_evidence.filter((e) => e.kind === "processed_reference") ?? [];
@@ -39,28 +46,26 @@ export default function DashboardPage() {
   return (
     <>
       <PageHeader title="Dashboard">
-        Where the loaded synthetic build, its sources and the recorded experiment evidence stand. Every number on this page comes from the API.
+        From real demographic data to AI-powered social insights.
       </PageHeader>
       <SyntheticNotice kind="population" />
 
-      <section className="card" aria-labelledby="build-h">
-        <div className="card-head"><h2 id="build-h">Selected build</h2></div>
-        {loading && !build ? <Loading what="builds" /> : null}
-        {error ? <ErrorState error={error} onRetry={reload} what="builds" /> : null}
-        {missingBuildId ? <UnavailableState title={`Build ${missingBuildId} is not registered.`}>Choose a registered build above; no other build was substituted.</UnavailableState> : null}
-        {build ? (
-          <div className="stack">
-            <div className="tiles">
-              <StatTile label="Synthetic residents in this build" value={fmtInt(build.row_count)} sub="Rows in the selected file" />
-              <StatTile label="Geography" value={build.scope.province} sub="Joined from the reference table" />
-              <StatTile label="Reference year" value={String(build.scope.reference_year)} sub="Of the source tables used" />
-              <StatTile label="Build version" value={build.variant} sub={build.is_default ? "Default build" : "Alternative version of the same residents"} />
-              <StatTile label="Configured seed" value={build.generator.configured_seed ?? "unknown"} sub="Read from generator source; not stored per row" />
-            </div>
-            <BuildDetails build={build} />
+      {loading && !build ? <Loading what="builds" /> : null}
+      {error ? <ErrorState error={error} onRetry={reload} what="builds" /> : null}
+      {missingBuildId ? <UnavailableState title={`Build ${missingBuildId} is not registered.`}>Choose a registered build above; no other build was substituted.</UnavailableState> : null}
+      {build ? <>
+        <div className="dashboard-hero">
+          <PopulationMap province={build.scope.province} year={build.scope.reference_year} count={build.row_count} href={withBuild("/population",linkBuild)}/>
+          <div className="dashboard-stats">
+            <StatTile label="Synthetic residents in this build" value={fmtInt(build.row_count)} sub="Residents in the current dataset"/>
+            <StatTile label="Geography" value={build.scope.province} sub={`${build.scope.reference_year} · 1 province with loaded data`}/>
+            <StatTile label="Stored personas" value={fmtInt(personaCount)} sub="Residents with a persona YAML"/>
+            <StatTile label="Completed experiments" value={runs.data ? completed.length : "—"} sub="Recorded completed comparisons"/>
           </div>
-        ) : null}
-      </section>
+        </div>
+        {featured ? <RunSnapshot id={featured.experiment_id} name={featured.name} build={linkBuild}/> : null}
+        <BuildDetails build={build}/>
+      </> : null}
 
       <div className="grid-2">
         <section className="card" aria-labelledby="sources-h">
@@ -153,7 +158,7 @@ export default function DashboardPage() {
 
       <section className="card" aria-labelledby="scope-h">
         <div className="card-head"><h2 id="scope-h">Geographic scope</h2></div>
-        <p className="small muted">No map is shown: boundary data, its licence and a province mapping are not part of this checkout.</p>
+        <p className="small muted">The map shows province outlines, with the loaded province highlighted. All other provinces have no loaded data. Geometry is from geoBoundaries / OpenStreetMap (2021), distinct from the population reference year.</p>
         <div className="table-wrap">
           <table>
             <caption>Provinces with loaded data</caption>

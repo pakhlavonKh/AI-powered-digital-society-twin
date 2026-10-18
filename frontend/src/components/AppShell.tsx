@@ -5,60 +5,50 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { withBuild } from "@/lib/urls";
 import { BuildBar } from "./BuildBar";
+import { Icon } from "./Icon";
 
 export const NAV = [
-  { href: "/", label: "Dashboard" },
-  { href: "/population", label: "Population Explorer" },
-  { href: "/cohorts", label: "Cohorts" },
-  { href: "/personas", label: "Persona Explorer" },
-  { href: "/experiments/new", label: "New Experiment" },
-  { href: "/results", label: "Results" },
-  { href: "/validation", label: "Validation / Data Sources", also: ["/data-sources"] },
+  { href: "/", label: "Dashboard", icon: "dashboard", group: "" },
+  { href: "/population", label: "Population Explorer", icon: "population", group: "Population" },
+  { href: "/cohorts", label: "Cohorts", icon: "cohorts", group: "Population" },
+  { href: "/personas", label: "Persona Explorer", icon: "persona", group: "Population" },
+  { href: "/experiments/new", label: "New Experiment", icon: "experiment", group: "Experiments" },
+  { href: "/results", label: "Results", icon: "results", group: "Experiments" },
+  { href: "/validation", label: "Validation", icon: "validation", group: "Research" },
+  { href: "/data-sources", label: "Data Sources", icon: "sources", group: "Research" },
 ] as const;
-
-function isActive(pathname: string, item: (typeof NAV)[number]): boolean {
-  if (item.href === "/") return pathname === "/";
-  const prefixes = [item.href, ...("also" in item ? item.also : [])];
-  return prefixes.some((p) => pathname === p || pathname.startsWith(`${p}/`));
-}
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const params = useSearchParams();
   const build = params.get("build");
   const [open, setOpen] = useState(false);
-
   return (
-    <div className="shell">
+    <div className="shell" data-page={pathname.split("/")[1] || "dashboard"}>
       <a className="skip-link" href="#main">Skip to content</a>
       <nav className="sidebar" aria-label="Workbench">
         <div className="sidebar-head">
           <div className="brand">
-            <span className="brand-name">SocietyTwin</span>
-            <span className="brand-sub">Research workbench</span>
+            <span className="brand-mark"><Icon name="network" size={22}/></span>
+            <span><span className="brand-name">SocietyTwin</span><span className="brand-sub">AI-Powered Digital Society<br/>for Türkiye</span></span>
           </div>
-          <button type="button" className="button small nav-toggle" aria-expanded={open} aria-controls="nav-list" onClick={() => setOpen((v) => !v)}>
-            {open ? "Close menu" : "Menu"}
-          </button>
+          <button type="button" className="button small nav-toggle" aria-expanded={open} aria-controls="nav-list" onClick={() => setOpen((v) => !v)}>{open ? "Close menu" : "Menu"}</button>
         </div>
-        <ol className="nav-list" id="nav-list" data-open={open ? "true" : "false"}>
+        <ul className="nav-list" id="nav-list" data-open={open ? "true" : "false"}>
           {NAV.map((item, i) => (
             <li key={item.href}>
-              <Link className="nav-link" href={withBuild(item.href, build)} aria-current={isActive(pathname, item) ? "page" : undefined}
-                onClick={() => setOpen(false)}>
-                <span className="nav-step" aria-hidden="true">{i + 1}</span>
-                <span>{item.label}</span>
+              {item.group && (i === 0 || NAV[i - 1].group !== item.group) ? <span className="nav-group">{item.group}</span> : null}
+              <Link className="nav-link" href={withBuild(item.href, build)} aria-current={(item.href === "/" ? pathname === "/" : pathname === item.href || pathname.startsWith(`${item.href}/`)) ? "page" : undefined} onClick={() => setOpen(false)}>
+                <Icon name={item.icon} size={17}/><span>{item.label}</span>
               </Link>
             </li>
           ))}
-        </ol>
-        <p className="sidebar-foot">Local development service. Not an authenticated deployment.</p>
+        </ul>
+        <div className="sidebar-foot"><span className="workspace-indicator"/><span>Local workspace<small>Changes stay on this computer</small></span></div>
       </nav>
       <div className="main">
         <BuildBar />
-        <main id="main" className="content" tabIndex={-1}>
-          {children}
-        </main>
+        <main id="main" className="content" tabIndex={-1}>{children}</main>
       </div>
     </div>
   );
