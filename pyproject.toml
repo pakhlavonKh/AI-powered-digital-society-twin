@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "societytwin"
 version = "0.1.0"
-description = "SocietyTwin research workbench: offline population browsing, cohorts, persona provenance and recorded MatrAIx results."
+description = "SocietyTwin: Türkiye-wide synthetic population calibrated to official aggregate statistics, cohorts, personas and controlled AI experiments."
 requires-python = ">=3.12,<3.13"
 # Lower bounds only; the tested environment is pinned in requirements-api.lock.
 dependencies = [
@@ -13,6 +13,7 @@ dependencies = [
   "uvicorn>=0.37",
   "pydantic>=2.12",
   "PyYAML>=6.0",
+  "pyarrow>=16",
 ]
 
 [project.optional-dependencies]

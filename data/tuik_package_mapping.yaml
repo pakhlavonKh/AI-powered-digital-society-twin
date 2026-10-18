@@ -1,0 +1,45 @@
+# Mapping from the team's long-format TÜİK package to SocietyTwin's standard control tables.
+#
+# The package itself is NOT in this repository. Put its files in data/raw/tuik_package/ (git-ignored):
+# one or more data CSVs with the columns
+#     province_code, province_name, nuts3_code, year, indicator, value, unit   (+ optional dataset_id)
+# and, if available, data_catalog.csv, variable_metadata.csv, coverage_report.csv, not_province_level.csv.
+# Then run:  python -m societytwin.national build-controls
+#
+# Without any rule below, every package indicator is still loaded as PROVINCE CONTEXT (environment),
+# grouped by its catalog theme, with its own source year and missing-value status. A rule is needed only
+# when an indicator should become a generator control table (a person attribute).
+#
+# Rules: `table` is one of the standard tables in src/societytwin/national/controls.py (TABLE_KINDS);
+# `dataset` is the package dataset id (dataset_id column, or the CSV file name without .csv);
+# `indicator_pattern` is a Python regex matched against the whole indicator string, with named groups for
+# the table's dimensions: sex, age_group (five-year bands 0-4 … 85-89, 90+) and/or category.
+# Labels are mapped to codes through src/societytwin/national/vocab.py; an unknown label is reported as an
+# error and the row is not loaded (nothing is guessed). Optional `<dim>_labels: {source label: code}` maps
+# labels explicitly. `universe_min_age` must state the table's population universe (e.g. 15 for marital status).
+#
+# No rule is active yet because the actual indicator strings of the package have not been seen in this
+# checkout. Example (adapt the pattern to the real indicator names, then uncomment):
+#
+# controls:
+#   - table: population_age_sex
+#     dataset: population_by_age_sex
+#     indicator_pattern: '^(?P<sex>Erkek|Kadın) (?P<age_group>\d+-\d+|90\+)$'
+#     universe_min_age: 0
+#     universe_note: All registered residents (ADNKS)
+#   - table: marital_status_sex
+#     dataset: marital_status_by_sex
+#     indicator_pattern: '^(?P<sex>Erkek|Kadın) - (?P<category>.+)$'
+#     universe_min_age: 15
+#     universe_note: Residents aged 15 and over
+#   - table: education_sex
+#     dataset: education_attainment_by_sex
+#     indicator_pattern: '^(?P<sex>Erkek|Kadın) - (?P<category>.+)$'
+#     universe_min_age: 15          # verify the table's universe (TÜİK publishes 6+, 15+ and 25+ variants)
+#     universe_note: Residents aged 15 and over
+
+version: 1
+controls: []
+
+# Extra source markers for missing values (case-insensitive), added to the defaults in sources.py.
+missing_value_markers: {}

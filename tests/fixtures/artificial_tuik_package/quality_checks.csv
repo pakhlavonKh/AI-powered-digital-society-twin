@@ -1,0 +1,6 @@
+dataset_id,province_code,province_name,nuts3_code,year,indicator,value,unit
+quality_checks,99,Nowhere,TR999,2025,Kontrol,1,adet
+quality_checks,06,Ankara,TR100,2025,Kontrol,1,adet
+quality_checks,06,Ankara,TR510,2025,Kontrol,2,adet
+quality_checks,06,Ankara,TR510,2025,Kontrol,3,adet
+quality_checks,06,Ankara,TR510,2025,Sıfır,0,adet

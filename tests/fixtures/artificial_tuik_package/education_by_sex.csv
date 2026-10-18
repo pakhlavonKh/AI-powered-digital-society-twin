@@ -1,0 +1,55 @@
+dataset_id,province_code,province_name,nuts3_code,year,indicator,value,unit
+education_by_sex,01,Adana,TR621,2025,Eğitim | Erkek | Okuma yazma bilmeyen,278,kişi
+education_by_sex,01,Adana,TR621,2025,Eğitim | Erkek | Okuma yazma bilen fakat bir okul bitirmeyen,371,kişi
+education_by_sex,01,Adana,TR621,2025,Eğitim | Erkek | İlkokul,1856,kişi
+education_by_sex,01,Adana,TR621,2025,Eğitim | Erkek | İlköğretim,928,kişi
+education_by_sex,01,Adana,TR621,2025,Eğitim | Erkek | Ortaokul veya dengi meslek ortaokul,742,kişi
+education_by_sex,01,Adana,TR621,2025,Eğitim | Erkek | Lise veya dengi meslek okulu,2784,kişi
+education_by_sex,01,Adana,TR621,2025,Eğitim | Erkek | Yüksekokul veya fakülte,1856,kişi
+education_by_sex,01,Adana,TR621,2025,Eğitim | Erkek | Yüksek lisans,371,kişi
+education_by_sex,01,Adana,TR621,2025,Eğitim | Erkek | Doktora,94,kişi
+education_by_sex,01,Adana,TR621,2025,Eğitim | Kadın | Okuma yazma bilmeyen,280,kişi
+education_by_sex,01,Adana,TR621,2025,Eğitim | Kadın | Okuma yazma bilen fakat bir okul bitirmeyen,373,kişi
+education_by_sex,01,Adana,TR621,2025,Eğitim | Kadın | İlkokul,1869,kişi
+education_by_sex,01,Adana,TR621,2025,Eğitim | Kadın | İlköğretim,934,kişi
+education_by_sex,01,Adana,TR621,2025,Eğitim | Kadın | Ortaokul veya dengi meslek ortaokul,747,kişi
+education_by_sex,01,Adana,TR621,2025,Eğitim | Kadın | Lise veya dengi meslek okulu,2804,kişi
+education_by_sex,01,Adana,TR621,2025,Eğitim | Kadın | Yüksekokul veya fakülte,1869,kişi
+education_by_sex,01,Adana,TR621,2025,Eğitim | Kadın | Yüksek lisans,373,kişi
+education_by_sex,01,Adana,TR621,2025,Eğitim | Kadın | Doktora,99,kişi
+education_by_sex,06,Ankara,TR510,2025,Eğitim | Erkek | Okuma yazma bilmeyen,556,kişi
+education_by_sex,06,Ankara,TR510,2025,Eğitim | Erkek | Okuma yazma bilen fakat bir okul bitirmeyen,742,kişi
+education_by_sex,06,Ankara,TR510,2025,Eğitim | Erkek | İlkokul,3712,kişi
+education_by_sex,06,Ankara,TR510,2025,Eğitim | Erkek | İlköğretim,1856,kişi
+education_by_sex,06,Ankara,TR510,2025,Eğitim | Erkek | Ortaokul veya dengi meslek ortaokul,1484,kişi
+education_by_sex,06,Ankara,TR510,2025,Eğitim | Erkek | Lise veya dengi meslek okulu,5568,kişi
+education_by_sex,06,Ankara,TR510,2025,Eğitim | Erkek | Yüksekokul veya fakülte,3712,kişi
+education_by_sex,06,Ankara,TR510,2025,Eğitim | Erkek | Yüksek lisans,742,kişi
+education_by_sex,06,Ankara,TR510,2025,Eğitim | Erkek | Doktora,188,kişi
+education_by_sex,06,Ankara,TR510,2025,Eğitim | Kadın | Okuma yazma bilmeyen,560,kişi
+education_by_sex,06,Ankara,TR510,2025,Eğitim | Kadın | Okuma yazma bilen fakat bir okul bitirmeyen,747,kişi
+education_by_sex,06,Ankara,TR510,2025,Eğitim | Kadın | İlkokul,3739,kişi
+education_by_sex,06,Ankara,TR510,2025,Eğitim | Kadın | İlköğretim,1869,kişi
+education_by_sex,06,Ankara,TR510,2025,Eğitim | Kadın | Ortaokul veya dengi meslek ortaokul,1495,kişi
+education_by_sex,06,Ankara,TR510,2025,Eğitim | Kadın | Lise veya dengi meslek okulu,5609,kişi
+education_by_sex,06,Ankara,TR510,2025,Eğitim | Kadın | Yüksekokul veya fakülte,3739,kişi
+education_by_sex,06,Ankara,TR510,2025,Eğitim | Kadın | Yüksek lisans,747,kişi
+education_by_sex,06,Ankara,TR510,2025,Eğitim | Kadın | Doktora,192,kişi
+education_by_sex,69,Bayburt,TRA13,2026,Eğitim | Erkek | Okuma yazma bilmeyen,8,kişi
+education_by_sex,69,Bayburt,TRA13,2026,Eğitim | Erkek | Okuma yazma bilen fakat bir okul bitirmeyen,11,kişi
+education_by_sex,69,Bayburt,TRA13,2026,Eğitim | Erkek | İlkokul,55,kişi
+education_by_sex,69,Bayburt,TRA13,2026,Eğitim | Erkek | İlköğretim,27,kişi
+education_by_sex,69,Bayburt,TRA13,2026,Eğitim | Erkek | Ortaokul veya dengi meslek ortaokul,22,kişi
+education_by_sex,69,Bayburt,TRA13,2026,Eğitim | Erkek | Lise veya dengi meslek okulu,83,kişi
+education_by_sex,69,Bayburt,TRA13,2026,Eğitim | Erkek | Yüksekokul veya fakülte,55,kişi
+education_by_sex,69,Bayburt,TRA13,2026,Eğitim | Erkek | Yüksek lisans,11,kişi
+education_by_sex,69,Bayburt,TRA13,2026,Eğitim | Erkek | Doktora,6,kişi
+education_by_sex,69,Bayburt,TRA13,2026,Eğitim | Kadın | Okuma yazma bilmeyen,8,kişi
+education_by_sex,69,Bayburt,TRA13,2026,Eğitim | Kadın | Okuma yazma bilen fakat bir okul bitirmeyen,11,kişi
+education_by_sex,69,Bayburt,TRA13,2026,Eğitim | Kadın | İlkokul,56,kişi
+education_by_sex,69,Bayburt,TRA13,2026,Eğitim | Kadın | İlköğretim,28,kişi
+education_by_sex,69,Bayburt,TRA13,2026,Eğitim | Kadın | Ortaokul veya dengi meslek ortaokul,22,kişi
+education_by_sex,69,Bayburt,TRA13,2026,Eğitim | Kadın | Lise veya dengi meslek okulu,84,kişi
+education_by_sex,69,Bayburt,TRA13,2026,Eğitim | Kadın | Yüksekokul veya fakülte,56,kişi
+education_by_sex,69,Bayburt,TRA13,2026,Eğitim | Kadın | Yüksek lisans,11,kişi
+education_by_sex,69,Bayburt,TRA13,2026,Eğitim | Kadın | Doktora,5,kişi

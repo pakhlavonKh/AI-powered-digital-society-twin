@@ -72,6 +72,25 @@ class Settings:
     start_worker: bool = True
     subprocess_timeout_seconds: int = 600
     layout: ExperimentLayout = field(default_factory=ExperimentLayout)
+    # National pipeline. Controls and populations are generated data (git-ignored); the mapping file is metadata.
+    national_controls_dir: Path | None = None
+    populations_dir: Path | None = None
+    tuik_package_dir: Path | None = None
+    tuik_mapping_path: Path | None = None
+    max_agents_per_run: int = 200
+    model_price_table: Path | None = None
+
+    def __post_init__(self):
+        data = self.repo_root / "data"
+        defaults = {"national_controls_dir": data / "processed" / "national", "populations_dir": data / "populations",
+                    "tuik_package_dir": data / "raw" / "tuik_package", "tuik_mapping_path": data / "tuik_package_mapping.yaml"}
+        for name, default in defaults.items():
+            if getattr(self, name) is None:
+                object.__setattr__(self, name, default)
+
+    @property
+    def national_runs_dir(self) -> Path:
+        return self.state_dir / "national_runs"
 
     @property
     def registry_path(self) -> Path:
@@ -125,4 +144,10 @@ def load_settings() -> Settings:
         start_worker=_env_flag("SOCIETYTWIN_START_WORKER", True),
         subprocess_timeout_seconds=timeout,
         layout=layout,
+        national_controls_dir=_env_path("SOCIETYTWIN_CONTROLS_DIR"),
+        populations_dir=_env_path("SOCIETYTWIN_POPULATIONS_DIR"),
+        tuik_package_dir=_env_path("SOCIETYTWIN_TUIK_PACKAGE"),
+        tuik_mapping_path=_env_path("SOCIETYTWIN_TUIK_MAPPING"),
+        max_agents_per_run=int(os.environ.get("SOCIETYTWIN_MAX_AGENTS", "200")),
+        model_price_table=_env_path("SOCIETYTWIN_MODEL_PRICES"),
     )

@@ -1,0 +1,4 @@
+dataset_id,province_code,province_name,nuts3_code,year,indicator,value,unit
+gdp_per_capita,01,Adana,TR621,2023,Kişi başına GSYH,150000,TL
+gdp_per_capita,06,Ankara,TR510,2023,Kişi başına GSYH,250000,TL
+gdp_per_capita,69,Bayburt,TRA13,2023,Kişi başına GSYH,,TL
