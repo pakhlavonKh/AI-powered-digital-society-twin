@@ -1,24 +1,84 @@
 # SocietyTwin data manifest
 #
-# One entry per downloaded dataset. This file records metadata only; the data
-# files themselves stay out of Git (see data/README.md).
+# One entry per dataset the pipeline uses. This file records metadata only; the data files themselves
+# stay out of Git (see data/README.md). Fields the project never recorded are null, not guessed.
+# Reuse terms for TÜİK portal tables are an OPEN DECISION (docs/data-strategy.md).
 #
-# No dataset has been downloaded or approved yet. Planned sources are listed in
-# docs/data-strategy.md. Reuse terms for TÜİK portal tables are an OPEN DECISION.
+# The three entries below are the TÜİK-derived Ankara extracts shipped with the historical MatrAIx
+# experiment. Their raw TÜİK downloads are NOT in this repository, so the checksums are of the processed
+# extracts (LF bytes as checked out here; the historical persona files recorded CRLF variants).
+# The team's long-format TÜİK package (reported: 33 datasets, 577 indicators) is not in this checkout;
+# when it is added under data/raw/tuik_package/, its datasets are catalogued automatically in the
+# control store manifest (data/processed/national/manifest.json) and should be summarised here.
 #
-# Entry template (copy it into `datasets:` and fill in every field):
-#
-#   - id:              short unique identifier
-#     source:          publishing organisation, e.g. TÜİK
-#     title:           official table or release title
-#     url:             page the data was downloaded from
-#     reference_year:  year (or period) the statistics describe
-#     geography:       geographic level (Türkiye, NUTS-1, NUTS-2, NUTS-3, district)
-#     variables:       list of variables and categories used
-#     licence:         licence or terms of use (or OPEN DECISION)
-#     download_date:   YYYY-MM-DD
-#     checksum:        sha256 of the downloaded file
-#     file:            path under data/raw/
-#     held_out:        true if reserved for validation and not used in generation
+# Entry template:
+#   - id, source, title (official Turkish title or null), title_en, url, identifier, publication_date,
+#     retrieval_date, reference_year(s), geography, province_coverage, variables, units, licence,
+#     file, checksum, transformations, limitations, held_out
 
-datasets: []
+datasets:
+  - id: legacy:tuik_t16_age_sex
+    source: TÜİK (Turkish Statistical Institute), Address Based Population Registration System (ADNKS)
+    title: null
+    title_en: Population by province, five-year age group and sex
+    url: null
+    identifier: "T16 (as named in experiments/matraix_simulation/src/data_processing/process_tuik_demographics.py)"
+    publication_date: null
+    retrieval_date: null
+    reference_year: [2025]
+    geography: NUTS-3 (province)
+    province_coverage: ["06"]
+    variables: [age_group, sex, population]
+    units: [persons]
+    licence: OPEN DECISION
+    file: experiments/matraix_simulation/processed/ankara_age_gender.csv
+    checksum: sha256:c06d8834761be1ebba037f108113a332a2ab9a0bf16e87022e994d4434ad993b
+    transformations:
+      - Extracted from the raw TÜİK table by process_tuik_demographics.py (raw file absent here)
+      - Normalised to the standard control table population_age_sex by societytwin.national.sources
+    limitations:
+      - Ankara only; raw-source verification unavailable
+    held_out: false
+  - id: legacy:tuik_t10_marital_sex
+    source: TÜİK, marital status statistics (administrative registers)
+    title: null
+    title_en: Population aged 15+ by province, marital status and sex
+    url: null
+    identifier: "T10 (as named in experiments/matraix_simulation/src/data_processing/process_tuik_marital.py)"
+    publication_date: null
+    retrieval_date: null
+    reference_year: [2025]
+    geography: NUTS-3 (province)
+    province_coverage: ["06"]
+    variables: [sex, marital_status, population]
+    units: [persons]
+    licence: OPEN DECISION
+    file: experiments/matraix_simulation/processed/ankara_marital_gender.csv
+    checksum: sha256:be38d80854eac22a30c1f4bb77bf9b178857eeb8c73e048cbf1010f432958239
+    transformations:
+      - Extracted by process_tuik_marital.py (raw file absent here)
+      - Labels mapped to codes (Hiç evlenmedi, Evli, Boşandı, Eşi öldü); universe checked equal to the 15+ population
+    limitations:
+      - Ankara only; no age breakdown, so the age × marital-status joint is not observed
+    held_out: false
+  - id: legacy:tuik_province_workbooks
+    source: TÜİK provincial workbooks
+    title: "İl ve cinsiyete göre il/ilçe merkezi, belde/köy nüfusu ve nüfus yoğunluğu; İllere ve cinsiyete göre ortanca yaş"
+    title_en: Population, population density and median age by province and sex
+    url: null
+    identifier: workbook, sheet and row recorded per observation in the processed file
+    publication_date: null
+    retrieval_date: null
+    reference_year: [2023, 2024, 2025]
+    geography: NUTS-3 (province)
+    province_coverage: ["06"]
+    variables: [total_population, female_population, male_population, population_density, median_age]
+    units: [persons, persons/km2, years]
+    licence: OPEN DECISION
+    file: experiments/matraix_simulation/processed/ankara_demographic_controls.csv
+    checksum: sha256:d6248b60a456c1decbf76418a6844f96437ea3f2d9ff6551691e0cf63532450d
+    transformations:
+      - Extracted by process_tuik_controls.py; used as province environment context and a cross-source total check
+    limitations:
+      - Ankara only; the settlement-type split in the same workbook was not extracted
+    held_out: false

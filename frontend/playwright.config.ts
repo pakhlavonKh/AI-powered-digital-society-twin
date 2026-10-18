@@ -16,7 +16,7 @@ export default defineConfig({
     screenshot: "only-on-failure",
   },
   projects: [
-    { name: "desktop", testMatch: /workbench\.spec\.ts/, use: { ...devices["Desktop Chrome"], viewport: { width: 1280, height: 900 } } },
+    { name: "desktop", testMatch: /(historical|national)\.spec\.ts/, use: { ...devices["Desktop Chrome"], viewport: { width: 1280, height: 900 } } },
     { name: "narrow", testMatch: /narrow\.spec\.ts/, use: { ...devices["Pixel 7"] } },
   ],
 });

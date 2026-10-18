@@ -2,393 +2,233 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
-import { Icon } from "@/components/Icon";
-import { CopyId } from "@/components/CopyId";
-import { Notice, SyntheticNotice } from "@/components/Notices";
+import { useEffect, useState } from "react";
+import { PopulationGate, useCapabilities } from "@/components/national/common";
+import { Notice } from "@/components/Notices";
 import { PageHeader } from "@/components/PageHeader";
-import { PreflightView } from "@/components/PreflightView";
-import { ErrorState, Loading, UnavailableState } from "@/components/States";
-import { KeyValues } from "@/components/StatTile";
-import { Badge, RunStateBadge } from "@/components/StatusBadge";
-import { api, toApiError, unwrap, type ApiError, type Schemas } from "@/lib/api/client";
+import { EmptyState, ErrorState, Loading } from "@/components/States";
+import { Badge } from "@/components/StatusBadge";
+import { toApiError, type ApiError } from "@/lib/api/client";
+import { v2, type Cohort, type Environment, type Experiment, type ExperimentDefinition, type Geography, type Plan, type RunView } from "@/lib/api/v2";
+import { fmtInt, fmtUsd } from "@/lib/format";
+import { useLinkPop, withPop } from "@/lib/population";
 import { useApi } from "@/lib/useApi";
-import { withBuild } from "@/lib/urls";
 
-type PersonaSource = "legacy_fixture_pair" | "legacy_fixture_single" | "cohort";
-type Mode = "preflight" | "smoke" | "legacy_ab_live";
-type Form = {
-  name: string; personaSource: PersonaSource; cohortId: string; scenarioKind: "none" | "draft"; scenarioText: string;
-  environment: "SURVEY" | "SCENARIO"; mode: Mode; model: string; temperature: string; callsLimit: string;
-};
+const STEPS = ["Scenario", "Task", "Environment", "Cohort", "Model", "Review"] as const;
 
-const STEPS = ["Personas", "Scenario, task, environment", "Execution settings", "Save draft", "Preflight review", "Explicit start"];
-
-function Steps({ current, done }: { current: number; done: number }) {
-  return (
-    <ol className="steps" aria-label="Experiment steps">
-      {STEPS.map((s, i) => (
-        <li key={s} aria-current={i === current ? "step" : undefined} className={i < done ? "done" : undefined}>
-          <span aria-hidden="true">{i < done ? "✓" : i + 1}</span> {s}
-        </li>
-      ))}
-    </ol>
-  );
+function blank(cohortId: string): ExperimentDefinition {
+  return {
+    title: "",
+    scenario: { title: "", description: "", parameters: [], hypothetical: true, source_note: null },
+    task: { instruction: "", options: [{ id: "option_a", label: "" }, { id: "option_b", label: "" }], allow_other_text: false, ask_rationale: true, adult_only: true },
+    environment: { province_code: null, context_indicators: [] },
+    cohort: { cohort_id: cohortId, sample_size: 20, sampling_method: "weighted", seed: 7, strata_field: null },
+    model: { backend: "stub", transport: "fake", model: null, temperature: 0, seed: null, max_output_tokens: 512 },
+    execution: { repetitions: 1, max_attempts: 1, max_calls: 20, max_cost_usd: null },
+    persona: { visible_fields: null },
+  };
 }
 
-function ModeBadge({ mode }: { mode: Schemas["ModeCapability"] | undefined }) {
-  if (!mode) return null;
-  return mode.available ? <Badge tone="good" glyph="✓">Available here</Badge> : <Badge tone="neutral" glyph="·">Unavailable here</Badge>;
+function Builder({ populationId }: { populationId: string }) {
+  const params = useSearchParams();
+  const router = useRouter();
+  const pop = useLinkPop();
+  const caps = useCapabilities();
+  const cohorts = useApi("v2:cohorts", (signal) => v2<{ items: Cohort[] }>("/cohorts", { signal }));
+  const geo = useApi(`v2:geo:${populationId}`, (signal) => v2<Geography>("/geography/provinces", { query: { population_id: populationId }, signal }));
+  const [step, setStep] = useState(0);
+  const [d, setD] = useState<ExperimentDefinition>(() => blank(params.get("cohort") ?? ""));
+  const [plan, setPlan] = useState<Plan | null>(null);
+  const [exp, setExp] = useState<Experiment | null>(null);
+  const [confirm, setConfirm] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<ApiError | null>(null);
+  const envCode = d.environment.province_code ?? geo.data?.provinces.find((p) => p.records > 0)?.province_code ?? null;
+  const env = useApi(envCode ? `v2:env:${envCode}` : null, (signal) => v2<Environment>(`/environments/${envCode}`, { signal }));
+  const valid = cohorts.data?.items.filter((c) => c.status === "valid" && c.population_id === populationId) ?? [];
+  useEffect(() => { setPlan(null); setExp(null); setConfirm(false); }, [d]);
+
+  const patch = <K extends keyof ExperimentDefinition>(key: K, value: Partial<ExperimentDefinition[K]>) =>
+    setD((cur) => ({ ...cur, [key]: { ...(cur[key] as object), ...(value as object) } }));
+
+  const loadExample = async () => {
+    const cohortId = d.cohort.cohort_id || valid.find((c) => !c.minors)?.cohort_id || valid[0]?.cohort_id || "";
+    const ex = await v2<ExperimentDefinition>("/examples/fare-experiment", { query: { cohort_id: cohortId } });
+    setD({ ...ex, persona: { visible_fields: null } });
+  };
+
+  const review = async () => {
+    setBusy(true); setError(null);
+    try {
+      const created = await v2<Experiment>("/experiments", { body: d });
+      setExp(created);
+      setPlan(await v2<Plan>(`/experiments/${created.experiment_id}/plan`, { method: "POST", body: {} }));
+    } catch (e) { setError(toApiError(e)); } finally { setBusy(false); }
+  };
+
+  const run = async () => {
+    if (!plan || !exp) return;
+    setBusy(true); setError(null);
+    try {
+      const out = await v2<{ run: RunView }>(`/experiments/${exp.experiment_id}/runs`, { body: { plan_hash: plan.plan_hash, idempotency_key: `ui-${plan.plan_hash.slice(0, 24)}`, confirm: true } });
+      router.push(withPop(`/results/${out.run.run_id}`, pop));
+    } catch (e) { setError(toApiError(e)); setBusy(false); }
+  };
+
+  const indicators = env.data ? Object.values(env.data.domains).flat() : [];
+  return (
+    <div className="stack">
+      <div className="row" style={{ justifyContent: "space-between" }}>
+        <ol className="builder-steps" aria-label="Experiment design steps">
+          {STEPS.map((s, i) => <li key={s}><button type="button" aria-current={i === step ? "step" : undefined} onClick={() => setStep(i)} aria-label={`Step ${i + 1}: ${s}`}><span>{i + 1}</span>{s}</button></li>)}
+        </ol>
+        <button type="button" className="button small" onClick={loadExample} disabled={!valid.length}>Load example: Ankara fare increase (hypothetical)</button>
+      </div>
+      {cohorts.data && valid.length === 0 ? <EmptyState title="No cohort for this population.">Save a cohort first on the <Link href={withPop("/cohorts", pop)}>Cohorts</Link> page; experiments always run on a saved cohort.</EmptyState> : null}
+
+      {step === 0 ? (
+        <section className="card stack" aria-labelledby="s-h"><h2 id="s-h">Scenario — what is happening?</h2>
+          <div className="field"><label htmlFor="exp-title">Experiment title</label><input id="exp-title" type="text" value={d.title} onChange={(e) => setD({ ...d, title: e.target.value })} /></div>
+          <div className="field"><label htmlFor="sc-title">Scenario title</label><input id="sc-title" type="text" value={d.scenario.title} onChange={(e) => patch("scenario", { title: e.target.value })} /></div>
+          <div className="field"><label htmlFor="sc-desc">Description</label><textarea id="sc-desc" value={d.scenario.description} onChange={(e) => patch("scenario", { description: e.target.value })} /></div>
+          <fieldset><legend>Parameters</legend>
+            {d.scenario.parameters.map((p, i) => (
+              <div className="param-row" key={i} style={{ marginBottom: 6 }}>
+                <input aria-label={`Parameter ${i + 1} name`} type="text" value={p.name} onChange={(e) => patch("scenario", { parameters: d.scenario.parameters.map((q, j) => j === i ? { ...q, name: e.target.value } : q) })} />
+                <input aria-label={`Parameter ${i + 1} label`} type="text" value={p.label} onChange={(e) => patch("scenario", { parameters: d.scenario.parameters.map((q, j) => j === i ? { ...q, label: e.target.value } : q) })} />
+                <input aria-label={`Parameter ${i + 1} value`} type="text" value={String(p.value)} onChange={(e) => patch("scenario", { parameters: d.scenario.parameters.map((q, j) => j === i ? { ...q, value: e.target.value !== "" && !isNaN(Number(e.target.value)) ? Number(e.target.value) : e.target.value } : q) })} />
+                <input aria-label={`Parameter ${i + 1} unit`} type="text" value={p.unit ?? ""} onChange={(e) => patch("scenario", { parameters: d.scenario.parameters.map((q, j) => j === i ? { ...q, unit: e.target.value || null } : q) })} />
+                <button type="button" className="button small" onClick={() => patch("scenario", { parameters: d.scenario.parameters.filter((_, j) => j !== i) })}>Remove</button>
+              </div>))}
+            <button type="button" className="button small" onClick={() => patch("scenario", { parameters: [...d.scenario.parameters, { name: `param_${d.scenario.parameters.length + 1}`, label: "", value: 0, unit: null }] })}>Add parameter</button>
+          </fieldset>
+          <label className="check"><input type="checkbox" checked={d.scenario.hypothetical} onChange={(e) => patch("scenario", { hypothetical: e.target.checked })} />Hypothetical scenario (values are set for the experiment, not current facts)</label>
+          {!d.scenario.hypothetical ? <div className="field"><label htmlFor="sc-src">Source for the scenario values (required)</label><input id="sc-src" type="text" value={d.scenario.source_note ?? ""} onChange={(e) => patch("scenario", { source_note: e.target.value })} /></div> : null}
+        </section>
+      ) : null}
+
+      {step === 1 ? (
+        <section className="card stack" aria-labelledby="t-h"><h2 id="t-h">Task — what must the agent do?</h2>
+          <div className="field"><label htmlFor="t-ins">Question / instruction</label><textarea id="t-ins" value={d.task.instruction} onChange={(e) => patch("task", { instruction: e.target.value })} /></div>
+          <p className="small muted">Response type: single choice among controlled options (structured JSON output, validated against these ids).</p>
+          <fieldset><legend>Options</legend>
+            {d.task.options.map((o, i) => (
+              <div className="option-row" key={i} style={{ marginBottom: 6 }}>
+                <input aria-label={`Option ${i + 1} id`} type="text" value={o.id} onChange={(e) => patch("task", { options: d.task.options.map((q, j) => j === i ? { ...q, id: e.target.value } : q) })} />
+                <input aria-label={`Option ${i + 1} label`} type="text" value={o.label} onChange={(e) => patch("task", { options: d.task.options.map((q, j) => j === i ? { ...q, label: e.target.value } : q) })} />
+                <button type="button" className="button small" disabled={d.task.options.length <= 2} onClick={() => patch("task", { options: d.task.options.filter((_, j) => j !== i) })}>Remove</button>
+              </div>))}
+            <button type="button" className="button small" disabled={d.task.options.length >= 12} onClick={() => patch("task", { options: [...d.task.options, { id: `option_${d.task.options.length + 1}`, label: "" }] })}>Add option</button>
+          </fieldset>
+          <label className="check"><input type="checkbox" checked={d.task.allow_other_text} onChange={(e) => patch("task", { allow_other_text: e.target.checked })} />Allow free text for an option with id <code>other</code></label>
+          <label className="check"><input type="checkbox" checked={d.task.ask_rationale} onChange={(e) => patch("task", { ask_rationale: e.target.checked })} />Ask for a short rationale</label>
+          <label className="check"><input type="checkbox" checked={d.task.adult_only} onChange={(e) => patch("task", { adult_only: e.target.checked })} />Adult-only task (minors in the sample block execution)</label>
+        </section>
+      ) : null}
+
+      {step === 2 ? (
+        <section className="card stack" aria-labelledby="e-h"><h2 id="e-h">Environment — where does it happen?</h2>
+          <div className="field"><label htmlFor="e-prov">Context province</label>
+            <select id="e-prov" value={d.environment.province_code ?? ""} onChange={(e) => patch("environment", { province_code: e.target.value || null, context_indicators: [] })}>
+              <option value="">Each persona's own province</option>
+              {geo.data?.provinces.filter((p) => p.has_population_controls || p.context_indicators > 0).map((p) => <option key={p.province_code} value={p.province_code}>{p.province_name}</option>)}
+            </select></div>
+          <fieldset><legend>Context dimensions shown to the agent{envCode ? ` (indicators of ${env.data?.province.province_name ?? envCode})` : ""}</legend>
+            {env.loading && !env.data ? <Loading what="environment" /> : null}
+            {env.data && indicators.length === 0 ? <p className="small muted">No context indicators are loaded for this province.</p> : null}
+            <div className="checks">{indicators.filter((i) => i.value !== null).map((i) => (
+              <label className="check" key={i.indicator_id}><input type="checkbox" checked={d.environment.context_indicators.includes(i.indicator_id)}
+                onChange={(e) => patch("environment", { context_indicators: e.target.checked ? [...d.environment.context_indicators, i.indicator_id] : d.environment.context_indicators.filter((x) => x !== i.indicator_id) })} />
+                {i.label} ({i.source_year})</label>))}</div>
+            <p className="field-hint">Each indicator is shown with its own source year. Missing indicators are omitted, never invented.</p>
+          </fieldset>
+        </section>
+      ) : null}
+
+      {step === 3 ? (
+        <section className="card stack" aria-labelledby="c-h"><h2 id="c-h">Cohort — who is asked?</h2>
+          <div className="field"><label htmlFor="c-pick">Saved cohort</label>
+            <select id="c-pick" value={d.cohort.cohort_id} onChange={(e) => patch("cohort", { cohort_id: e.target.value })}>
+              <option value="">Choose a cohort…</option>
+              {valid.map((c) => <option key={c.cohort_id} value={c.cohort_id}>{c.name} · {fmtInt(c.eligible_records)} eligible{c.minors ? ` · ${fmtInt(c.minors)} minors` : ""}</option>)}
+            </select></div>
+          <div className="form-grid">
+            <div className="field"><label htmlFor="c-size">Sample size (active personas)</label><input id="c-size" type="number" min={1} max={caps.data?.max_agents_per_run ?? 200} value={d.cohort.sample_size} onChange={(e) => patch("cohort", { sample_size: Number(e.target.value) })} />
+              <span className="field-hint">Limit per run: {caps.data?.max_agents_per_run ?? "…"}. The population size never sets the number of agents.</span></div>
+            <div className="field"><label htmlFor="c-meth">Sampling</label><select id="c-meth" value={d.cohort.sampling_method} onChange={(e) => patch("cohort", { sampling_method: e.target.value, strata_field: e.target.value === "stratified" ? "province_code" : null })}>
+              <option value="weighted">Weighted (∝ population weight)</option><option value="simple_random">Simple random</option><option value="stratified">Stratified by province</option></select></div>
+            <div className="field"><label htmlFor="c-seed">Sampling seed</label><input id="c-seed" type="number" min={0} value={d.cohort.seed} onChange={(e) => patch("cohort", { seed: Number(e.target.value) })} /></div>
+          </div>
+        </section>
+      ) : null}
+
+      {step === 4 ? (
+        <section className="card stack" aria-labelledby="m-h"><h2 id="m-h">Model — what executes it?</h2>
+          <div className="form-grid">
+            <div className="field"><label htmlFor="m-backend">Backend</label>
+              <select id="m-backend" value={`${d.model.backend}:${d.model.transport}`} onChange={(e) => { const [backend, transport] = e.target.value.split(":") as ["stub" | "matraix", "fake" | "live"]; patch("model", { backend, transport }); }}>
+                <option value="stub:fake">Stub (offline pipeline test — not a model)</option>
+                <option value="matraix:fake" disabled={!caps.data?.backends.matraix_fake.available}>MatrAIx survey agent, fake transport (zero cost){caps.data?.backends.matraix_fake.available ? "" : " — unavailable"}</option>
+                <option value="matraix:live">MatrAIx survey agent, live provider (gated)</option>
+              </select></div>
+            <div className="field"><label htmlFor="m-model">Provider/model</label><input id="m-model" type="text" placeholder="e.g. anthropic/claude-haiku-5-5" value={d.model.model ?? ""} disabled={d.model.transport !== "live"} onChange={(e) => patch("model", { model: e.target.value || null })} /></div>
+            <div className="field"><label htmlFor="m-temp">Temperature</label><input id="m-temp" type="number" step="0.1" min={0} max={2} value={d.model.temperature} onChange={(e) => patch("model", { temperature: Number(e.target.value) })} /></div>
+            <div className="field"><label htmlFor="m-reps">Repetitions per persona</label><input id="m-reps" type="number" min={1} max={5} value={d.execution.repetitions} onChange={(e) => patch("execution", { repetitions: Number(e.target.value) })} /></div>
+            <div className="field"><label htmlFor="m-att">Attempts per call (1 = no retry)</label><input id="m-att" type="number" min={1} max={3} value={d.execution.max_attempts} onChange={(e) => patch("execution", { max_attempts: Number(e.target.value) })} /></div>
+            <div className="field"><label htmlFor="m-cap">Call cap (budget guard)</label><input id="m-cap" type="number" min={1} value={d.execution.max_calls} onChange={(e) => patch("execution", { max_calls: Number(e.target.value) })} /></div>
+            <div className="field"><label htmlFor="m-cost">Cost cap (USD, optional)</label><input id="m-cost" type="number" min={0} step="0.01" value={d.execution.max_cost_usd ?? ""} onChange={(e) => patch("execution", { max_cost_usd: e.target.value === "" ? null : Number(e.target.value) })} /></div>
+          </div>
+          {d.model.transport === "live" ? <Notice tone="warn" title="Live execution is gated.">It needs SOCIETYTWIN_ENABLE_LIVE_EXECUTION, a provider key in the API server environment and the MatrAIx runtime. Calls cost money; the review step lists every blocker.</Notice> : null}
+        </section>
+      ) : null}
+
+      {step === 5 ? (
+        <section className="card stack" aria-labelledby="r-h"><h2 id="r-h">Review</h2>
+          <dl className="kv">
+            <dt>Title</dt><dd>{d.title || <span className="muted">missing</span>}</dd>
+            <dt>Scenario</dt><dd>{d.scenario.title || <span className="muted">missing</span>} {d.scenario.hypothetical ? <Badge tone="neutral">hypothetical</Badge> : null}</dd>
+            <dt>Task</dt><dd>{d.task.instruction || <span className="muted">missing</span>} · {d.task.options.length} options</dd>
+            <dt>Environment</dt><dd>{d.environment.province_code ? geo.data?.provinces.find((p) => p.province_code === d.environment.province_code)?.province_name : "Each persona's own province"} · {d.environment.context_indicators.length} context indicators</dd>
+            <dt>Cohort</dt><dd>{valid.find((c) => c.cohort_id === d.cohort.cohort_id)?.name ?? <span className="muted">none selected</span>} · sample {d.cohort.sample_size} ({d.cohort.sampling_method}, seed {d.cohort.seed})</dd>
+            <dt>Model</dt><dd>{d.model.backend} / {d.model.transport}{d.model.model ? ` / ${d.model.model}` : ""} · temperature {d.model.temperature}</dd>
+          </dl>
+          <div><button type="button" className="button primary" disabled={busy} onClick={review}>{busy && !plan ? "Saving and planning…" : "Save and review plan"}</button></div>
+          {error ? <ErrorState error={error} /> : null}
+          {plan ? (
+            <div className="stack">
+              <div className="tiles">
+                <div className="tile"><div className="tile-label">Eligible records</div><div className="tile-value">{fmtInt(plan.eligible_records)}</div><div className="tile-sub">{fmtInt(plan.eligible_weighted_population)} represented</div></div>
+                <div className="tile"><div className="tile-label">Selected / active personas</div><div className="tile-value">{fmtInt(plan.active_personas)}</div><div className="tile-sub">{plan.minors_in_sample} minors</div></div>
+                <div className="tile"><div className="tile-label">Estimated calls</div><div className="tile-value">{fmtInt(plan.calls.planned)}</div><div className="tile-sub">max {plan.calls.maximum_with_retries} with retries · cap {plan.calls.cap} · provider {plan.calls.provider_calls_expected}</div></div>
+                <div className="tile"><div className="tile-label">Estimated cost</div><div className="tile-value">{fmtUsd(plan.cost.estimate_usd)}</div><div className="tile-sub">{plan.cost.basis}</div></div>
+              </div>
+              <p className="small muted">≈{fmtInt(plan.tokens.input_estimate_per_repetition)} input tokens per repetition ({plan.tokens.method}); output capped at {plan.tokens.max_output_tokens_per_call} per call.</p>
+              {plan.blockers.length ? <div className="notice crit" role="alert"><strong>Execution is blocked:</strong><ul>{plan.blockers.map((b) => <li key={b.code}><code>{b.code}</code>: {b.message}</li>)}</ul></div> : null}
+              {plan.warnings.length ? <div className="notice warn"><strong>Warnings and missing data</strong><ul>{plan.warnings.map((w) => <li key={w}>{w}</li>)}</ul></div> : null}
+              {plan.example_prompt ? <details><summary>Exact prompt for {plan.example_prompt.synthetic_id}</summary><div className="details-body">
+                <h3>System (persona card)</h3><pre className="prompt">{plan.example_prompt.system}</pre><h3>User (environment, scenario, task)</h3><pre className="prompt">{plan.example_prompt.user}</pre></div></details> : null}
+              <label className="check"><input type="checkbox" checked={confirm} disabled={!plan.executable} onChange={(e) => setConfirm(e.target.checked)} />
+                I reviewed this plan: {plan.calls.planned} calls for {plan.active_personas} personas{plan.calls.provider_calls_expected ? `, ${plan.calls.provider_calls_expected} of them to a paid provider` : ", no provider calls"}.</label>
+              <div><button type="button" className="button primary" disabled={!plan.executable || !confirm || busy} onClick={run}>Run experiment</button></div>
+            </div>
+          ) : null}
+        </section>
+      ) : null}
+
+      <div className="wizard-actions">
+        <button type="button" className="button" disabled={step === 0} onClick={() => setStep((s) => s - 1)}>Back</button>
+        <button type="button" className="button" disabled={step === STEPS.length - 1} onClick={() => setStep((s) => s + 1)}>Next</button>
+      </div>
+    </div>
+  );
 }
 
 export default function NewExperimentPage() {
-  const params = useSearchParams();
-  const draftId = params.get("draft");
   return (
     <>
-      <PageHeader title="New Experiment">
-        Define a scenario, task and environment for your synthetic personas.
-      </PageHeader>
-      <SyntheticNotice kind="responses" />
-      {draftId ? <DraftView draftId={draftId} /> : <DraftForm />}
+      <PageHeader title="New Experiment">Controlled persona-conditioned AI experiment: scenario, task, environment, cohort and model are set separately and reviewed before anything runs.</PageHeader>
+      <Notice tone="info">Experiments test the pipeline and explore hypotheses. Their outputs are not predictions of what real residents of Türkiye would do.</Notice>
+      <PopulationGate what="the experiment builder">{(id) => <Builder populationId={id} />}</PopulationGate>
     </>
-  );
-}
-
-function DraftForm() {
-  const router = useRouter();
-  const params = useSearchParams();
-  const linkBuild = params.get("build");
-  const cohortParam = params.get("cohort");
-  const caps = useApi("capabilities", (signal) => unwrap(api.GET("/api/v1/capabilities", { signal })));
-  const cohorts = useApi("cohorts", (signal) => unwrap(api.GET("/api/v1/cohorts", { signal })));
-  const tasks = useApi("tasks", (signal) => unwrap(api.GET("/api/v1/tasks", { signal })));
-  const envs = useApi("environments", (signal) => unwrap(api.GET("/api/v1/environments", { signal })));
-  const [form, setForm] = useState<Form>({
-    name: "", personaSource: cohortParam ? "cohort" : "legacy_fixture_pair", cohortId: cohortParam ?? "", scenarioKind: "none",
-    scenarioText: "", environment: "SURVEY", mode: "preflight", model: "", temperature: "0", callsLimit: "0",
-  });
-  const [step, setStep] = useState(0);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<ApiError | undefined>();
-  const set = <K extends keyof Form>(key: K, value: Form[K]) => setForm((f) => ({ ...f, [key]: value }));
-  const selectedCohort = cohorts.data?.items.find((c) => c.cohort_id === form.cohortId);
-  const personaIndex = useApi(selectedCohort ? `persona-index:${selectedCohort.build_id}` : null, (signal) =>
-    unwrap(api.GET("/api/v1/personas/{build_id}", { params: { path: { build_id: selectedCohort!.build_id } }, signal })));
-  const fixed = caps.data?.runner.fixed_persona_ids ?? [];
-  const ready = selectedCohort ? selectedCohort.realized.record_ids.filter((id) => personaIndex.data?.items.some((i) => i.record_id === id)).length : 0;
-
-  useEffect(() => {
-    setForm((f) => ({ ...f, callsLimit: f.mode === "legacy_ab_live" ? "2" : "0" }));
-  }, [form.mode]);
-
-  const hints: string[] = [];
-  if (form.mode === "smoke" && form.personaSource !== "legacy_fixture_single") hints.push("Smoke runs only the single fixture persona through the fake transport.");
-  if (form.mode !== "smoke" && form.personaSource !== "legacy_fixture_pair") hints.push("The A/B preflight and live path accept only the existing two-persona fixture.");
-  if (form.personaSource === "cohort") hints.push("A cohort draft is saved for design only: no verified runner accepts arbitrary cohorts, and the fixture personas are never substituted.");
-  if (form.scenarioKind === "draft") hints.push("A draft scenario cannot be passed to the fixed runner, so execution will be blocked.");
-  if (form.environment === "SCENARIO") hints.push("SCENARIO is a draft-only environment.");
-
-  async function save() {
-    setSaving(true);
-    setError(undefined);
-    try {
-      const created = await unwrap(api.POST("/api/v1/experiments", {
-        body: {
-          name: form.name.trim() || "Untitled draft",
-          persona_source: form.personaSource,
-          cohort_id: form.personaSource === "cohort" ? form.cohortId || null : null,
-          scenario: form.scenarioKind === "draft" ? { kind: "draft", text: form.scenarioText } : { kind: "none" },
-          task: { id: "product_feedback_v1" },
-          environment: form.environment,
-          mode: form.mode,
-          model: form.mode === "smoke" ? null : form.model.trim() || null,
-          temperature: form.mode === "smoke" || form.temperature === "" ? null : Number(form.temperature),
-          calls_limit: Number(form.callsLimit),
-        },
-      }));
-      router.replace(withBuild("/experiments/new", linkBuild, { draft: created.experiment_id }));
-    } catch (err) {
-      setError(toApiError(err));
-      setSaving(false);
-    }
-  }
-
-  return (
-    <div className="stack">
-      {caps.error ? <ErrorState error={caps.error} onRetry={caps.reload} what="capabilities" /> : null}
-
-      <ol className="steps reference-wizard" aria-label="Design experiment steps">
-        {[["Scenario","What is happening?"],["Task","What should personas do?"],["Environment","How will they respond?"],["Cohort","Who will participate?"]].map(([title,hint],i)=><li key={title} aria-current={step===i?"step":undefined} className={i<step?"done":undefined}><button type="button" aria-label={`Step ${i+1}: ${title}`} onClick={()=>setStep(i)}><span>{i<step?"✓":i+1}</span><span>{title}<small>{hint}</small></span></button></li>)}
-      </ol>
-      {step===0 ? <div className="wizard-panels"><section className="card stack wizard-panel"><h2><Icon name="sources"/> Scenario</h2><div className="field"><label htmlFor="scenario-title">Title</label><input id="scenario-title" type="text" maxLength={120} value={form.name} onChange={e=>set("name",e.target.value)} placeholder="Name your experiment"/></div><p className="small muted">Describe the situation presented to personas. Custom scenarios are saved as drafts until a compatible runner exists.</p>
-          <fieldset>
-            <legend>Scenario (the condition)</legend>
-            <label className="check"><input type="radio" name="scenario" checked={form.scenarioKind === "none"} onChange={() => set("scenarioKind", "none")} /> None: task unchanged</label>
-            <label className="check"><input type="radio" name="scenario" checked={form.scenarioKind === "draft"} onChange={() => set("scenarioKind", "draft")} /> Custom scenario (draft only)</label>
-            {form.scenarioKind === "draft" ? (
-              <div className="field" style={{ marginTop: 8 }}>
-                <label htmlFor="scenario-text">Scenario text</label>
-                <textarea id="scenario-text" maxLength={4000} value={form.scenarioText} onChange={(e) => set("scenarioText", e.target.value)} />
-                <span className="field-hint">Saved with the draft. Execution stays disabled: the fixed runner has no scenario input.</span>
-              </div>
-            ) : null}
-          </fieldset>
-      </section><section className="card stack wizard-panel"><h2>Scenario preview</h2><div className="scenario-preview"><span className="scenario-symbol"><Icon name={form.scenarioKind==='draft'?"location":"experiment"} size={40}/></span><h3>{form.name.trim() || (form.scenarioKind==='draft'?"Your research scenario":"Product feedback survey")}</h3><p>{form.scenarioKind==='draft'?(form.scenarioText||"Your scenario description will appear here."):"The existing survey task is used without a scenario manipulation."}</p><Badge tone={form.scenarioKind==='draft'?"warn":"info"} glyph="·">{form.scenarioKind==='draft'?"Draft only":"Existing task"}</Badge></div><p className="small muted">Illustrative preview. No responses have been generated.</p></section></div> : null}
-      {step===1 ? <section className="card stack wizard-panel"><h2><Icon name="sources"/> Task</h2>          <fieldset>
-            <legend>Task (instrument and response schema)</legend>
-            {tasks.data?.items.map((t) => (
-              <div key={t.id}>
-                <label className="check"><input type="radio" name="task" checked readOnly /> {t.title}</label>
-                <p className="small muted">Instrument <code>{t.instrument_id}</code>{t.question_count_from_snapshots ? `, ${t.question_count_from_snapshots} questions in recorded snapshots` : ""}.
-                  External task content: {t.external_content_available ? "available" : "not available in this environment"}.</p>
-                <ul className="small muted">{t.notes.map((n) => <li key={n}>{n}</li>)}</ul>
-              </div>
-            )) ?? <Loading what="tasks" />}
-          </fieldset></section> : null}
-      {step===2 ? <section className="card stack wizard-panel"><h2><Icon name="layers"/> Environment</h2>          <fieldset>
-            <legend>Environment (the execution mechanism)</legend>
-            {envs.data?.items.map((e) => (
-              <div key={e.name}>
-                <label className="check">
-                  <input type="radio" name="environment" checked={form.environment === e.name} onChange={() => set("environment", e.name as Form["environment"])} />
-                  {e.name} {e.status === "draft_only" ? <Badge tone="neutral" glyph="·">Draft only</Badge> : null}
-                </label>
-                <p className="small muted">{e.description}{e.reasons.length ? ` ${e.reasons.join(" ")}` : ""}</p>
-              </div>
-            )) ?? <Loading what="environments" />}
-          </fieldset></section> : null}
-      {step===3 ? <>
-      <section className="card stack" aria-labelledby="s1">
-        <h2 id="s1">1. Personas</h2>
-        <fieldset>
-          <legend>Who answers</legend>
-          <div className="stack">
-            <label className="option-card">
-              <input type="radio" name="source" checked={form.personaSource === "legacy_fixture_pair"} onChange={() => set("personaSource", "legacy_fixture_pair")} />
-              <span><strong>Existing two-persona fixture (A/B)</strong><br />
-                <span className="small muted">{fixed.length ? fixed.join(" and ") : "Fixed IDs read from the runner"}. These personas differ in age band and in marital status, so this is not a single-attribute contrast.</span></span>
-            </label>
-            <label className="option-card">
-              <input type="radio" name="source" checked={form.personaSource === "legacy_fixture_single"} onChange={() => set("personaSource", "legacy_fixture_single")} />
-              <span><strong>Existing single fixture persona (smoke)</strong><br />
-                <span className="small muted">{fixed[0] ?? "The first fixture persona"} only, as the smoke runner is hard-wired.</span></span>
-            </label>
-            <label className="option-card">
-              <input type="radio" name="source" checked={form.personaSource === "cohort"} onChange={() => set("personaSource", "cohort")} />
-              <span><strong>A saved cohort (draft only)</strong><br />
-                <span className="small muted">Records the exact realized IDs. Cannot be executed with the existing runners.</span></span>
-            </label>
-          </div>
-        </fieldset>
-        {form.personaSource === "cohort" ? (
-          <div className="field">
-            <label htmlFor="cohort-select">Cohort</label>
-            <select id="cohort-select" value={form.cohortId} onChange={(e) => set("cohortId", e.target.value)}>
-              <option value="">Choose a saved cohort</option>
-              {(cohorts.data?.items ?? []).map((c) => (
-                <option key={c.cohort_id} value={c.cohort_id} disabled={c.current.status !== "valid"}>
-                  {c.name || c.cohort_id} · {c.realized.selected_count} residents{c.current.status !== "valid" ? " · source changed" : ""}
-                </option>
-              ))}
-            </select>
-            {cohorts.data && cohorts.data.items.length === 0 ? <span className="field-hint">No cohorts yet. <Link href={withBuild("/cohorts", linkBuild)}>Create one</Link>.</span> : null}
-            {selectedCohort ? (
-              <p className="small">
-                {selectedCohort.realized.selected_count} realized IDs: {selectedCohort.realized.record_ids.slice(0, 8).join(", ")}
-                {selectedCohort.realized.record_ids.length > 8 ? " …" : ""}. Persona readiness: {ready} of {selectedCohort.realized.selected_count} have a stored
-                persona YAML; the rest are source cards only.
-              </p>
-            ) : null}
-          </div>
-        ) : null}
-      </section>      <section className="card stack" aria-labelledby="s3">
-        <h2 id="s3">3. Execution settings</h2>
-        <fieldset>
-          <legend>Mode</legend>
-          <div className="stack">
-            {([
-              ["preflight", "Preflight only (default)", "Prepares and reviews the exact prompts with the existing A/B runner. Zero provider calls.", caps.data?.modes.preflight],
-              ["smoke", "Fake smoke run", "Runs the real survey agent once with a deterministic fake transport. Zero provider calls; answers are not persona behaviour.", caps.data?.modes.smoke],
-              ["legacy_ab_live", "Live two-persona A/B", "Exactly two provider calls, one per fixture persona, zero automatic retries, after an explicit start.", caps.data?.modes.legacy_ab_live],
-            ] as [Mode, string, string, Schemas["ModeCapability"] | undefined][]).map(([value, title, text, cap]) => (
-              <label className="option-card" key={value}>
-                <input type="radio" name="mode" checked={form.mode === value} onChange={() => set("mode", value)} />
-                <span><strong>{title}</strong> <ModeBadge mode={cap} /><br /><span className="small muted">{text}</span>
-                  {cap && !cap.available && cap.reasons[0] ? <><br /><span className="small muted">Why unavailable: {cap.reasons[0]}</span></> : null}</span>
-              </label>
-            ))}
-          </div>
-        </fieldset>
-        <div className="grid-3">
-          <div className="field">
-            <label htmlFor="model">Model (provider/model)</label>
-            <input id="model" type="text" value={form.model} disabled={form.mode === "smoke"} onChange={(e) => set("model", e.target.value)} placeholder="provider/model" aria-describedby="model-hint" />
-            <span className="field-hint" id="model-hint">
-              {form.mode === "smoke" ? "Smoke uses the fake transport model." : `Accepted prefixes: ${(caps.data?.runner.provider_prefixes ?? []).join(", ")}. This list does not show that a model is available.`}
-            </span>
-          </div>
-          <div className="field">
-            <label htmlFor="temperature">Temperature</label>
-            <input id="temperature" type="number" min={0} max={1} step={0.1} value={form.temperature} disabled={form.mode === "smoke"} onChange={(e) => set("temperature", e.target.value)} />
-            <span className="field-hint">Checked by the runner to lie in [0, 1].</span>
-          </div>
-          <div className="field">
-            <label htmlFor="calls">Provider-call limit</label>
-            <input id="calls" type="number" min={0} max={10} step={1} value={form.callsLimit} onChange={(e) => set("callsLimit", e.target.value)} />
-            <span className="field-hint">The live A/B path makes exactly 2 calls; preflight and smoke make none.</span>
-          </div>
-        </div>
-      </section>      <section className="card stack" aria-labelledby="s4">
-        <h2 id="s4">4. Save draft</h2>
-        <div className="field">
-          <label htmlFor="name">Draft name</label>
-          <input id="name" type="text" maxLength={120} value={form.name} onChange={(e) => set("name", e.target.value)} placeholder="Untitled draft" />
-        </div>
-        {hints.length ? <Notice tone="info" title="What this draft can and cannot do:"><ul>{hints.map((h) => <li key={h}>{h}</li>)}</ul></Notice> : null}
-        {error ? <ErrorState error={error} what="saving the draft" /> : null}
-        <div className="row">
-          <button type="button" className="button primary" disabled={saving || (form.personaSource === "cohort" && !form.cohortId)} onClick={save}>
-            {saving ? "Saving…" : "Save draft"}
-          </button>
-          <span className="small muted">Saving records the configuration only. Nothing is queued or run.</span>
-        </div>
-      </section>
-      </> : null}
-      <div className="wizard-actions"><button type="button" className="button" disabled={step===0} onClick={()=>setStep(n=>n-1)}>Back</button><span className="small muted">Step {step+1} of 4 · Nothing is run when a draft is saved</span>{step<3?<button type="button" className="button primary" onClick={()=>setStep(n=>n+1)}>Next <Icon name="arrow" size={14}/></button>:<span/>}</div>
-    </div>
-  );
-}
-
-function DraftView({ draftId }: { draftId: string }) {
-  const params = useSearchParams();
-  const linkBuild = params.get("build");
-  const detail = useApi(`experiment:${draftId}`, (signal) =>
-    unwrap(api.GET("/api/v1/experiments/{experiment_id}", { params: { path: { experiment_id: draftId } }, signal })));
-  const [busy, setBusy] = useState<string | null>(null);
-  const [actionError, setActionError] = useState<ApiError | undefined>();
-  const [confirmLive, setConfirmLive] = useState(false);
-  const d = detail.data;
-  const plan = d?.preflights[0];
-  const job = plan ? d?.jobs.find((j) => j.preflight_hash === plan.preflight_hash) : undefined;
-  const idempotencyKey = useMemo(() => (plan ? `ui-${plan.preflight_hash.slice(0, 12)}-${crypto.randomUUID().replace(/-/g, "")}` : ""), [plan?.preflight_hash]); // eslint-disable-line react-hooks/exhaustive-deps
-  const active = job && (job.state === "queued" || job.state === "running");
-
-  useEffect(() => {
-    if (!active) return;
-    const timer = setInterval(() => detail.reload(), 2000);
-    return () => clearInterval(timer);
-  }, [active, detail]);
-
-  async function run(label: string, fn: () => Promise<unknown>) {
-    setBusy(label);
-    setActionError(undefined);
-    try {
-      await fn();
-      detail.reload();
-    } catch (err) {
-      setActionError(toApiError(err));
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  if (detail.loading && !d) return <Loading what="draft" />;
-  if (detail.error && !d) return <ErrorState error={detail.error} onRetry={detail.reload} what="draft" />;
-  if (!d || !d.config) return <UnavailableState title="This is not a managed draft." />;
-  const c = d.config;
-  const executable = c.mode !== "preflight";
-  const stepNow = job ? 5 : plan ? (executable ? 5 : 4) : 4;
-
-  return (
-    <div className="stack">
-      <Steps current={stepNow} done={job?.state === "completed" ? 6 : plan ? 5 : 4} />
-      <section className="card stack" aria-labelledby="draft-h">
-        <div className="card-head"><h2 id="draft-h">Draft: {d.name}</h2><RunStateBadge state={d.display_state} /></div>
-        <p className="small muted">{d.display_state_reason}</p>
-        <KeyValues items={[
-          ["Experiment ID", <CopyId key="id" value={c.experiment_id} label="experiment ID" />],
-          ["Personas", c.persona_source === "cohort" ? <span key="p">Cohort <Link href={withBuild(`/cohorts/${c.cohort_id}`, linkBuild)}>{c.cohort_id}</Link></span> : c.persona_source.replaceAll("_", " ")],
-          ["Realized IDs", c.realized_ids.join(", ")],
-          ["Scenario", c.scenario.kind === "draft" ? `Draft: ${c.scenario.text}` : "None"],
-          ["Task", <span key="t"><code>{c.task.task_path}</code> · content hash {c.task.content_hash ? <code>{c.task.content_hash.slice(0, 16)}…</code> : "unknown"}</span>],
-          ["Environment", c.environment],
-          ["Mode", c.mode],
-          ["Model and temperature", c.mode === "smoke" ? "Fake transport (smoke/fake)" : `${c.model ?? "not set"} · ${c.temperature ?? "not set"}`],
-          ["Provider-call limit", String(c.calls_limit)],
-          ["Configuration hash", <code key="h">{c.config_hash}</code>],
-        ]} />
-        {c.provenance_gaps.length ? <ul className="small muted">{c.provenance_gaps.map((g) => <li key={g}>{g}</li>)}</ul> : null}
-        {d.blockers.length ? (
-          <Notice tone="warn" title="Saved as a draft. Execution is blocked:">
-            <ul>{d.blockers.map((b) => <li key={b.code}>{b.message} <code className="small">{b.code}</code></li>)}</ul>
-          </Notice>
-        ) : null}
-        {d.preparation_status === "blocked_by_dependencies" ? (
-          <UnavailableState title="Preflight needs the external runtime, which is not available here." reasons={d.dependency_reasons} />
-        ) : null}
-        <p className="small"><Link href={withBuild("/experiments/new", linkBuild)}>Start another draft</Link></p>
-      </section>
-
-      <section className="card stack" aria-labelledby="pf-h">
-        <h2 id="pf-h">5. Preflight review</h2>
-        <p className="small">Validates the draft, runs the existing runner in prepare-only mode where applicable, and records an immutable plan. It makes zero provider calls.</p>
-        <div className="row">
-          <button type="button" className="button" disabled={Boolean(busy) || d.blockers.length > 0}
-            onClick={() => run("preflight", () => unwrap(api.POST("/api/v1/experiments/{experiment_id}/preflight", { params: { path: { experiment_id: c.experiment_id } } })))}>
-            {busy === "preflight" ? "Preparing…" : plan ? "Prepare a new preflight" : "Run preflight"}
-          </button>
-          {d.preflights.length > 1 ? <span className="small muted">{d.preflights.length} plans recorded; the newest is shown.</span> : null}
-        </div>
-        {actionError ? <ErrorState error={actionError} what={busy ?? "the last action"} /> : null}
-        {plan ? <PreflightView plan={plan} /> : <p className="muted">No preflight yet.</p>}
-      </section>
-
-      {plan && executable ? (
-        <section className="card stack" aria-labelledby="start-h">
-          <h2 id="start-h">6. Explicit start</h2>
-          {job ? (
-            <div className="stack">
-              <p className="row"><span>Job <code>{job.job_id}</code></span><RunStateBadge state={job.state} /></p>
-              {job.error_message ? <Notice tone="crit" title={`Ended with ${job.error_code}:`}>{job.error_message}</Notice> : null}
-              {job.state === "queued" ? (
-                <button type="button" className="button small" disabled={Boolean(busy)}
-                  onClick={() => run("cancel", () => unwrap(api.POST("/api/v1/experiments/{experiment_id}/jobs/{job_id}/cancel", { params: { path: { experiment_id: c.experiment_id, job_id: job.job_id } } })))}>
-                  Cancel before it starts
-                </button>
-              ) : null}
-              {job.state === "running" ? <p className="small muted">Running jobs are not interrupted: a request already sent cannot be retracted.</p> : null}
-              {job.state === "completed" || job.state === "failed" ? (
-                <Link className="button" href={withBuild(`/results/${encodeURIComponent(c.experiment_id)}`, linkBuild, { job: job.job_id })}>Open results</Link>
-              ) : null}
-              <p className="small muted">This reviewed plan has been used. Prepare a new preflight to run again.</p>
-            </div>
-          ) : (
-            <div className="stack">
-              {plan.execution_blockers.length ? (
-                <UnavailableState title="This plan cannot be started:" reasons={plan.execution_blockers.map((b) => b.message)} />
-              ) : null}
-              {c.mode === "legacy_ab_live" ? (
-                <label className="check">
-                  <input type="checkbox" checked={confirmLive} onChange={(e) => setConfirmLive(e.target.checked)} />
-                  I reviewed this plan and want to send exactly {plan.planned_provider_calls} requests to <code>{plan.model}</code>, with no automatic retries.
-                </label>
-              ) : null}
-              <div className="row">
-                <button type="button" className="button primary"
-                  disabled={Boolean(busy) || plan.execution_blockers.length > 0 || (c.mode === "legacy_ab_live" && !confirmLive)}
-                  onClick={() => run("start", () => unwrap(api.POST("/api/v1/experiments/{experiment_id}/execute", {
-                    params: { path: { experiment_id: c.experiment_id } },
-                    body: { preflight_hash: plan.preflight_hash, mode: c.mode as "smoke" | "legacy_ab_live", idempotency_key: idempotencyKey },
-                  })))}>
-                  {busy === "start" ? "Starting…" : c.mode === "smoke" ? "Start fake smoke run" : "Start live run"}
-                </button>
-                <span className="small muted">Repeated clicks reuse one idempotency key, so this plan can create at most one job.</span>
-              </div>
-            </div>
-          )}
-        </section>
-      ) : null}
-    </div>
   );
 }

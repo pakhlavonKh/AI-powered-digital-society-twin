@@ -9,8 +9,8 @@ export function ValidationTabs() {
   const build = useSearchParams().get("build");
   return (
     <nav aria-label="Validation and data sources" className="row">
-      <Link className="button small" href={withBuild("/validation", build)} aria-current={pathname === "/validation" ? "page" : undefined}>Validation</Link>
-      <Link className="button small" href={withBuild("/data-sources", build)} aria-current={pathname === "/data-sources" ? "page" : undefined}>Data sources</Link>
+      <Link className="button small" href={withBuild("/historical/validation", build)} aria-current={pathname === "/validation" ? "page" : undefined}>Validation</Link>
+      <Link className="button small" href={withBuild("/historical/data-sources", build)} aria-current={pathname === "/data-sources" ? "page" : undefined}>Data sources</Link>
     </nav>
   );
 }

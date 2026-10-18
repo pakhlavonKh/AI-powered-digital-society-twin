@@ -1,282 +1,154 @@
 "use client";
 
 import Link from "next/link";
-import { useParams, useSearchParams } from "next/navigation";
-import { useState } from "react";
-import { AnswerCell } from "@/components/AnswerCell";
-import { SafeMarkdown } from "@/components/Markdown";
+import { useParams, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { ShareBars } from "@/components/national/charts";
+import { useLabels } from "@/components/national/common";
 import { Notice, SyntheticNotice } from "@/components/Notices";
 import { PageHeader } from "@/components/PageHeader";
 import { ErrorState, Loading } from "@/components/States";
-import { KeyValues, StatTile } from "@/components/StatTile";
-import { Badge, CheckBadge, OriginBadge, RunStateBadge, TrialStateBadge } from "@/components/StatusBadge";
-import { UsageTable } from "@/components/UsageTable";
-import { api, unwrap, type Schemas } from "@/lib/api/client";
-import { fmtInt, fmtUsd, fmtValue } from "@/lib/format";
+import { StatTile } from "@/components/StatTile";
+import { Badge, RunStateBadge } from "@/components/StatusBadge";
+import { toApiError, type ApiError } from "@/lib/api/client";
+import { v2, type Aggregate, type ResponsesPage, type RunDetail, type RunView } from "@/lib/api/v2";
+import { fmtInt, fmtUsd } from "@/lib/format";
+import { useLinkPop, withPop } from "@/lib/population";
 import { useApi } from "@/lib/useApi";
-import { apiPath, withBuild } from "@/lib/urls";
 
-function ArtifactRow({ artifact }: { artifact: Schemas["Artifact"] }) {
-  const [preview, setPreview] = useState<string | null>(null);
-  const [failed, setFailed] = useState(false);
-  const href = apiPath(`/artifacts/${artifact.artifact_id}`);
-  const isMarkdown = artifact.media_type.startsWith("text/markdown");
-  return (
-    <tr>
-      <th scope="row"><code>{artifact.relpath}</code>{artifact.caveat ? <div className="small muted">{artifact.caveat}</div> : null}
-        {preview !== null ? <div className="card" style={{ marginTop: 8 }}><SafeMarkdown text={preview} /></div> : null}
-        {failed ? <div className="small">Could not load the preview.</div> : null}
-      </th>
-      <td>{artifact.kind === "report" ? <Badge tone="warn" glyph="!">Descriptive report</Badge> : artifact.kind}</td>
-      <td className="num">{fmtInt(artifact.size)} B</td>
-      <td>
-        <div className="row">
-          <a className="button small" href={`${href}?download=true`} download>Download</a>
-          {isMarkdown ? (
-            <button type="button" className="button small" onClick={async () => {
-              if (preview !== null) { setPreview(null); return; }
-              try {
-                const res = await fetch(href);
-                if (!res.ok) throw new Error(String(res.status));
-                setPreview(await res.text());
-              } catch {
-                setFailed(true);
-              }
-            }}>{preview !== null ? "Hide preview" : "Preview"}</button>
-          ) : null}
-        </div>
-      </td>
-    </tr>
-  );
-}
+const GROUPS: [string, string][] = [["sex", "Sex"], ["age_group", "Age group"], ["province_code", "Province"], ["marital_status", "Marital status"],
+  ["education_level", "Education"], ["labour_status", "Labour status"], ["urbanicity", "Settlement type"]];
 
-function EventsPanel({ experimentId, jobId }: { experimentId: string; jobId: string | null }) {
-  const [offset, setOffset] = useState(0);
-  const events = useApi(`events:${experimentId}:${jobId}:${offset}`, (signal) =>
-    unwrap(api.GET("/api/v1/experiments/{experiment_id}/events", { params: { path: { experiment_id: experimentId }, query: { offset, limit: 20, job_id: jobId } }, signal })));
-  return (
-    <details>
-      <summary>Runtime events{events.data ? ` (${events.data.total})` : ""}</summary>
-      <div className="details-body">
-        <p className="small muted">{events.data?.note}</p>
-        {events.error ? <ErrorState error={events.error} onRetry={events.reload} /> : null}
-        {events.data?.items.map((e) => (
-          <details key={`${e.trial_label}:${e.index}`}>
-            <summary>Trial {e.trial_label} · #{e.index} · {e.type ?? "(untyped)"}{e.phase ? ` · ${e.phase}` : ""}</summary>
-            <div className="details-body"><pre className="prompt">{JSON.stringify(e.content, null, 2)}</pre></div>
-          </details>
-        ))}
-        {events.data ? (
-          <div className="row">
-            <button type="button" className="button small" disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - 20))}>Previous</button>
-            <span className="small">{events.data.total ? `${offset + 1}–${Math.min(offset + 20, events.data.total)} of ${events.data.total}` : "No events"}</span>
-            <button type="button" className="button small" disabled={offset + 20 >= events.data.total} onClick={() => setOffset(offset + 20)}>Next</button>
-          </div>
-        ) : null}
-      </div>
-    </details>
-  );
-}
-
-export default function ResultDetailPage() {
-  const { id: rawId } = useParams<{ id: string }>();
-  const id = decodeURIComponent(rawId);
-  const params = useSearchParams();
-  const jobId = params.get("job");
-  const focusTrial = params.get("trial");
-  const linkBuild = params.get("build");
-  const results = useApi(`results:${id}:${jobId}`, (signal) =>
-    unwrap(api.GET("/api/v1/experiments/{experiment_id}/results", { params: { path: { experiment_id: id }, query: { job_id: jobId } }, signal })));
-  const trials = useApi(`trials:${id}:${jobId}`, (signal) =>
-    unwrap(api.GET("/api/v1/experiments/{experiment_id}/trials", { params: { path: { experiment_id: id }, query: { job_id: jobId } }, signal })));
-  const r = results.data;
-  const coercions = new Map<string, Schemas["Coercion"]>();
-  for (const t of r?.trial_summaries ?? []) for (const c of t.coerced_answers) if (c.question_id) coercions.set(`${t.label}:${c.question_id}`, c);
-  const [a, b] = r?.trial_summaries ?? [];
-  const exportBase = apiPath(`/experiments/${encodeURIComponent(id)}/export`);
-  const jobQuery = jobId ? `&job_id=${encodeURIComponent(jobId)}` : "";
-
+export default function RunPage() {
+  const { id } = useParams<{ id: string }>();
+  const runId = decodeURIComponent(id);
+  const router = useRouter();
+  const pop = useLinkPop();
+  const labels = useLabels();
+  const [group, setGroup] = useState("sex");
+  const [minGroup, setMinGroup] = useState(10);
+  const [page, setPage] = useState(0);
+  const [replayError, setReplayError] = useState<ApiError | null>(null);
+  const historical = runId.startsWith("imp_");
+  const [tick, setTick] = useState(0);
+  const detail = useApi(historical ? null : `v2:run:${runId}:${tick}`, (signal) => v2<RunDetail>(`/runs/${runId}`, { signal }));
+  const state = detail.data?.run.state;
+  const done = state !== undefined && ["completed", "completed_with_errors", "failed", "budget_stopped"].includes(state);
+  const agg = useApi(historical || !done ? null : `v2:agg:${runId}:${group}:${minGroup}`, (signal) => v2<Aggregate>(`/runs/${runId}/aggregate`, { query: { group_by: [group], min_group: minGroup }, signal }));
+  const responses = useApi(historical || !done ? null : `v2:resp:${runId}:${page}`, (signal) => v2<ResponsesPage>(`/runs/${runId}/responses`, { query: { offset: page * 20, limit: 20 }, signal }));
+  useEffect(() => { if (historical) router.replace(`/historical/results/${encodeURIComponent(runId)}`); }, [historical, router, runId]);
+  useEffect(() => {  // queued or running MatrAIx runs are executed by the local worker; poll until they finish
+    if (!state || done) return;
+    const timer = setTimeout(() => setTick((t) => t + 1), 2000);
+    return () => clearTimeout(timer);
+  }, [state, done, tick]);
+  if (historical) return null;
+  if (detail.error) return <><PageHeader title="Run" /><ErrorState error={detail.error} onRetry={detail.reload} what="run" /></>;
+  if (!detail.data) return <><PageHeader title="Run" /><Loading what="run" /></>;
+  if (!done) return <><PageHeader title={detail.data.title} /><div className="row"><RunStateBadge state={detail.data.run.state} />
+    <span className="small muted">Waiting for the local worker; this page refreshes automatically.</span></div></>;
+  const { run, definition, plan, manifest, cohort } = detail.data;
+  const optionLabels = Object.fromEntries(definition.task.options.map((o) => [o.id, o.label]));
+  const terminal = done;
   return (
     <>
-      <PageHeader title={r ? `Results: ${r.display_name}` : "Results"}>
-        {r ? r.display_state_reason : "Recorded evidence for one run."}
+      <PageHeader title={detail.data.title} actions={terminal ? null : <button type="button" className="button small" onClick={detail.reload}>Refresh</button>}>
+        Run <code>{run.run_id}</code>{run.kind === "replay" ? <> · replay of <Link href={withPop(`/results/${run.replay_of}`, pop)}>{run.replay_of}</Link></> : null}
       </PageHeader>
       <SyntheticNotice kind="responses" />
-      {results.loading && !r ? <Loading what="results" /> : null}
-      {results.error ? <ErrorState error={results.error} onRetry={results.reload} what="results" /> : null}
-      {r ? (
-        <>
+      {detail.data.is_stub ? <Notice tone="warn" title="Stub run — pipeline test only.">These answers were produced by the deterministic stub backend, not by a model. They test the pipeline and must not be read as results.</Notice> : null}
+      {!detail.data.is_stub && detail.data.is_placeholder ? <Notice tone="warn" title="MatrAIx fake transport.">The real MatrAIx survey agent ran, but its zero-cost smoke client returned schema-valid placeholder answers. Not persona behaviour.</Notice> : null}
+      <div className="row"><RunStateBadge state={run.state} />{run.error_message ? <span className="small muted">{run.error_message}</span> : null}</div>
+      <div className="tiles">
+        <StatTile label="Active personas" value={fmtInt(run.personas ?? plan.active_personas)} sub={`${fmtInt(plan.eligible_records)} eligible records`} />
+        <StatTile label="Completed" value={fmtInt(run.valid_responses)} sub={`of ${fmtInt(run.final_responses)} final responses`} />
+        <StatTile label="Failed / invalid" value={fmtInt(run.final_responses !== null && run.valid_responses !== null ? run.final_responses - run.valid_responses : null)}
+          sub={Object.entries(run.status_counts ?? {}).map(([k, v]) => `${k} ${v}`).join(" · ")} />
+        <StatTile label="Calls" value={fmtInt(run.calls_attempted)} sub={`${fmtInt(run.provider_calls)} to a provider`} />
+        <StatTile label="Tokens (in / out)" value={`${fmtInt(run.usage?.input_tokens)} / ${fmtInt(run.usage?.output_tokens)}`} sub="unknown = not reported by the backend" />
+        <StatTile label="Cost" value={fmtUsd(run.usage?.cost_usd)} sub={plan.cost.basis} />
+      </div>
+      <dl className="kv card">
+        <dt>Backend</dt><dd>{run.backend_label ?? run.backend}</dd>
+        <dt>Model</dt><dd>{definition.model.backend} / {definition.model.transport}{definition.model.model ? ` / ${definition.model.model}` : ""} · temperature {definition.model.temperature} · seed {definition.model.seed ?? "none"}</dd>
+        <dt>Cohort</dt><dd>{cohort?.name ?? definition.cohort.cohort_id} · sample {definition.cohort.sample_size} ({definition.cohort.sampling_method}, seed {definition.cohort.seed})</dd>
+        <dt>Scenario</dt><dd>{definition.scenario.title}{definition.scenario.hypothetical ? " (hypothetical)" : ""}</dd>
+        <dt>Task</dt><dd>{definition.task.instruction}</dd>
+      </dl>
+
+      <section className="card stack" aria-labelledby="dist-h">
+        <h2 id="dist-h">Response distribution (weighted)</h2>
+        {agg.error ? <ErrorState error={agg.error} /> : null}
+        {agg.data ? (
+          <>
+            {agg.data.overall.responses === 0 ? <p className="muted">No valid responses.</p> :
+              <ShareBars options={agg.data.overall.options} labels={optionLabels} caption="Overall response distribution" />}
+            <p className="small muted">{fmtInt(agg.data.overall.responses)} valid responses from {fmtInt(agg.data.overall.personas)} personas · Kish effective n {agg.data.overall.effective_n.toFixed(1)}. {agg.data.weighting}</p>
+            <p className="small">{agg.data.inference_note}</p>
+          </>
+        ) : <Loading what="aggregates" />}
+      </section>
+
+      <section className="card stack" aria-labelledby="sub-h">
+        <div className="card-head"><h2 id="sub-h">Subgroup comparison</h2>
           <div className="row">
-            <RunStateBadge state={r.display_state} />
-            <OriginBadge origin={r.origin} />
-            {r.evidence_kind === "fake" ? <Badge tone="fake" glyph="◇">Fake transport: not model behaviour</Badge> : null}
-            {r.evidence_kind === "live" ? <Badge tone="info" glyph="◆">Live provider evidence (recorded)</Badge> : null}
-            <span className="small muted"><code>{r.experiment_id}</code></span>
-          </div>
-          <nav className="reference-tabs" aria-label="Result sections"><a href="#result-overview">Overview</a><a href="#cmp-h">Individual responses</a><a href="#usage-h">Usage &amp; cost</a><a href="#checks-h">Methodology</a><a href="#files-h">Export</a></nav>
-          <div className="result-overview" id="result-overview">
-            <StatTile label="Recorded results" value={r.trial_summaries.filter(t=>t.answers !== null).length} sub="Trials with saved answers"/>
-            <StatTile label="Total personas" value={r.trial_summaries.length} sub="Recorded in this experiment"/>
-            <StatTile label="Different answer values" value={r.differing_values_recomputed ?? "—"} sub={`${r.comparison_rows.length} questions compared`}/>
-            <StatTile label="Estimated cost (USD)" value={r.usage?.cost_usd == null ? "Unknown" : fmtUsd(r.usage.cost_usd)} sub="Provider-billed cost not recorded"/>
-          </div>
-          <Notice tone="info" title="How to read this.">{r.inference_note}</Notice>
-          {r.warnings.length ? <Notice tone="warn" title="Evidence warnings:"><ul>{r.warnings.map((w) => <li key={w}>{w}</li>)}</ul></Notice> : null}
-
-          <div className="grid-2">
-            <section className="card" aria-labelledby="facts-h">
-              <h2 id="facts-h">Run facts</h2>
-              <KeyValues items={[
-                ["Model", <code key="m">{r.model ?? "unknown"}</code>],
-                ["Temperature", r.temperature === null ? "unknown" : String(r.temperature)],
-                ["Task", r.task ? <code key="t">{r.task}</code> : "unknown"],
-                ["Planned calls", r.planned_calls === null ? "unknown" : String(r.planned_calls)],
-                ["Recorded calls", r.recorded_calls === null ? (r.provider_calls_recorded !== null ? `${r.provider_calls_recorded} provider calls (smoke report)` : "not recorded") : String(r.recorded_calls)],
-                ["Automatic retries", r.automatic_retries === null ? "not recorded" : String(r.automatic_retries)],
-                ["Output-token cap", r.max_output_tokens_per_call === null ? "none recorded" : fmtInt(r.max_output_tokens_per_call)],
-                ["Runtime", r.runtime_seconds === null ? "not recorded" : `${r.runtime_seconds.toFixed(2)} s`],
-                ["Credential flag in the old preflight", r.historical_credentials_present === null ? "not recorded" : `${r.historical_credentials_present}. ${r.historical_credentials_note}`],
-              ]} />
-            </section>
-            <section className="card stack" aria-labelledby="usage-h">
-              <h2 id="usage-h">Usage and cost</h2>
-              <UsageTable caption="Null values are unknown, not zero" rows={[
-                ...r.trial_summaries.map((t) => ({ label: `Trial ${t.label}`, usage: t.usage })),
-                ...(r.usage ? [{ label: "Run total (comparison file)", usage: r.usage }] : []),
-              ]} />
-              <p className="small muted">Costs marked estimated come from a local price table in the external framework. No provider-billed amount is recorded.</p>
-              {r.budget_file ? <p className="small muted">Budget file: spent {fmtUsd(r.budget_file.spent_usd)}, cap {r.budget_file.max_cost_usd === null ? "none" : fmtUsd(r.budget_file.max_cost_usd)}. {r.budget_file.note}</p> : null}
-            </section>
-          </div>
-
-          {r.comparison_rows.length ? (
-            <section className="card stack" aria-labelledby="cmp-h">
-              <div className="card-head">
-                <h2 id="cmp-h">Answers side by side</h2>
-                <span className="small">
-                  {r.differing_values_recomputed} of {r.comparison_rows.length} recorded values differ
-                  {r.differing_values_recorded !== null ? ` (comparison file: ${r.differing_values_recorded})` : ""}
-                </span>
+            <div className="field"><label htmlFor="grp">Group by</label><select id="grp" value={group} onChange={(e) => setGroup(e.target.value)}>{GROUPS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></div>
+            <div className="field"><label htmlFor="ming">Minimum personas per group</label><input id="ming" type="number" min={1} value={minGroup} onChange={(e) => setMinGroup(Math.max(1, Number(e.target.value)))} /></div>
+          </div></div>
+        {agg.data?.by[group] ? (
+          <>
+            {agg.data.by[group].groups.map((g) => (
+              <div key={g.value} className="stack" style={{ borderTop: "1px solid var(--border)", paddingTop: 10 }}>
+                <strong>{group === "province_code" ? g.value : labels(group, g.value)} <span className="small muted">· {g.personas} personas</span></strong>
+                {g.suppressed ? <span className="small muted">{g.reason}</span> : <ShareBars options={g.options} labels={optionLabels} caption={`Responses for ${g.value}`} />}
               </div>
-              <div className="table-wrap">
-                <table>
-                  <caption>Persona A {a?.persona_id ?? ""} versus persona B {b?.persona_id ?? ""}; one response each</caption>
-                  <thead><tr><th scope="col">Question</th><th scope="col">Persona A</th><th scope="col">Persona B</th><th scope="col">Values differ</th></tr></thead>
-                  <tbody>
-                    {r.comparison_rows.map((row) => (
-                      <tr key={row.question_id}>
-                        <th scope="row">{row.prompt ?? row.question_id}<div className="small muted"><code>{row.question_id}</code>{row.question_type ? ` · ${row.question_type}` : ""}</div></th>
-                        <td><AnswerCell answer={row.answer_a} coercion={a ? coercions.get(`${a.label}:${row.question_id}`) : undefined} /></td>
-                        <td><AnswerCell answer={row.answer_b} coercion={b ? coercions.get(`${b.label}:${row.question_id}`) : undefined} /></td>
-                        <td>{row.value_differs === null ? "–" : row.value_differs ? "Yes" : "No"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <p className="small muted">The two personas differ in age band and marital status. Differences describe these two recorded responses only.</p>
-            </section>
-          ) : (
-            <section className="card stack" aria-labelledby="ans-h">
-              <h2 id="ans-h">Recorded answers</h2>
-              {r.trial_summaries.every((t) => !t.answers) ? <p className="muted">No trial in this folder has a saved result.</p> : null}
-              {r.trial_summaries.filter((t) => t.answers).map((t) => (
-                <div className="table-wrap" key={t.label}>
-                  <table>
-                    <caption>Trial {t.label} · {t.persona_id ?? "unknown persona"}</caption>
-                    <thead><tr><th scope="col">Question</th><th scope="col">Answer</th></tr></thead>
-                    <tbody>
-                      {t.answers!.map((ans) => (
-                        <tr key={ans.question_id}><th scope="row"><code>{ans.question_id}</code></th><td><AnswerCell answer={ans} coercion={coercions.get(`${t.label}:${ans.question_id}`)} /></td></tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ))}
-            </section>
-          )}
-
-          <section className="card stack" aria-labelledby="trials-h">
-            <h2 id="trials-h">Trials</h2>
-            {trials.error ? <ErrorState error={trials.error} onRetry={trials.reload} /> : null}
-            {trials.data?.trials.map((t) => (
-              <details key={t.label} open={focusTrial === t.label}>
-                <summary>Trial {t.label} · {t.persona_id ?? "unknown persona"} · {t.answer_count ?? 0} answers</summary>
-                <div className="details-body">
-                  <div className="row"><TrialStateBadge state={t.state} /><span className="small muted">Raw boundary status: <code>{t.boundary_status_raw ?? "none"}</code></span></div>
-                  {t.persona_id ? <Link href={withBuild("/personas", linkBuild, { record: t.persona_id })}>Open {t.persona_id} in the Persona Explorer</Link> : null}
-                  {t.persona_snapshot && !t.persona_snapshot.parse_error ? (
-                    <div className="table-wrap">
-                      <table>
-                        <caption>Persona snapshot saved with this trial (authoritative for this run) · SHA-256 <code>{t.persona_snapshot.sha256.slice(0, 16)}…</code>
-                          {t.preflight_persona_sha256 ? (t.preflight_persona_sha256 === t.persona_snapshot.sha256 ? " · matches the preflight hash" : " · differs from the preflight hash") : ""}</caption>
-                        <thead><tr><th scope="col">Prompt-visible dimension</th><th scope="col">Value</th></tr></thead>
-                        <tbody>{Object.entries(t.persona_snapshot.dimensions).map(([k, v]) => <tr key={k}><th scope="row"><code>{k}</code></th><td>{v}</td></tr>)}</tbody>
-                      </table>
-                    </div>
-                  ) : <p className="muted small">No persona snapshot saved in this trial folder.</p>}
-                  {t.prompts ? (
-                    <>
-                      <p className="small muted">Prompts as recorded in <code>{t.prompts.source}</code>; not re-rendered.</p>
-                      <details><summary>Exact system prompt</summary><div className="details-body"><pre className="prompt">{t.prompts.system}</pre></div></details>
-                      <details><summary>Exact task prompt</summary><div className="details-body"><pre className="prompt">{t.prompts.user}</pre></div></details>
-                    </>
-                  ) : <p className="muted small">No prompt evidence recorded.</p>}
-                  <p className="small muted">Events: {t.events_summary.count} ({Object.entries(t.events_summary.types).map(([k, v]) => `${k} ${v}`).join(", ") || "none"}). {t.events_summary.note}</p>
-                </div>
-              </details>
             ))}
-          </section>
+            {agg.data.by[group].comparisons.length ? <ul className="small">{agg.data.by[group].comparisons.map((c) => <li key={c}>{c}</li>)}</ul>
+              : <p className="small muted">No subgroup difference whose intervals do not overlap. Differences between small groups are not reported as findings.</p>}
+          </>
+        ) : null}
+      </section>
 
-          <section className="card stack" aria-labelledby="checks-h">
-            <h2 id="checks-h">Consistency checks</h2>
-            {r.consistency_checks.length === 0 ? <p className="muted">No cross-file checks apply to this evidence.</p> : (
-              <ul className="stack" style={{ listStyle: "none", padding: 0, margin: 0 }}>
-                {r.consistency_checks.map((c) => <li key={c.name} className="row"><CheckBadge passed={c.passed} /><code>{c.name}</code><span className="small">{c.detail}</span></li>)}
-              </ul>
-            )}
-            <ul className="small muted">{r.limitations.map((l) => <li key={l}>{l}</li>)}</ul>
-          </section>
+      <section className="card" aria-labelledby="resp-h">
+        <h2 id="resp-h">Structured responses (final attempt per persona)</h2>
+        {responses.data ? (
+          <>
+            <div className="table-wrap"><table><caption>{fmtInt(responses.data.total)} final responses</caption>
+              <thead><tr><th>Synthetic ID</th><th>Status</th><th>Choice</th><th>Rationale</th><th className="num">Attempt</th><th>Prompt source</th></tr></thead>
+              <tbody>{responses.data.items.map((r) => (
+                <tr key={r.request_key}><th><Link href={withPop(`/personas/${r.synthetic_id}`, pop)}><code>{r.synthetic_id}</code></Link></th>
+                  <td className="status-pill">{r.status}</td><td>{r.choice ? optionLabels[r.choice] ?? r.choice : <span className="muted">{r.error}</span>}{r.other_text ? ` — ${r.other_text}` : ""}</td>
+                  <td className="small">{r.rationale ?? "–"}</td><td className="num">{r.attempt}</td><td className="small">{r.prompt_source.replaceAll("_", " ")}</td></tr>))}</tbody></table></div>
+            <div className="row" style={{ justifyContent: "flex-end", marginTop: 8 }}>
+              <button type="button" className="button small" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>Previous</button>
+              <button type="button" className="button small" disabled={(page + 1) * 20 >= responses.data.total} onClick={() => setPage((p) => p + 1)}>Next</button>
+            </div>
+          </>
+        ) : <Loading what="responses" />}
+      </section>
 
-          <section className="card stack" aria-labelledby="files-h">
-            <div className="card-head">
-              <h2 id="files-h">Artifacts and export</h2>
-              <div className="row">
-                <a className="button small" href={`${exportBase}?format=csv${jobQuery}`} download>Export CSV</a>
-                <a className="button small" href={`${exportBase}?format=json${jobQuery}`} download>Export JSON</a>
-              </div>
-            </div>
-            <p className="small muted">Exports carry the synthetic-data label, provenance hashes and a column schema. Null stays null.</p>
-            <div className="table-wrap">
-              <table>
-                <caption>Files in the run folder, served by server-owned IDs</caption>
-                <thead><tr><th scope="col">File</th><th scope="col">Kind</th><th scope="col" className="num">Size</th><th scope="col">Actions</th></tr></thead>
-                <tbody>{r.artifacts.map((art) => <ArtifactRow key={art.artifact_id} artifact={art} />)}</tbody>
-              </table>
-            </div>
-            <EventsPanel experimentId={id} jobId={jobId} />
-            <details>
-              <summary>Raw statuses and file evidence</summary>
-              <div className="details-body">
-                <KeyValues items={[
-                  ["preflight.status", fmtValue(r.raw_statuses.preflight_status)],
-                  ["comparison.status", fmtValue(r.raw_statuses.comparison_status)],
-                  ["smoke_report.ok", fmtValue(r.raw_statuses.smoke_report_ok)],
-                  ["Trial boundary statuses", JSON.stringify(r.raw_statuses.trial_boundaries)],
-                  ["Changed since first import", r.evidence_drift && r.evidence_drift.length ? r.evidence_drift.join(", ") : "nothing"],
-                ]} />
-                <div className="table-wrap">
-                  <table>
-                    <caption>Files read to build this view</caption>
-                    <thead><tr><th scope="col">File</th><th scope="col">Status</th><th scope="col">SHA-256</th></tr></thead>
-                    <tbody>{r.files.map((f) => <tr key={f.relpath}><td><code>{f.relpath}</code></td><td>{f.status}{f.error ? ` (${f.error})` : ""}</td><td><code>{f.sha256 ? `${f.sha256.slice(0, 16)}…` : "–"}</code></td></tr>)}</tbody>
-                  </table>
-                </div>
-              </div>
-            </details>
-          </section>
-        </>
-      ) : null}
+      <section className="card stack" aria-labelledby="repro-h">
+        <h2 id="repro-h">Reproducibility and limitations</h2>
+        <dl className="kv">
+          <dt>Population</dt><dd><code>{manifest?.population?.population_id ?? plan.population_id}</code> · seed {manifest?.population?.seed ?? "?"} · {manifest?.population?.generator_version} · reference year {manifest?.population?.reference_year}</dd>
+          <dt>Source years</dt><dd>{manifest?.reference_years ? Object.entries(manifest.reference_years.source_years).map(([p, ys]) => `${p}: ${Object.entries(ys).map(([f, y]) => `${f} ${y}`).join(", ")}`).join(" · ") : "–"}</dd>
+          <dt>Templates</dt><dd>persona {plan.persona_template_version} · prompt {plan.prompt_template_version} · visible fields {plan.visible_fields_policy.join(", ")}</dd>
+          <dt>Plan hash</dt><dd><code>{plan.plan_hash}</code></dd>
+          <dt>Code version</dt><dd>{manifest?.code_version?.commit ? <code>{manifest.code_version.commit.slice(0, 12)}</code> : "unknown"} {manifest?.code_version?.note}</dd>
+          <dt>Reproduce</dt><dd>{String(manifest?.reproduction ?? "")}</dd>
+        </dl>
+        {plan.warnings.length ? <ul className="small">{plan.warnings.map((w) => <li key={w}>{w}</li>)}</ul> : null}
+        {terminal && run.kind === "execute" && (run.state === "completed" || run.state === "completed_with_errors") ? (
+          <div className="row"><button type="button" className="button small" onClick={async () => {
+            setReplayError(null);
+            try { const out = await v2<{ run: RunView }>(`/runs/${runId}/replay`, { body: { idempotency_key: `replay-${runId}` } }); router.push(withPop(`/results/${out.run.run_id}`, pop)); }
+            catch (e) { setReplayError(toApiError(e)); }
+          }}>Replay from cache (exact, no calls)</button></div>
+        ) : null}
+        {replayError ? <ErrorState error={replayError} /> : null}
+        <p className="small muted">Source-fit validation of the population does not show that these responses resemble human behaviour; behavioural validation is a separate question.</p>
+        <Badge tone="neutral">{detail.data.label}</Badge>
+      </section>
     </>
   );
 }

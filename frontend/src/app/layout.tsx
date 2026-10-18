@@ -2,11 +2,12 @@ import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import { AppShell } from "@/components/AppShell";
 import { BuildProvider } from "@/lib/build";
+import { PopulationProvider } from "@/lib/population";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "SocietyTwin Workbench",
-  description: "Research workbench for the SocietyTwin synthetic Ankara population, cohorts, personas and recorded MatrAIx results.",
+  title: "SocietyTwin",
+  description: "Türkiye synthetic population calibrated to official aggregate statistics, cohorts, personas and controlled AI experiments.",
 };
 
 export const viewport: Viewport = { width: "device-width", initialScale: 1 };
@@ -16,9 +17,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body>
         <Suspense fallback={<p className="muted" style={{ padding: 24 }}>Loading workbench…</p>}>
-          <BuildProvider>
-            <AppShell>{children}</AppShell>
-          </BuildProvider>
+          <PopulationProvider>
+            <BuildProvider>
+              <AppShell>{children}</AppShell>
+            </BuildProvider>
+          </PopulationProvider>
         </Suspense>
       </body>
     </html>

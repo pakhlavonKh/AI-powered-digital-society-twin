@@ -2,218 +2,133 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { BuildDetails } from "@/components/BuildDetails";
-import { DonutCard } from "@/components/charts/DonutCard";
-import { Icon } from "@/components/Icon";
-import { BarChartCard } from "@/components/charts/BarChartCard";
-import { FilterControls } from "@/components/FilterControls";
+import { useState } from "react";
+import { DistributionChart, PopulationPyramid } from "@/components/national/charts";
+import { GenerateForm, PopulationGate, useCapabilities, useLabels } from "@/components/national/common";
+import { FilterPanel } from "@/components/national/FilterPanel";
 import { SyntheticNotice } from "@/components/Notices";
 import { PageHeader } from "@/components/PageHeader";
-import { EmptyState, ErrorState, Loading, UnavailableState } from "@/components/States";
+import { ErrorState, Loading } from "@/components/States";
 import { StatTile } from "@/components/StatTile";
-import { api, unwrap, type Schemas } from "@/lib/api/client";
-import { useBuild } from "@/lib/build";
-import { filterCount, filtersFromParams, filtersToParams, filtersToQuery, type Filters } from "@/lib/filters";
-import { FIELD_LABELS, fmtInt, fmtPct } from "@/lib/format";
+import { v2, type Environment, type Filters, type Geography, type RecordsPage, type Summary } from "@/lib/api/v2";
+import { fmtInt } from "@/lib/format";
+import { describeFilters, filtersFromParams, filtersToParams, filtersToQuery } from "@/lib/nationalFilters";
+import { useLinkPop, usePopulation, withPop } from "@/lib/population";
 import { useApi } from "@/lib/useApi";
-import { withBuild } from "@/lib/urls";
 
-const PAGE_SIZES = [25, 50, 100];
-type SortField = "person_id" | "age_group" | "gender" | "marital_status";
+const FIELD_TITLES: Record<string, string> = {
+  sex: "Sex (administrative)", marital_status: "Marital status", education_level: "Education", labour_status: "Labour status",
+  household_size_class: "Household size", household_type: "Household type", urbanicity: "Settlement type", age_group: "Age group",
+};
 
-function categoriesOf(summary: Schemas["Summary"] | undefined) {
-  const of = (field: string) => summary?.distributions.find((d) => d.field === field)?.categories.map((c) => c.value) ?? [];
-  return { age_group: of("age_group"), gender: of("gender"), marital_status: of("marital_status") };
-}
-
-export default function PopulationPage() {
+function Explorer({ populationId }: { populationId: string }) {
   const params = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
-  const { build, missingBuildId, error: buildError, reload: reloadBuilds } = useBuild();
+  const pop = useLinkPop();
+  const caps = useCapabilities();
+  const labels = useLabels();
   const filters = filtersFromParams(params);
-  const sort = (params.get("sort") as SortField) || "person_id";
-  const direction = params.get("dir") === "desc" ? "desc" : "asc";
-  const size = PAGE_SIZES.includes(Number(params.get("size"))) ? Number(params.get("size")) : 50;
-  const page = Math.max(0, Number(params.get("page") ?? 0) || 0);
-  const translations = params.get("tr") === "1";
-  const buildId = build?.availability.status === "available" ? build.build_id : null;
-  const query = filtersToQuery(filters);
-  const fkey = JSON.stringify(query);
-
-  const summary = useApi(buildId ? `summary:${buildId}:${fkey}` : null, (signal) =>
-    unwrap(api.GET("/api/v1/builds/{build_id}/summary", { params: { path: { build_id: buildId! }, query: { ...query, crosstab: true } }, signal })));
-  const allCats = useApi(buildId ? `cats:${buildId}` : null, (signal) =>
-    unwrap(api.GET("/api/v1/builds/{build_id}/summary", { params: { path: { build_id: buildId! } }, signal })));
-  const datasets = useApi("datasets", (signal) => unwrap(api.GET("/api/v1/datasets", { signal })));
-  const records = useApi(buildId ? `records:${buildId}:${fkey}:${sort}:${direction}:${page}:${size}` : null, (signal) =>
-    unwrap(api.GET("/api/v1/builds/{build_id}/records", {
-      params: { path: { build_id: buildId! }, query: { ...query, sort, direction, offset: page * size, limit: size } }, signal })));
-
-  const update = (changes: Record<string, string | undefined>, nextFilters?: Filters) => {
-    let next = new URLSearchParams(params.toString());
-    if (nextFilters) next = filtersToParams(nextFilters, next);
-    for (const [k, v] of Object.entries(changes)) {
-      if (v === undefined) next.delete(k);
-      else next.set(k, v);
-    }
-    router.replace(`${pathname}?${next.toString()}`, { scroll: false });
-  };
-  const setFilters = (next: Filters) => update({ page: undefined }, next);
-  const reset = () => router.replace(withBuild(pathname, params.get("build")), { scroll: false });
-  const sortBy = (field: SortField) => update({ sort: field, dir: sort === field && direction === "asc" ? "desc" : "asc", page: undefined });
-
+  const [page, setPage] = useState(0);
+  const key = filtersToParams(filters).toString();
+  const geo = useApi(`v2:geo:${populationId}`, (signal) => v2<Geography>("/geography/provinces", { query: { population_id: populationId }, signal }));
+  const summary = useApi(`v2:summary:${populationId}:${key}`, (signal) => v2<Summary>(`/populations/${populationId}/summary`, { query: filtersToQuery(filters), signal }));
+  const records = useApi(`v2:records:${populationId}:${key}:${page}`, (signal) => v2<RecordsPage>(`/populations/${populationId}/records`,
+    { query: { ...filtersToQuery(filters), limit: 25, offset: page * 25 }, signal }));
+  const province = filters.province_codes?.length === 1 ? filters.province_codes[0] : null;
+  const env = useApi(province ? `v2:env:${province}` : null, (signal) => v2<Environment>(`/environments/${province}`, { signal }));
+  const setFilters = (f: Filters) => { setPage(0); router.replace(`${pathname}?${filtersToParams(f, params).toString()}`); };
+  const provinceName = (code: string) => geo.data?.provinces.find((p) => p.province_code === code)?.province_name ?? code;
   const s = summary.data;
-  const cats = categoriesOf(allCats.data);
-  const dist = (field: string) => s?.distributions.find((d) => d.field === field);
-  const maritalT = s?.display_translations.marital_status ?? {};
-  const totalPages = records.data ? Math.max(1, Math.ceil(records.data.total_matching / size)) : 1;
-  const available = build?.available_fields ?? [];
+  const available = new Set((s?.distributions ?? []).filter((d) => d.available).map((d) => d.field));
+  const cohortHref = withPop("/cohorts", pop, { prefill: JSON.stringify(filters) });
+  return (
+    <div className="explorer2">
+      <FilterPanel filters={filters} onChange={setFilters} provinces={geo.data?.provinces ?? []} caps={caps.data} available={s ? available : undefined} />
+      <div className="stack">
+        <div className="row" style={{ justifyContent: "space-between" }}>
+          <span className="small muted">Selection: {describeFilters(filters, provinceName)}</span>
+          <Link className="button primary small" href={cohortHref}>Create cohort from this selection</Link>
+        </div>
+        {summary.error ? <ErrorState error={summary.error} onRetry={summary.reload} what="summary" /> : null}
+        {summary.loading && !s ? <Loading what="distributions" /> : null}
+        {s ? (
+          <div className={summary.stale ? "stack is-stale" : "stack"}>
+            <div className="tiles">
+              <StatTile label="Synthetic records" value={fmtInt(s.records)} sub={`of ${fmtInt(s.total_records)} in this population`} />
+              <StatTile label="Residents represented" value={fmtInt(s.represented_population)} sub="Weighted (population_weight)" />
+              <StatTile label="Provinces" value={s.provinces.length} sub={s.provinces.map((p) => p.province_name).slice(0, 4).join(", ") || "none"} />
+              <StatTile label="Population reference year" value={s.reference_year} sub="Source years listed below" />
+            </div>
+            {s.records === 0 ? <p className="notice warn">No synthetic records match these filters.</p> : (
+              <div className="charts2">
+                <div className="wide"><PopulationPyramid rows={s.pyramid} /></div>
+                {s.distributions.filter((d) => d.field !== "age_group").map((d) => (
+                  <DistributionChart key={d.field} dist={d} title={FIELD_TITLES[d.field] ?? d.field} label={(c) => labels(d.field, c)} />
+                ))}
+              </div>
+            )}
+            <section className="card" aria-labelledby="years-h">
+              <div className="card-head"><h2 id="years-h">Source years and coverage</h2><Link href={withPop("/data-sources", pop)}>Data sources</Link></div>
+              <div className="table-wrap"><table><caption>Population reference year {s.reference_year}; each field keeps its own source year</caption>
+                <thead><tr><th>Province</th><th>Records</th><th>Represented</th><th>Field source years</th></tr></thead>
+                <tbody>{s.source_years.map((y) => {
+                  const p = s.provinces.find((q) => q.province_code === y.province_code);
+                  return <tr key={y.province_code}><th>{y.province_name}</th><td className="num">{fmtInt(p?.records)}</td><td className="num">{fmtInt(p?.weighted)}</td>
+                    <td>{Object.entries(y.source_years).filter(([f]) => !["province_code", "sex"].includes(f)).map(([f, yr]) => `${f.replace("_", " ")} ${yr}`).join(" · ")}</td></tr>;
+                })}</tbody></table></div>
+              <p className="small muted">{s.weighting} Fields not listed have no source table for that province and stay unavailable.</p>
+            </section>
+          </div>
+        ) : null}
+        {province && env.data ? (
+          <section className="card" aria-labelledby="env-h">
+            <div className="card-head"><h2 id="env-h">{env.data.province.province_name} environment</h2><span className="small muted">Province context, not person attributes</span></div>
+            {env.data.empty ? <p className="muted small">No context indicators are loaded for this province.</p> : (
+              <div className="table-wrap"><table><caption>Value at or before reference year {env.data.reference_year}</caption>
+                <thead><tr><th>Domain</th><th>Indicator</th><th className="num">Value</th><th>Source year</th><th>Status</th></tr></thead>
+                <tbody>{Object.entries(env.data.domains).flatMap(([domain, rows]) => rows.map((r) => (
+                  <tr key={r.indicator_id}><td>{domain}</td><th>{r.label}</th><td className="num">{r.value === null ? "–" : `${r.value.toLocaleString("en-GB", { maximumFractionDigits: 1 })} ${r.unit}`}</td>
+                    <td>{r.source_year ?? "–"}</td><td className="status-pill">{r.value_status}</td></tr>)))}</tbody></table></div>
+            )}
+            {env.data.structurally_unavailable_datasets.length ? <p className="small muted">Not covered for this province (structurally unavailable, not zero): {env.data.structurally_unavailable_datasets.map((d) => `${d.title ?? d.source_id} (${d.coverage})`).join(", ")}.</p> : null}
+          </section>
+        ) : null}
+        <section className="card" aria-labelledby="rec-h">
+          <div className="card-head"><h2 id="rec-h">Records</h2><span className="small muted">Server-side pages of 25; never the whole population</span></div>
+          {records.error ? <ErrorState error={records.error} onRetry={records.reload} /> : null}
+          {records.data ? (
+            <>
+              <div className="table-wrap"><table><caption>{fmtInt(records.data.total_matching)} matching synthetic records</caption>
+                <thead><tr><th>Synthetic ID</th><th>Province</th><th>Age group</th><th>Sex</th><th>Marital status</th><th>Education</th><th className="num">Weight</th></tr></thead>
+                <tbody>{records.data.items.map((r) => (
+                  <tr key={r.synthetic_id}><th><Link href={withPop(`/personas/${r.synthetic_id}`, pop)}><code>{r.synthetic_id}</code></Link></th>
+                    <td>{r.province_name}</td><td>{r.age_group}</td><td>{labels("sex", r.sex)}</td><td>{labels("marital_status", r.marital_status as string)}</td>
+                    <td>{labels("education_level", r.education_level as string | null)}</td><td className="num">{r.population_weight.toFixed(1)}</td></tr>))}</tbody></table></div>
+              <div className="row" style={{ justifyContent: "flex-end", marginTop: 8 }}>
+                <button type="button" className="button small" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>Previous</button>
+                <span className="small muted">Page {page + 1} of {Math.max(1, Math.ceil(records.data.total_matching / 25))}</span>
+                <button type="button" className="button small" disabled={(page + 1) * 25 >= records.data.total_matching} onClick={() => setPage((p) => p + 1)}>Next</button>
+              </div>
+            </>
+          ) : records.loading ? <Loading what="records" /> : null}
+        </section>
+      </div>
+    </div>
+  );
+}
 
-  const ageRows = (cats.age_group.length ? cats.age_group : []).map((age) => ({
-    category: age, label: age,
-    values: Object.fromEntries((s?.crosstab?.cells ?? []).filter((c) => c.row === age).map((c) => [c.column, c.count])),
-  }));
-  const maritalRows = (dist("marital_status")?.categories ?? []).map((c) => ({
-    category: c.value, label: translations && maritalT[c.value] ? `${c.value} (${maritalT[c.value]})` : c.value, values: { count: c.count },
-    share: c.share,
-  }));
-
+export default function PopulationPage() {
+  const { reload, select } = usePopulation();
+  const [showGen, setShowGen] = useState(false);
   return (
     <>
-      <PageHeader title="Population Explorer">
-        Explore the synthetic population generated from TÜİK data.
+      <PageHeader title="Population Explorer" actions={<button type="button" className="button small" onClick={() => setShowGen((v) => !v)}>{showGen ? "Close" : "Generate another population"}</button>}>
+        Weighted distributions of the selected synthetic population, for all of Türkiye or one province. Synthetic population — no real individual records.
       </PageHeader>
       <SyntheticNotice kind="population" />
-      {buildError ? <ErrorState error={buildError} onRetry={reloadBuilds} what="builds" /> : null}
-      {missingBuildId ? <UnavailableState title={`Build ${missingBuildId} is not registered.`}>Nothing else was selected. Choose a build in the bar above.</UnavailableState> : null}
-      {build && build.availability.status !== "available" ? <UnavailableState title="This build's source file has changed." reasons={[build.availability.detail]} /> : null}
-
-      {build && buildId ? (
-        <>
-          <div className="explorer-layout">
-          <section className="card explorer-filters" aria-labelledby="filters-h">
-            <div className="card-head">
-              <h2 id="filters-h">Filters</h2>
-              <div className="row">
-                <label className="check"><input type="checkbox" checked={translations} onChange={(e) => update({ tr: e.target.checked ? "1" : undefined })} />Show English translations of Turkish labels</label>
-                <button type="button" className="button small" onClick={reset} disabled={filterCount(filters) === 0}>Reset filters</button>
-              </div>
-            </div>
-            <FilterControls filters={filters} onChange={setFilters} categories={cats} availableFields={available} translations={maritalT}
-              showTranslations={translations} idSearch disabled={!allCats.data} />
-            <p className="small muted" style={{ marginTop: 10 }}>
-              Geography and year are build context ({build.scope.province}, {build.scope.reference_year}), not row columns, so they cannot be filtered per row.
-              {" "}The <code>gender</code> column is TÜİK&apos;s administrative sex category, not gender identity.
-            </p>
-          </section>
-
-          {summary.error ? <ErrorState error={summary.error} onRetry={summary.reload} what="summary" /> : null}
-          {summary.loading && !s ? <Loading what="summary" /> : null}
-          {s ? (
-            <section className={`card stack explorer-summary ${summary.loading ? "is-stale" : ""}`} aria-busy={summary.loading} aria-labelledby="summary-h">
-              <div className="card-head">
-                <h2 id="summary-h">{fmtInt(s.denominator)} of {fmtInt(s.total_records)} residents match</h2>
-                <span className="small muted">Denominator for every share below: {fmtInt(s.denominator)}</span>
-              </div>
-              {s.denominator === 0 ? (
-                <EmptyState title="No residents match these filters.">Reset or widen the filters. Nothing was substituted.</EmptyState>
-              ) : (
-                <>
-                  <div className="tiles">
-                    <StatTile label="Filtered population" value={fmtInt(s.denominator)} sub="Matching synthetic residents"/>
-                    <StatTile label="Current dataset" value={fmtInt(s.total_records)} sub="Residents before filters"/>
-                    {(dist("gender")?.categories ?? []).map((c) => (
-                      <StatTile key={c.value} label={`Sex: ${c.value}`} value={fmtInt(c.count)} sub={`${fmtPct(c.share)} of matching residents`} />
-                    ))}
-                  </div>
-                  <div className="distribution-grid">
-                    <BarChartCard title="Age distribution" subtitle="by source age band and sex" orientation="columns" rows={ageRows}
-                      series={[{ key: "male", label: "male", slot: "series-1" }, { key: "female", label: "female", slot: "series-2" }]}
-                      valueLabel="residents" format={(v) => fmtInt(v)} />
-                    {available.includes("marital_status") ? (
-                      <DonutCard title="Marital status" total={s.denominator} rows={maritalRows.map((r) => ({ category:r.category,label:r.label,count:r.values.count,share:r.share }))}/>
-                    ) : null}
-                    <div className="unavailable-chart"><h3>Education level</h3><Icon name="chart" size={35}/><p>Education is not recorded in this population.</p><span>No source data</span></div>
-                    <div className="unavailable-chart"><h3>Employment status</h3><Icon name="chart" size={35}/><p>Employment is not recorded in this population.</p><span>No source data</span></div>
-                  </div>
-                  <details>
-                    <summary>Method and limitations</summary>
-                    <div className="details-body">
-                      <p>{s.method}</p>
-                      <ul>{s.limitations.map((l) => <li key={l}>{l}</li>)}</ul>
-                      <h3>Source tables used to generate this build</h3>
-                      <ul>
-                        {(datasets.data?.fixture_evidence ?? []).filter((e) => e.kind === "processed_reference" && !e.path.includes("controls")
-                          && (available.includes("marital_status") || !e.path.includes("marital"))).map((e) => (
-                          <li key={e.path}><code>{e.path}</code>: {e.declared_source} <span className="muted small">SHA-256 {e.sha256 ? `${e.sha256.slice(0, 16)}…` : "missing"}</span></li>
-                        ))}
-                      </ul>
-                      <p className="small muted">{datasets.data?.attribution_note}</p>
-                      <p className="small muted">Source hash <code>{s.source_sha256}</code></p>
-                    </div>
-                  </details>
-                </>
-              )}
-            </section>
-          ) : null}
-
-          </div>
-          <section className="card stack" aria-labelledby="records-h">
-            <div className="card-head">
-              <h2 id="records-h">Residents</h2>
-              <div className="row small">
-                <label htmlFor="page-size">Rows per page</label>
-                <select id="page-size" value={size} onChange={(e) => update({ size: e.target.value, page: undefined })}>
-                  {PAGE_SIZES.map((n) => <option key={n} value={n}>{n}</option>)}
-                </select>
-              </div>
-            </div>
-            {records.error ? <ErrorState error={records.error} onRetry={records.reload} what="records" /> : null}
-            {records.loading && !records.data ? <Loading what="residents" /> : null}
-            {records.data ? (
-              <div className={records.loading ? "is-stale" : ""} aria-busy={records.loading}>
-                <div className="table-wrap">
-                  <table>
-                    <caption>Rows {records.data.total_matching === 0 ? 0 : records.data.offset + 1}–{records.data.offset + records.data.items.length} of {fmtInt(records.data.total_matching)} matching</caption>
-                    <thead>
-                      <tr>
-                        {(["person_id", "age_group", "gender", "marital_status"] as SortField[]).filter((f) => available.includes(f)).map((f) => (
-                          <th scope="col" key={f} aria-sort={sort === f ? (direction === "asc" ? "ascending" : "descending") : "none"}>
-                            <button type="button" className="sort-button" onClick={() => sortBy(f)}>
-                              {FIELD_LABELS[f]}{sort === f ? (direction === "asc" ? " ▲" : " ▼") : ""}
-                            </button>
-                          </th>
-                        ))}
-                        {available.includes("marital_status_conditioning") ? <th scope="col">Marital conditioning</th> : null}
-                        <th scope="col" className="num">CSV row</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {records.data.items.map((r) => (
-                        <tr key={r.person_id}>
-                          <th scope="row"><Link href={withBuild("/personas", params.get("build"), { record: r.person_id })}>{r.person_id}</Link></th>
-                          <td>{r.age_group}</td>
-                          <td>{r.gender}</td>
-                          {available.includes("marital_status") ? <td>{r.marital_status}{translations && r.marital_status && maritalT[r.marital_status] ? <span className="muted"> ({maritalT[r.marital_status]})</span> : null}</td> : null}
-                          {available.includes("marital_status_conditioning") ? <td><code>{r.marital_status_conditioning}</code></td> : null}
-                          <td className="num">{r.csv_row}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <nav className="row" aria-label="Pagination" style={{ marginTop: 10 }}>
-                  <button type="button" className="button small" disabled={page === 0} onClick={() => update({ page: String(page - 1) })}>Previous</button>
-                  <span className="small">Page {page + 1} of {totalPages}</span>
-                  <button type="button" className="button small" disabled={page + 1 >= totalPages} onClick={() => update({ page: String(page + 1) })}>Next</button>
-                </nav>
-              </div>
-            ) : null}
-          </section>
-          <BuildDetails build={build} />
-        </>
-      ) : null}
+      {showGen ? <section className="card stack"><h2>Generate a population</h2><GenerateForm onDone={(id) => { reload(); select(id); setShowGen(false); }} /></section> : null}
+      <PopulationGate what="the Population Explorer">{(id) => <Explorer populationId={id} />}</PopulationGate>
     </>
   );
 }

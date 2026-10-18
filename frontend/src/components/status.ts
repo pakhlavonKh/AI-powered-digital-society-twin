@@ -17,6 +17,8 @@ export const RUN_STATES: Record<string, StatusInfo> = {
   running: { label: "Running", tone: "info", glyph: "▸", description: "Claimed by the local worker." },
   failed: { label: "Failed", tone: "crit", glyph: "×", description: "The managed job ended with an error." },
   stopped: { label: "Stopped", tone: "neutral", glyph: "■", description: "Cancelled before it started." },
+  completed_with_errors: { label: "Completed with errors", tone: "warn", glyph: "◐", description: "Some final responses are invalid or failed; they are listed, never dropped." },
+  budget_stopped: { label: "Stopped at budget", tone: "warn", glyph: "■", description: "The call or cost cap was reached; remaining calls were not made." },
   unknown_after_interruption: { label: "Unknown after interruption", tone: "warn", glyph: "?", description: "The worker stopped mid-job; the outcome is unknown and it was not retried." },
 };
 

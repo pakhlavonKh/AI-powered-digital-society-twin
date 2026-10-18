@@ -1,173 +1,141 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
-import { CohortStatusBadge, FilterChips } from "@/components/CohortStatus";
-import { FilterControls } from "@/components/FilterControls";
+import { useSearchParams } from "next/navigation";
+import { useState } from "react";
+import { PopulationGate, useCapabilities } from "@/components/national/common";
+import { FilterPanel } from "@/components/national/FilterPanel";
 import { SyntheticNotice } from "@/components/Notices";
 import { PageHeader } from "@/components/PageHeader";
-import { EmptyState, ErrorState, Loading, UnavailableState } from "@/components/States";
-import { StatTile } from "@/components/StatTile";
-import { api, toApiError, unwrap, type ApiError } from "@/lib/api/client";
-import { useBuild } from "@/lib/build";
-import { filtersToBody, type Filters } from "@/lib/filters";
-import { fmtDecimal, fmtInt } from "@/lib/format";
+import { EmptyState, ErrorState, Loading } from "@/components/States";
+import { Badge } from "@/components/StatusBadge";
+import { toApiError, type ApiError } from "@/lib/api/client";
+import { v2, type Cohort, type CohortPreview, type Filters, type Geography, type Sample } from "@/lib/api/v2";
+import { fmtInt } from "@/lib/format";
+import { describeFilters } from "@/lib/nationalFilters";
+import { useLinkPop, withPop } from "@/lib/population";
 import { useApi } from "@/lib/useApi";
-import { withBuild } from "@/lib/urls";
 
-function randomSeed(): number {
-  const buf = new Uint32Array(1);
-  crypto.getRandomValues(buf);
-  return buf[0];
+function SampleForm({ cohort, onDone }: { cohort: Cohort; onDone: () => void }) {
+  const pop = useLinkPop();
+  const [size, setSize] = useState(Math.min(20, cohort.eligible_records ?? 20));
+  const [method, setMethod] = useState<"weighted" | "simple_random" | "stratified">("weighted");
+  const [seed, setSeed] = useState(7);
+  const [strata, setStrata] = useState("province_code");
+  const [error, setError] = useState<ApiError | null>(null);
+  const [sample, setSample] = useState<Sample | null>(null);
+  return (
+    <form className="stack" onSubmit={async (e) => {
+      e.preventDefault(); setError(null);
+      try {
+        const s = await v2<Sample>(`/cohorts/${cohort.cohort_id}/samples`, { body: { size, method, seed, strata_field: method === "stratified" ? strata : null } });
+        setSample(s); onDone();
+      } catch (err) { setError(toApiError(err)); }
+    }}>
+      <div className="form-grid">
+        <div className="field"><label htmlFor={`sz-${cohort.cohort_id}`}>Sample size</label>
+          <input id={`sz-${cohort.cohort_id}`} type="number" min={1} max={10000} value={size} onChange={(e) => setSize(Number(e.target.value))} /></div>
+        <div className="field"><label htmlFor={`m-${cohort.cohort_id}`}>Sampling method</label>
+          <select id={`m-${cohort.cohort_id}`} value={method} onChange={(e) => setMethod(e.target.value as typeof method)}>
+            <option value="weighted">Weighted (probability ∝ population weight)</option>
+            <option value="simple_random">Simple random (equal probability)</option>
+            <option value="stratified">Stratified (proportional allocation)</option>
+          </select></div>
+        {method === "stratified" ? <div className="field"><label htmlFor={`st-${cohort.cohort_id}`}>Strata</label>
+          <select id={`st-${cohort.cohort_id}`} value={strata} onChange={(e) => setStrata(e.target.value)}>
+            {["province_code", "sex", "age_group", "marital_status", "education_level"].map((f) => <option key={f} value={f}>{f}</option>)}</select></div> : null}
+        <div className="field"><label htmlFor={`sd-${cohort.cohort_id}`}>Seed</label>
+          <input id={`sd-${cohort.cohort_id}`} type="number" min={0} value={seed} onChange={(e) => setSeed(Number(e.target.value))} /></div>
+      </div>
+      <div><button className="button small" type="submit">Draw sample</button></div>
+      {error ? <ErrorState error={error} /> : null}
+      {sample ? <p className="small">Sample <code>{sample.sample_id}</code>: {fmtInt(sample.selected)} of {fmtInt(sample.eligible_records)} eligible records ·{" "}
+        <Link href={withPop("/personas", pop, { sample: sample.sample_id })}>View personas</Link></p> : null}
+    </form>
+  );
+}
+
+function CohortCard({ cohort, provinceName, reload }: { cohort: Cohort; provinceName: (c: string) => string; reload: () => void }) {
+  const pop = useLinkPop();
+  return (
+    <article className="card stack" aria-labelledby={`c-${cohort.cohort_id}`}>
+      <div className="card-head"><h3 id={`c-${cohort.cohort_id}`}>{cohort.name}</h3>
+        <Badge tone={cohort.status === "valid" ? "good" : "warn"} glyph={cohort.status === "valid" ? "✓" : "!"}>{cohort.status === "valid" ? "Valid" : cohort.status_detail}</Badge></div>
+      <dl className="kv">
+        <dt>Filters</dt><dd>{describeFilters(cohort.filters, provinceName)}</dd>
+        <dt>Eligible records</dt><dd>{fmtInt(cohort.eligible_records)}</dd>
+        <dt>Represented population</dt><dd>{fmtInt(cohort.eligible_weighted_population)}</dd>
+        <dt>Minors</dt><dd>{cohort.minors ? <Badge tone="warn" glyph="!">{fmtInt(cohort.minors)} under 18 — not usable for adult tasks</Badge> : "None"}</dd>
+        <dt>Cohort ID</dt><dd><code>{cohort.cohort_id}</code> · population <code>{cohort.population_id}</code></dd>
+      </dl>
+      {cohort.samples.length ? (
+        <div className="table-wrap"><table><caption>Saved samples (members stored separately from the definition)</caption>
+          <thead><tr><th>Sample</th><th>Method</th><th className="num">Size</th><th className="num">Seed</th><th>Personas</th></tr></thead>
+          <tbody>{cohort.samples.map((s) => <tr key={s.sample_id}><th><code>{s.sample_id}</code></th><td>{s.config.method}</td><td className="num">{s.selected}</td>
+            <td className="num">{s.config.seed}</td><td><Link href={withPop("/personas", pop, { sample: s.sample_id })}>View</Link></td></tr>)}</tbody></table></div>
+      ) : <p className="small muted">No sample drawn yet.</p>}
+      <details><summary>Draw a seeded sample</summary><div className="details-body"><SampleForm cohort={cohort} onDone={reload} /></div></details>
+      <div className="row"><Link className="button small" href={withPop("/experiments/new", pop, { cohort: cohort.cohort_id })}>Use in a new experiment</Link></div>
+    </article>
+  );
+}
+
+function Cohorts({ populationId }: { populationId: string }) {
+  const params = useSearchParams();
+  const caps = useCapabilities();
+  const prefill = (() => { try { return JSON.parse(params.get("prefill") ?? "{}") as Filters; } catch { return {}; } })();
+  const [filters, setFilters] = useState<Filters>(prefill);
+  const [name, setName] = useState("");
+  const [error, setError] = useState<ApiError | null>(null);
+  const geo = useApi(`v2:geo:${populationId}`, (signal) => v2<Geography>("/geography/provinces", { query: { population_id: populationId }, signal }));
+  const list = useApi("v2:cohorts", (signal) => v2<{ items: Cohort[] }>("/cohorts", { signal }));
+  const fkey = JSON.stringify(filters);
+  const preview = useApi(`v2:preview:${populationId}:${fkey}`, (signal) => v2<CohortPreview>("/cohorts/preview", { body: { population_id: populationId, filters }, signal }));
+  const provinceName = (code: string) => geo.data?.provinces.find((p) => p.province_code === code)?.province_name ?? code;
+  return (
+    <div className="explorer2">
+      <FilterPanel title="Cohort filters" filters={filters} onChange={setFilters} provinces={geo.data?.provinces ?? []} caps={caps.data} />
+      <div className="stack">
+        <section className="card stack" aria-labelledby="new-h">
+          <h2 id="new-h">New cohort</h2>
+          <p className="small muted">{describeFilters(filters, provinceName)}</p>
+          {preview.error ? <ErrorState error={preview.error} /> : null}
+          {preview.data ? (
+            <div className="tiles">
+              <div className="tile"><div className="tile-label">Eligible synthetic records</div><div className="tile-value">{fmtInt(preview.data.eligible_records)}</div></div>
+              <div className="tile"><div className="tile-label">Represented population</div><div className="tile-value">{fmtInt(preview.data.eligible_weighted_population)}</div></div>
+              <div className="tile"><div className="tile-label">Minors in selection</div><div className="tile-value">{fmtInt(preview.data.minors)}</div>
+                <div className="tile-sub">{preview.data.minors ? "Add “Adults only” for adult experiments" : "Adults only"}</div></div>
+            </div>
+          ) : <Loading what="preview" />}
+          <form className="row" onSubmit={async (e) => {
+            e.preventDefault(); setError(null);
+            try { await v2("/cohorts", { body: { name: name || "Untitled cohort", population_id: populationId, filters } }); setName(""); list.reload(); }
+            catch (err) { setError(toApiError(err)); }
+          }}>
+            <div className="field" style={{ flex: 1 }}><label htmlFor="cohort-name">Cohort name</label>
+              <input id="cohort-name" type="text" value={name} placeholder="e.g. Ankara adults" onChange={(e) => setName(e.target.value)} /></div>
+            <button type="submit" className="button primary" style={{ alignSelf: "end" }} disabled={!preview.data?.eligible_records}>Save cohort</button>
+          </form>
+          {error ? <ErrorState error={error} /> : null}
+        </section>
+        <section aria-labelledby="saved-h" className="stack">
+          <h2 id="saved-h">Saved cohorts</h2>
+          {list.error ? <ErrorState error={list.error} onRetry={list.reload} /> : null}
+          {list.data && list.data.items.length === 0 ? <EmptyState title="No cohorts yet.">Define filters and save a cohort.</EmptyState> : null}
+          {list.data?.items.map((c) => <CohortCard key={c.cohort_id} cohort={c} provinceName={provinceName} reload={list.reload} />)}
+        </section>
+      </div>
+    </div>
+  );
 }
 
 export default function CohortsPage() {
-  const router = useRouter();
-  const params = useSearchParams();
-  const linkBuild = params.get("build");
-  const { build, missingBuildId } = useBuild();
-  const buildId = build?.availability.status === "available" ? build.build_id : null;
-  const [filters, setFilters] = useState<Filters>({});
-  const [size, setSize] = useState("10");
-  const [seed, setSeed] = useState("");
-  const [name, setName] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState<ApiError | undefined>();
-
-  useEffect(() => setSeed(String(randomSeed())), []);
-  useEffect(() => setFilters({}), [buildId]);
-
-  const cats = useApi(buildId ? `cats:${buildId}` : null, (signal) =>
-    unwrap(api.GET("/api/v1/builds/{build_id}/summary", { params: { path: { build_id: buildId! } }, signal })));
-  const body = filtersToBody(filters);
-  const preview = useApi(buildId ? `preview:${buildId}:${JSON.stringify(body)}` : null, (signal) =>
-    unwrap(api.POST("/api/v1/cohorts/preview", { body: { build_id: buildId!, filters: body }, signal })));
-  const caps = useApi("capabilities", (signal) => unwrap(api.GET("/api/v1/capabilities", { signal })));
-  const cohorts = useApi("cohorts", (signal) => unwrap(api.GET("/api/v1/cohorts", { signal })));
-
-  const categories = {
-    age_group: cats.data?.distributions.find((d) => d.field === "age_group")?.categories.map((c) => c.value) ?? [],
-    gender: cats.data?.distributions.find((d) => d.field === "gender")?.categories.map((c) => c.value) ?? [],
-    marital_status: cats.data?.distributions.find((d) => d.field === "marital_status")?.categories.map((c) => c.value) ?? [],
-  };
-  const eligible = preview.data?.eligible_count ?? 0;
-  const n = Number(size);
-  const seedNumber = Number(seed);
-  const sizeProblem = !Number.isInteger(n) || n < 1 ? "Enter a whole number of at least 1."
-    : preview.data && n > eligible ? `Only ${fmtInt(eligible)} residents match; sampling is without replacement.` : null;
-  const seedProblem = seed === "" || !Number.isInteger(seedNumber) || seedNumber < 0 ? "Enter a whole-number seed of 0 or more." : null;
-  const canSave = Boolean(preview.data && preview.data.can_persist && !sizeProblem && !seedProblem && !preview.loading && !saving);
-
-  async function save() {
-    if (!preview.data || !buildId) return;
-    setSaving(true);
-    setSaveError(undefined);
-    try {
-      const created = await unwrap(api.POST("/api/v1/cohorts", {
-        body: { build_id: buildId, source_sha256: preview.data.source_sha256, filters: body, size: n, sampling: "simple_random",
-                 seed: seedNumber, name: name.trim() || null },
-      }));
-      router.push(withBuild(`/cohorts/${created.cohort_id}`, linkBuild));
-    } catch (err) {
-      setSaveError(toApiError(err));
-      setSaving(false);
-    }
-  }
-
   return (
     <>
-      <PageHeader title="Cohorts">
-        Draw a reproducible sample from the loaded synthetic build: filter, check the matching count, then save a seeded simple random
-        sample. The saved manifest keeps the requested filters and the exact realized resident IDs.
-      </PageHeader>
+      <PageHeader title="Cohorts">Reusable, filtered selections of synthetic records. Definitions are stored separately from seeded samples drawn from them.</PageHeader>
       <SyntheticNotice kind="population" />
-      {missingBuildId ? <UnavailableState title={`Build ${missingBuildId} is not registered.`}>Choose a registered build above.</UnavailableState> : null}
-      {build && !buildId ? <UnavailableState title="The selected build's source has changed; new cohorts cannot be drawn from it." /> : null}
-
-      {buildId ? (
-        <section className="card stack" aria-labelledby="new-h">
-          <h2 id="new-h">New cohort</h2>
-          <FilterControls filters={filters} onChange={setFilters} categories={categories} availableFields={build?.available_fields ?? []}
-            disabled={!cats.data} idSearch />
-          {preview.error ? <ErrorState error={preview.error} onRetry={preview.reload} what="preview" /> : null}
-          {preview.data ? (
-            <div className={preview.loading ? "is-stale" : ""} aria-live="polite" aria-busy={preview.loading}>
-              <div className="tiles">
-                <StatTile label="Eligible residents (M)" value={fmtInt(preview.data.eligible_count)} sub={`of ${fmtInt(preview.data.total_records)} in this build`} />
-                <StatTile label="Inclusion probability (n/M)" value={preview.data.eligible_count && !sizeProblem ? fmtDecimal(n / preview.data.eligible_count, 4) : "–"}
-                  sub="Each eligible resident, without replacement" />
-                <StatTile label="Expansion weight (M/n)" value={preview.data.eligible_count && !sizeProblem ? fmtDecimal(preview.data.eligible_count / n, 2) : "–"}
-                  sub="Relative to this synthetic frame only" />
-              </div>
-              {!preview.data.can_persist ? <EmptyState title="No residents match.">An empty preview can be inspected, but a saved cohort must be nonempty.</EmptyState> : null}
-            </div>
-          ) : preview.loading ? <Loading what="matching count" /> : null}
-
-          <div className="grid-3">
-            <div className="field">
-              <label htmlFor="size">Sample size (n)</label>
-              <input id="size" type="number" min={1} step={1} value={size} onChange={(e) => setSize(e.target.value)} aria-describedby="size-hint" aria-invalid={Boolean(sizeProblem)} />
-              <span className="field-hint" id="size-hint">{sizeProblem ?? "Without replacement; cannot exceed the eligible count."}</span>
-            </div>
-            <div className="field">
-              <label htmlFor="seed">Seed</label>
-              <div className="row">
-                <input id="seed" type="number" min={0} step={1} value={seed} onChange={(e) => setSeed(e.target.value)} aria-invalid={Boolean(seedProblem)} style={{ flex: "1 1 120px" }} />
-                <button type="button" className="button small" onClick={() => setSeed(String(randomSeed()))}>New seed</button>
-              </div>
-              <span className="field-hint">{seedProblem ?? "Recorded in the manifest. Same build, filters, size and seed give the same IDs."}</span>
-            </div>
-            <div className="field">
-              <label htmlFor="cohort-name">Name (optional)</label>
-              <input id="cohort-name" type="text" maxLength={120} value={name} onChange={(e) => setName(e.target.value)} />
-            </div>
-          </div>
-          <fieldset>
-            <legend>Sampling method</legend>
-            <label className="check"><input type="radio" name="sampling" checked readOnly /> Simple random sample without replacement</label>
-            <label className="check" style={{ opacity: 0.7 }}>
-              <input type="radio" name="sampling" disabled aria-describedby="strat-reason" /> Stratified sample
-            </label>
-            <p className="field-hint" id="strat-reason">
-              Stratified sampling is unavailable: {caps.data?.modes.stratified_sampling.reasons[0] ?? "no tested design is implemented."}
-            </p>
-          </fieldset>
-          {saveError ? <ErrorState error={saveError} what="saving the cohort" /> : null}
-          <div className="row">
-            <button type="button" className="button primary" onClick={save} disabled={!canSave}>{saving ? "Saving…" : "Save cohort"}</button>
-            <span className="small muted">Saving draws the sample on the server from the previewed bytes; a changed source is rejected.</span>
-          </div>
-        </section>
-      ) : null}
-
-      <section className="card stack" aria-labelledby="saved-h">
-        <h2 id="saved-h">Saved cohorts</h2>
-        {cohorts.loading && !cohorts.data ? <Loading what="cohorts" /> : null}
-        {cohorts.error ? <ErrorState error={cohorts.error} onRetry={cohorts.reload} /> : null}
-        {cohorts.data && cohorts.data.items.length === 0 ? <EmptyState title="No cohorts saved yet." /> : null}
-        {cohorts.data && cohorts.data.items.length > 0 ? (
-          <div className="table-wrap">
-            <table>
-              <caption>Saved cohort manifests (newest first)</caption>
-              <thead><tr><th scope="col">Cohort</th><th scope="col">Filters</th><th scope="col" className="num">n / M</th><th scope="col" className="num">Seed</th><th scope="col">Build</th><th scope="col">Status</th><th scope="col">Created</th></tr></thead>
-              <tbody>
-                {cohorts.data.items.map((c) => (
-                  <tr key={c.cohort_id}>
-                    <th scope="row"><Link href={withBuild(`/cohorts/${c.cohort_id}`, linkBuild)}>{c.name || c.cohort_id}</Link>{c.name ? <div className="small muted"><code>{c.cohort_id}</code></div> : null}</th>
-                    <td><FilterChips filters={c.requested.filters} /></td>
-                    <td className="num">{fmtInt(c.realized.selected_count)} / {fmtInt(c.realized.eligible_count)}</td>
-                    <td className="num">{c.requested.seed}</td>
-                    <td><code>{c.build_id}</code></td>
-                    <td><CohortStatusBadge status={c.current.status} /></td>
-                    <td className="small">{c.created_at}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : null}
-      </section>
+      <PopulationGate what="cohorts">{(id) => <Cohorts populationId={id} />}</PopulationGate>
     </>
   );
 }

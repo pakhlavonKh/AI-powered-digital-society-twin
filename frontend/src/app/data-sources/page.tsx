@@ -1,91 +1,82 @@
 "use client";
 
-import { CopyId } from "@/components/CopyId";
-import { Notice, SyntheticNotice } from "@/components/Notices";
+import Link from "next/link";
+import { BuildControlsButton } from "@/components/national/common";
+import { Notice } from "@/components/Notices";
 import { PageHeader } from "@/components/PageHeader";
-import { EmptyState, ErrorState, Loading } from "@/components/States";
+import { ErrorState, Loading } from "@/components/States";
 import { Badge } from "@/components/StatusBadge";
-import { ValidationTabs } from "@/components/ValidationTabs";
-import { api, unwrap } from "@/lib/api/client";
+import { v2, type DataSources } from "@/lib/api/v2";
 import { fmtInt } from "@/lib/format";
+import { usePopulation } from "@/lib/population";
 import { useApi } from "@/lib/useApi";
 
-const STAT_LABELS: Record<string, string> = {
-  total_population: "Total population", male_population: "Male population", female_population: "Female population",
-  population_density: "Population density", total_median_age: "Median age (total)", male_median_age: "Median age (male)",
-  female_median_age: "Median age (female)",
-};
+function Coverage({ n }: { n: number }) {
+  return <Badge tone={n === 81 ? "good" : n === 0 ? "neutral" : "warn"}>{n}/81 provinces</Badge>;
+}
 
 export default function DataSourcesPage() {
-  const data = useApi("datasets", (signal) => unwrap(api.GET("/api/v1/datasets", { signal })));
-  const d = data.data;
+  const { reload: reloadPops } = usePopulation();
+  const ds = useApi("v2:data-sources", (signal) => v2<DataSources>("/data-sources", { signal }));
+  const c = ds.data?.controls;
   return (
     <>
-      <PageHeader title="Data Sources">
-        What the fixtures in this checkout are, where the project recorded them as coming from, and what provenance is missing.
-      </PageHeader>
-      <ValidationTabs />
-      <SyntheticNotice kind="population" />
-      {data.loading && !d ? <Loading what="data sources" /> : null}
-      {data.error ? <ErrorState error={data.error} onRetry={data.reload} /> : null}
-      {d ? (
+      <PageHeader title="Data Sources">Official aggregate statistics used by the generator, their years, coverage and limitations. Missing coverage is shown, never filled.</PageHeader>
+      {ds.error ? <ErrorState error={ds.error} onRetry={ds.reload} /> : null}
+      {ds.loading && !ds.data ? <Loading what="data sources" /> : null}
+      {ds.data ? (
         <>
-          <section className="card stack" aria-labelledby="manifest-h">
-            <div className="card-head"><h2 id="manifest-h">Root data manifest</h2><code>{d.manifest.path}</code></div>
-            <p className="row"><Badge tone="neutral" glyph="○">{`Status: ${d.manifest.status}`}</Badge><span className="small">{d.manifest.note}</span></p>
-            {d.manifest.datasets.length === 0 ? <EmptyState title="No datasets are registered in the root manifest.">The processed fixtures below are listed separately and are not manifest entries.</EmptyState> : (
-              <pre className="prompt">{JSON.stringify(d.manifest.datasets, null, 2)}</pre>
-            )}
-            {d.manifest.error ? <Notice tone="crit" title="The manifest could not be read:">{d.manifest.error}</Notice> : null}
+          <section className="card stack" aria-labelledby="pkg-h">
+            <h2 id="pkg-h">Long-format TÜİK package</h2>
+            {ds.data.package.present ? <p className="small">Found in <code>{ds.data.package.directory}</code>. Indicators become control tables only through rules in <code>{ds.data.package.mapping_file}</code>; every other indicator is province context.</p>
+              : <Notice tone="warn" title="Not in this checkout.">The team's 33-dataset package (577 indicators, long format) is not present. Put it in <code>{ds.data.package.directory}/</code> (git-ignored), add control rules to <code>{ds.data.package.mapping_file}</code>, then rebuild. Until then only the historical Ankara extracts below are available, so 80 provinces have no source data.</Notice>}
+            <div className="row"><span className="small muted">Control store: <strong>{c?.status}</strong>{c?.built_at ? ` · built ${c.built_at}` : ""} · builder {c?.builder_version}</span></div>
+            <BuildControlsButton onDone={() => { ds.reload(); reloadPops(); }} />
           </section>
-
-          <section className="card stack" aria-labelledby="fixtures-h">
-            <h2 id="fixtures-h">Fixture evidence in this checkout</h2>
-            <p className="small muted">{d.attribution_note} No source URL, download date or raw checksum is invented here.</p>
-            <div className="table-wrap">
-              <table>
-                <caption>Files with their current SHA-256</caption>
-                <thead><tr><th scope="col">File</th><th scope="col">Kind</th><th scope="col">Declared source</th><th scope="col" className="num">Rows</th><th scope="col">Raw evidence</th><th scope="col">Licence</th><th scope="col">Gaps</th></tr></thead>
-                <tbody>
-                  {d.fixture_evidence.map((e) => (
-                    <tr key={e.path}>
-                      <th scope="row"><code>{e.path}</code>{e.sha256 ? <div className="small"><CopyId value={e.sha256} label={`SHA-256 of ${e.path}`} /></div> : <div className="small">missing</div>}</th>
-                      <td>{e.kind.replaceAll("_", " ")}</td>
-                      <td className="small">{e.declared_source}</td>
-                      <td className="num">{e.rows === null ? "–" : fmtInt(e.rows)}</td>
-                      <td>{e.raw_evidence_status === "unavailable" ? <Badge tone="warn" glyph="!">Unavailable</Badge> : e.raw_evidence_status.replaceAll("_", " ")}</td>
-                      <td>{e.licence ?? "Unknown"}</td>
-                      <td className="small"><ul style={{ margin: 0, paddingLeft: 16 }}>{e.gaps.map((g) => <li key={g}>{g}</li>)}</ul></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
-
-          <section className="card stack" aria-labelledby="controls-h">
-            <h2 id="controls-h">Demographic controls</h2>
-            <p className="small muted">{d.controls_note}</p>
-            <div className="table-wrap">
-              <table>
-                <caption>Distinct facts by year (source observations grouped when they agree)</caption>
-                <thead><tr><th scope="col">Year</th><th scope="col">Statistic</th><th scope="col" className="num">Value</th><th scope="col">Unit</th><th scope="col">Source observations</th></tr></thead>
-                <tbody>
-                  {d.controls.map((c) => (
-                    <tr key={`${c.year}:${c.statistic}`}>
-                      <td>{c.year}</td>
-                      <th scope="row">{STAT_LABELS[c.statistic] ?? c.statistic} <span className="small muted"><code>{c.statistic}</code></span></th>
-                      <td className="num">{c.unit === "persons" ? fmtInt(c.value) : c.value.toFixed(2)}</td>
-                      <td>{c.unit}</td>
-                      <td className="small">
-                        {c.observations.length} {c.observations.length === 1 ? "observation" : "agreeing observations"}
-                        <ul style={{ margin: 0, paddingLeft: 16 }}>{c.observations.map((o) => <li key={`${o.source_workbook}:${o.csv_row}`}><code>{o.source_workbook}</code>, sheet {o.source_sheet}, row {o.source_row}</li>)}</ul>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+          {c?.status === "built" ? (
+            <>
+              <section className="card" aria-labelledby="tab-h">
+                <h2 id="tab-h">Standard control tables (generator inputs)</h2>
+                <div className="table-wrap"><table><caption>{c.tables?.length} tables · {fmtInt(c.context_indicators)} context indicators</caption>
+                  <thead><tr><th>Table</th><th>Universe</th><th>Coverage</th><th>Years</th><th>Sources</th><th>Checks and limitations</th></tr></thead>
+                  <tbody>{c.tables?.map((t) => (
+                    <tr key={t.table_id}><th><code>{t.table_id}</code><div className="small muted">{t.title}</div></th><td className="small">{t.universe_note} ({t.universe_min_age}+)</td>
+                      <td><Coverage n={t.province_coverage} /></td><td>{t.years.join(", ")}</td><td className="small">{t.source_ids.join(", ")}</td>
+                      <td className="small">{t.checks.map((k, i) => <div key={i}>{k.passed ? "✓" : "×"} {k.detail} {k.sex ? `(${k.sex} ${k.year})` : ""}</div>)}{t.limitations.map((l) => <div key={l} className="muted">{l}</div>)}</td></tr>))}</tbody></table></div>
+              </section>
+              <section className="card stack" aria-labelledby="src-h">
+                <h2 id="src-h">Sources</h2>
+                {c.sources?.map((s) => (
+                  <details key={s.source_id}>
+                    <summary>{s.title_en ?? s.source_id} <Coverage n={s.province_coverage.length} /> <Badge tone={s.status === "used" ? "good" : "neutral"}>{s.status.replace("_", " ")}</Badge></summary>
+                    <div className="details-body">
+                      <dl className="kv">
+                        <dt>Source ID</dt><dd><code>{s.source_id}</code></dd>
+                        <dt>Publisher</dt><dd>{s.publisher}</dd>
+                        <dt>Turkish title</dt><dd>{s.title_tr ?? "Not recorded"}</dd>
+                        <dt>Identifier</dt><dd>{s.dataset_identifier ?? "Not recorded"}</dd>
+                        <dt>URL</dt><dd>{s.url ? <a href={s.url} rel="noreferrer" target="_blank">{s.url}</a> : "Not recorded"}</dd>
+                        <dt>Publication / retrieval</dt><dd>{s.publication_date ?? "not recorded"} / {s.retrieval_date ?? "not recorded"}</dd>
+                        <dt>Reference years</dt><dd>{s.reference_years.join(", ")}</dd>
+                        <dt>Geographic level</dt><dd>{s.geographic_level} · provinces {s.province_coverage.join(", ")}</dd>
+                        <dt>Variables</dt><dd className="small">{s.variables.slice(0, 20).join(", ")}{(s.variable_count ?? s.variables.length) > 20 ? ` … (${s.variable_count})` : ""}</dd>
+                        <dt>Units</dt><dd>{s.units.join(", ") || "–"}</dd>
+                        <dt>Transformations</dt><dd className="small">{s.transformations.join(" ")}</dd>
+                        <dt>Checksum</dt><dd className="small">{s.processed_file ? <><code>{s.processed_file.sha256.slice(0, 16)}…</code> ({s.processed_file.path})</> : s.raw_files?.map((f) => <div key={f.path}><code>{f.sha256.slice(0, 16)}…</code> {f.path}</div>)}</dd>
+                        {s.value_status_counts ? <><dt>Value statuses</dt><dd>{Object.entries(s.value_status_counts).map(([k, v]) => `${k} ${v}`).join(" · ")}</dd></> : null}
+                        <dt>Limitations</dt><dd><ul className="small" style={{ margin: 0, paddingLeft: 18 }}>{s.limitations.map((l) => <li key={l}>{l}</li>)}</ul></dd>
+                      </dl>
+                    </div>
+                  </details>
+                ))}
+              </section>
+              {c.warnings?.length ? <section className="card"><h2>Ingestion warnings</h2><ul className="small">{c.warnings.map((w, i) => <li key={i}>{w}</li>)}</ul></section> : null}
+            </>
+          ) : <p className="muted small">{c?.detail}</p>}
+          <section className="card" aria-labelledby="man-h">
+            <h2 id="man-h">Root data manifest</h2>
+            <p className="small"><code>{ds.data.root_manifest.path}</code>: {ds.data.root_manifest.status} ({ds.data.root_manifest.datasets.length} entries). {ds.data.root_manifest.note}</p>
+            <p className="small muted">Missing values keep their status: OBSERVED (a published number, including 0), NOT_REPORTED, UNKNOWN, NOT_APPLICABLE and STRUCTURALLY_UNAVAILABLE (dataset does not cover the province). None is shown as zero. See also <Link href="/historical/data-sources">historical fixture evidence</Link>.</p>
           </section>
         </>
       ) : null}

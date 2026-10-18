@@ -55,7 +55,7 @@ export default function CohortDetailPage() {
             </div>
             <p className="small muted">{c.realized.weight_scope} {c.scope_note}</p>
             <div className="row">
-              <Link className="button" href={withBuild("/experiments/new", linkBuild, { cohort: c.cohort_id })}>Design an experiment draft with this cohort</Link>
+              <Link className="button" href={withBuild("/historical/experiments/new", linkBuild, { cohort: c.cohort_id })}>Design an experiment draft with this cohort</Link>
               <span className="small muted">Cohort-based drafts can be saved; no verified runner executes arbitrary cohorts.</span>
             </div>
           </section>
@@ -71,7 +71,7 @@ export default function CohortDetailPage() {
                     {c.realized.record_ids.map((rid, i) => (
                       <tr key={rid}>
                         <td className="num">{i + 1}</td>
-                        <td><Link href={withBuild("/personas", c.build_id, { record: rid })}>{rid}</Link></td>
+                        <td><Link href={withBuild("/historical/personas", c.build_id, { record: rid })}>{rid}</Link></td>
                       </tr>
                     ))}
                   </tbody>

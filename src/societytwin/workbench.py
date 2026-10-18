@@ -312,7 +312,9 @@ class Workbench:
         return {
             "manifest": {"path": "data/manifest.yaml", "status": manifest_status, "datasets": manifest_entries,
                          "error": manifest_error,
-                         "note": "The root data manifest is the project's record of downloaded datasets. It is empty: no dataset has been registered there."},
+                         "note": ("The root data manifest is the project's record of datasets. It is empty: no dataset has been registered there."
+                                  if not manifest_entries else
+                                  f"The root data manifest records {len(manifest_entries)} dataset(s); fields the project never recorded stay null.")},
             "fixture_evidence": evidence,
             "controls": controls,
             "controls_note": "Agreeing duplicate observations are grouped; every source observation is kept. Median ages are aggregate context, not resident ages.",

@@ -1,7 +1,8 @@
 import { expect, test } from "@playwright/test";
 
 test("narrow screens have no horizontal page scroll and a working menu", async ({ page }) => {
-  for (const path of ["/", "/population", "/cohorts", "/personas?record=TST2099_000001", "/experiments/new", "/results/imp_ab_complete", "/validation", "/data-sources"]) {
+  for (const path of ["/", "/population", "/cohorts", "/personas", "/experiments/new", "/experiments", "/results", "/validation", "/data-sources", "/settings",
+    "/historical", "/historical/personas?record=TST2099_000001", "/historical/results/imp_ab_complete"]) {
     await page.goto(path);
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
@@ -11,7 +12,7 @@ test("narrow screens have no horizontal page scroll and a working menu", async (
   const menu = page.getByRole("button", { name: "Menu" });
   await expect(menu).toHaveAttribute("aria-expanded", "false");
   await menu.click();
-  await page.getByRole("link", { name: /Results/ }).click();
+  await page.getByRole("link", { name: "Results", exact: true }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Results" })).toBeVisible();
 });
 

@@ -1,24 +1,25 @@
 import { expect, test, type Page } from "@playwright/test";
 
-// Runs against the artificial TESTLAND fixture with no MatrAIx runtime and no provider keys.
+// The historical (v1) Ankara workbench, now under /historical, against the artificial TESTLAND fixture.
+// No MatrAIx runtime and no provider keys.
 
 async function heading(page: Page, name: string) {
   await expect(page.getByRole("heading", { level: 1, name })).toBeVisible();
 }
 
-test("sidebar follows the requested workflow order and every page loads", async ({ page }) => {
+test("historical pages stay reachable from the sidebar archive", async ({ page }) => {
   await page.goto("/");
-  const links = page.getByRole("navigation", { name: "Workbench" }).getByRole("link");
-  await expect(links).toHaveText([/Dashboard/, /Population Explorer/, /Cohorts/, /Persona Explorer/, /New Experiment/, /Results/, /Validation/, /Data Sources/]);
-  for (const [label, title] of [["Population Explorer", "Population Explorer"], ["Cohorts", "Cohorts"], ["Persona Explorer", "Persona Explorer"],
-    ["New Experiment", "New Experiment"], ["Results", "Results"], ["Validation", "Validation"], ["Data Sources", "Data Sources"], ["Dashboard", "Dashboard"]] as const) {
-    await links.filter({ hasText: label }).click();
+  await page.getByRole("navigation", { name: "Workbench" }).getByRole("link", { name: /Historical/ }).click();
+  await heading(page, "Historical Ankara experiment");
+  for (const [path, title] of [["/historical/population", "Population Explorer"], ["/historical/cohorts", "Cohorts"], ["/historical/personas", "Persona Explorer"],
+    ["/historical/experiments/new", "New Experiment"], ["/historical/results", "Results"], ["/historical/validation", "Validation"], ["/historical/data-sources", "Data Sources"]] as const) {
+    await page.goto(path);
     await heading(page, title);
   }
 });
 
-test("dashboard shows backend-derived scope and recorded runs without invented metrics", async ({ page }) => {
-  await page.goto("/");
+test("historical overview shows backend-derived scope and recorded runs without invented metrics", async ({ page }) => {
+  await page.goto("/historical");
   await expect(page.getByText("Synthetic population generated from official aggregate statistics")).toBeVisible();
   await expect(page.locator(".tile").filter({ hasText: "Synthetic residents in this build" })).toContainText("40");
   await expect(page.locator(".tile").filter({ hasText: "Geography" })).toContainText("TESTLAND");
@@ -29,7 +30,7 @@ test("dashboard shows backend-derived scope and recorded runs without invented m
 });
 
 test("population filters change backend counts and live in the URL", async ({ page }) => {
-  await page.goto("/population");
+  await page.goto("/historical/population");
   await expect(page.getByRole("heading", { name: "40 of 40 residents match" })).toBeVisible();
   // The checkbox is controlled by the URL, which updates asynchronously, so click and then assert.
   const female = page.getByRole("group", { name: "Sex (administrative)" }).getByLabel("female");
@@ -50,7 +51,7 @@ test("population filters change backend counts and live in the URL", async ({ pa
 });
 
 test("a cohort is saved, reloads with the same realized IDs, and links to personas", async ({ page }) => {
-  await page.goto("/cohorts");
+  await page.goto("/historical/cohorts");
   await expect(page.getByText("Eligible residents (M)")).toBeVisible();
   await page.getByLabel("Sample size (n)").fill("3");
   await page.getByLabel("Seed").fill("5");
@@ -68,20 +69,20 @@ test("a cohort is saved, reloads with the same realized IDs, and links to person
 });
 
 test("persona explorer separates source cards from stored personas", async ({ page }) => {
-  await page.goto("/personas?record=TST2099_000001");
+  await page.goto("/historical/personas?record=TST2099_000001");
   await expect(page.getByText("Stored fixture persona available")).toBeVisible();
   await expect(page.getByRole("heading", { name: /MatrAIx persona YAML/ })).toBeVisible();
   await expect(page.getByText("Kept in metadata only (never shown to the model)")).toBeVisible();
   await expect(page.getByText("Line-ending drift").first()).toBeVisible();
   await expect(page.getByText("Materialization is unavailable here.")).toBeVisible();
   await expect(page.getByRole("button", { name: "Materialize persona" })).toBeDisabled();
-  await page.goto("/personas?record=TST2099_000010");
+  await page.goto("/historical/personas?record=TST2099_000010");
   await expect(page.getByText(/Source card only/).first()).toBeVisible();
   await expect(page.getByRole("heading", { name: /MatrAIx persona YAML/ })).toHaveCount(0);
 });
 
 test("experiment drafts save with exact blockers and cannot launch unsupported execution", async ({ page }) => {
-  await page.goto("/experiments/new");
+  await page.goto("/historical/experiments/new");
   await page.getByRole("button", { name: "Step 4: Cohort" }).click();
   await page.getByLabel("Draft name").fill("e2e draft");
   await page.getByRole("button", { name: "Save draft" }).click();
@@ -100,7 +101,7 @@ test("experiment drafts save with exact blockers and cannot launch unsupported e
 });
 
 test("results show recorded answers, labels, unknown values and the fake/live separation", async ({ page }) => {
-  await page.goto("/results");
+  await page.goto("/historical/results");
   await expect(page.getByRole("table", { name: "Smoke runs" })).toContainText("smoke_fake");
   await page.getByRole("link", { name: "ab_complete" }).click();
   await expect(page.getByText("2 of 4 recorded values differ")).toBeVisible();
@@ -117,7 +118,7 @@ test("results show recorded answers, labels, unknown values and the fake/live se
 });
 
 test("validation keeps integrity separate from fit and invents no score", async ({ page }) => {
-  await page.goto("/validation");
+  await page.goto("/historical/validation");
   await expect(page.getByRole("heading", { name: "Integrity checks" })).toBeVisible();
   await expect(page.getByText("Joint age × sex TVD")).toBeVisible();
   await expect(page.getByText(/held out table comparison/i)).toBeVisible();
@@ -127,7 +128,7 @@ test("validation keeps integrity separate from fit and invents no score", async 
 
 
 test("experiment builder keeps the scenario title while moving between design steps", async ({ page }) => {
-  await page.goto("/experiments/new");
+  await page.goto("/historical/experiments/new");
   await page.getByLabel("Title", { exact: true }).fill("Local design draft");
   await page.getByRole("button", { name: "Next", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Task", exact: true })).toBeVisible();
