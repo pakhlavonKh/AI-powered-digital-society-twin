@@ -136,11 +136,20 @@ function Builder({ populationId }: { populationId: string }) {
           <fieldset><legend>Context dimensions shown to the agent{envCode ? ` (indicators of ${env.data?.province.province_name ?? envCode})` : ""}</legend>
             {env.loading && !env.data ? <Loading what="environment" /> : null}
             {env.data && indicators.length === 0 ? <p className="small muted">No context indicators are loaded for this province.</p> : null}
-            <div className="checks">{indicators.filter((i) => i.value !== null).map((i) => (
-              <label className="check" key={i.indicator_id}><input type="checkbox" checked={d.environment.context_indicators.includes(i.indicator_id)}
-                onChange={(e) => patch("environment", { context_indicators: e.target.checked ? [...d.environment.context_indicators, i.indicator_id] : d.environment.context_indicators.filter((x) => x !== i.indicator_id) })} />
-                {i.label} ({i.source_year})</label>))}</div>
-            <p className="field-hint">Each indicator is shown with its own source year. Missing indicators are omitted, never invented.</p>
+            {env.data ? Object.entries(env.data.domains).map(([domain, rows]) => {
+              const usable = rows.filter((i) => i.value !== null);
+              const chosen = usable.filter((i) => d.environment.context_indicators.includes(i.indicator_id)).length;
+              return usable.length ? (
+                <details key={domain} open={chosen > 0}>
+                  <summary>{domain} <span className="small muted">({usable.length}{chosen ? `, ${chosen} selected` : ""})</span></summary>
+                  <div className="checks">{usable.map((i) => (
+                    <label className="check" key={i.indicator_id}><input type="checkbox" checked={d.environment.context_indicators.includes(i.indicator_id)}
+                      onChange={(e) => patch("environment", { context_indicators: e.target.checked ? [...d.environment.context_indicators, i.indicator_id] : d.environment.context_indicators.filter((x) => x !== i.indicator_id) })} />
+                      {i.label} ({i.source_period ?? i.source_year})</label>))}</div>
+                </details>
+              ) : null;
+            }) : null}
+            <p className="field-hint">Each indicator is shown with its own reference period (a year or a published multi-year period). Missing indicators and projections are omitted, never invented. At most 20 can be selected.</p>
           </fieldset>
         </section>
       ) : null}

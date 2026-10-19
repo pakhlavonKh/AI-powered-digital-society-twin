@@ -12,7 +12,7 @@ import { ErrorState, Loading } from "@/components/States";
 import { StatTile } from "@/components/StatTile";
 import { Badge, RunStateBadge } from "@/components/StatusBadge";
 import { v2, type Geography, type Overview, type ValidationReport } from "@/lib/api/v2";
-import { coverageNote } from "@/lib/coverage";
+import { coverageNote, fullCoverage } from "@/lib/coverage";
 import { fmtInt } from "@/lib/format";
 import { useLinkPop, usePopulation, withPop } from "@/lib/population";
 import { featuredRun, useRecordedRuns } from "@/lib/recordedRuns";
@@ -54,8 +54,9 @@ export default function DashboardPage() {
         {geo.data ? (
           <ProvinceMap provinces={geo.data.provinces} referenceYear={population?.reference_year} title="Türkiye province coverage"
             hrefFor={(code) => withPop("/population", pop, { province: code })}
-            note={<p className="notice info coverage-note" role="note">{coverageNote(geo.data)} Remaining provinces appear here once their official
-              tables are added to the control store (see <Link href={withPop("/data-sources", pop)}>Data sources</Link>).</p>} />
+            note={<p className="notice info coverage-note" role="note">{coverageNote(geo.data)} {fullCoverage(geo.data)
+              ? <>Coverage, years and remaining gaps per dataset are on <Link href={withPop("/data-sources", pop)}>Data sources</Link>.</>
+              : <>Remaining provinces appear here once their official tables are added to the control store (see <Link href={withPop("/data-sources", pop)}>Data sources</Link>).</>}</p>} />
         ) : geo.error ? <ErrorState error={geo.error} onRetry={geo.reload} what="province coverage" /> : <Loading what="province coverage" />}
         <div className="dash-side">
           {featured ? (

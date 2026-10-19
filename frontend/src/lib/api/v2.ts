@@ -113,12 +113,15 @@ export type ProvinceCoverage = {
 export type Geography = { classification: string; provinces: ProvinceCoverage[]; controls_status: string;
   provinces_with_population_controls: number; province_count: number };
 
+export type EnvironmentPoint = { period: string; year: number | null; value: number | null; value_status: string; observation_type: string };
 export type EnvironmentIndicator = { indicator_id: string; label: string; label_tr: string | null; unit: string; value: number | null;
-  value_status: string; source_year: number | null; years_from_reference: number | null; geo_level: string; source_id: string;
-  source_ref: string; history: { year: number; value: number | null; value_status: string }[]; note: string | null };
+  value_status: string; source_year: number | null; source_period?: string | null; multi_year_period?: boolean; years_from_reference: number | null;
+  geo_level: string; source_id: string; source_ref: string; history: EnvironmentPoint[]; projections?: EnvironmentPoint[]; note: string | null };
+export type EnvironmentProjection = { indicator_id: string; label: string; label_tr: string | null; unit: string; source_id: string; theme: string;
+  points: EnvironmentPoint[]; note: string };
 export type Environment = {
   province: { province_code: string; province_name: string; nuts3_code: string }; reference_year: number;
-  domains: Record<string, EnvironmentIndicator[]>; empty_domains: string[]; indicator_count: number;
+  domains: Record<string, EnvironmentIndicator[]>; empty_domains: string[]; indicator_count: number; projections?: EnvironmentProjection[];
   structurally_unavailable_datasets: { source_id: string; title: string | null; theme: string | null; coverage: string; value_status: string; note: string }[];
   population_controls: { table_id: string; attribute: string | null; title: string; available: boolean; source_year: number | null; geo_level: string | null }[];
   notes: string[]; empty: boolean;
@@ -220,32 +223,59 @@ export type TableFit = {
     tvd_records: number; jsd_weighted: number | null; srmse_weighted: number | null; max_abs_record_z: number; record_z_threshold: number };
   weighted_status?: string; record_status?: string; status?: string; detail?: string; evidence?: string;
   source?: { geo_level: string; geo_code: string; year: number; source_ids: string[]; universe_min_age: number; universe_note: string };
-  source_to_population_scale?: number; records_without_value?: number; provinces?: string[]; note?: string;
+  source_to_population_scale?: number; source_to_population_scale_by_sex?: Record<string, number> | null; records_without_value?: number; provinces?: string[]; note?: string;
+  notes?: string[]; calibration_note?: string; provinces_not_calibrated?: string[];
 };
+export type ProvinceCalibration = { province_code: string; calibrated: boolean; margins: string[]; weight_ratio_bounds?: [number, number];
+  margins_not_calibrated?: { margin: string; records: number; converged?: boolean; reason: string }[] };
 export type ValidationReport = {
   method_version: string; population_id: string; statement: string; tolerances: Record<string, number>; tolerance_justification: Record<string, string>;
-  national: { scope: string; province_count: number; province_reference_count: number; tables: TableFit[] };
+  national: { scope: string; province_count: number; province_reference_count: number; tables: TableFit[]; note?: string | null };
+  calibration?: ProvinceCalibration[];
   provinces: { province_code: string; province_name: string; records: number; tables: TableFit[]; fields_without_source: { field: string; reason: string }[];
     cross_source_checks: { name: string; year: number; root_table: number; context: number; difference: number; passed: boolean; detail: string }[] }[];
   constraints: { rule_id: string; kind: string; description: string; checked: number; violations: number; examples: { synthetic_id: string; detail: string }[] }[];
   constraint_violations: number; weights: Weights; not_validated: string[];
 };
 
+export type Discrepancy = { dataset: string | null; field: string; claimed: unknown; actual: unknown; note: string };
 export type Source = {
   source_id: string; publisher: string; title_en: string | null; title_tr: string | null; dataset_identifier: string | null; theme?: string | null;
   url: string | null; publication_date: string | null; retrieval_date: string | null; reference_years: number[]; geographic_level: string;
   province_coverage: string[]; variables: string[]; variable_count?: number; units: string[]; transformations: string[]; limitations: string[];
   status: string; processed_file?: { path: string; sha256: string; bytes: number } | null; raw_files?: { path: string; sha256: string }[];
   value_status_counts?: Record<string, number>; rows?: number;
+  // TÜİK package datasets only
+  domain?: string; source_tables?: string[]; reference_periods?: string[]; catalog_reference_years?: string | null; missing_provinces?: string[];
+  blank_values?: number; multi_year_rows?: number; multi_year_periods?: Record<string, number>; projection_rows?: number; absent_province_rows?: number;
+  observation_type?: string; accounting?: { read: number; control_cells: number; context_observations: number; rejected: number; duplicates_agreeing: number };
+  mapping?: { use: "controls" | "context"; tables: string[]; reason: string | null }; discrepancies?: Discrepancy[];
+  wide_files?: { file: string; sha256: string; cells_compared: number; mismatches: number; wide_only_values: number; long_only_keys: number }[];
 };
+export type TableCheck = { name: string; passed: boolean; detail: string; sex?: string; year?: number; summary?: boolean; checked?: number;
+  failed?: number; years_passed?: number[]; years_failed?: number[]; relative_gap_range?: [number, number] };
 export type ControlTable = { table_id: string; kind: string; title: string; unit: string; universe_min_age: number; universe_note: string;
-  source_ids: string[]; transformations: string[]; checks: { name: string; passed: boolean; detail: string; sex?: string; year?: number }[];
+  source_ids: string[]; transformations: string[]; checks: TableCheck[];
   limitations: string[]; province_coverage: number; provinces: string[]; years: number[]; rows: number };
+export type PackageAudit = {
+  adapter: "tuik_long_format_package"; package_dir: string; mapping_file: string;
+  files: { total: number; long_format: number; wide: number; metadata: string[]; documentation: string[] };
+  counts: { datasets: number; indicators: number; long_rows: number; datasets_with_full_coverage: number; not_province_level_datasets: number;
+    rejected_rows: number; blank_values: number; multi_year_rows: number; projection_rows: number; control_cells: number; context_observations: number;
+    duplicate_keys_conflicting: number; variable_metadata_indicators: number; province_coverage_distribution: Record<string, number> };
+  documentation_claims: { source: string | null; claims: Record<string, number | null>; note: string };
+  wide_files: { verified: number; cells_compared: number; mismatches: number; unmatched_files: string[] };
+  discrepancies: Discrepancy[];
+  not_province_level: { title_en: string | null; title_tr: string | null; theme: string | null; geographic_level: string | null; reason: string | null; url: string | null }[];
+};
+export type CrossSourceAudit = { adapter: "cross_source"; checks: { check: string; detail?: string; passed?: boolean; cells?: number; indicator?: string;
+  package_indicator?: string; geo_code?: string; period?: string; legacy?: number; package?: number }[] };
 export type ControlsStatus = { status: "built" | "not_built" | "invalid"; detail?: string; built_at?: string; fingerprint?: string;
   tables?: ControlTable[]; sources?: Source[]; inputs?: { path: string; role: string; sha256: string; bytes: number }[]; warnings?: string[];
-  context_indicators?: number; package_dir_present: boolean; builder_version: string };
+  context_indicators?: number; context_observations?: number; context_domains?: Record<string, number>; multi_year_observations?: number;
+  projection_observations?: number; audits?: (PackageAudit | CrossSourceAudit)[]; package_dir_present: boolean; builder_version: string };
 export type DataSources = { controls: ControlsStatus; root_manifest: { path: string; status: string; datasets: unknown[]; note: string; error: string | null };
-  package: { directory: string; present: boolean; mapping_file: string; mapping_present: boolean } };
+  package: { directory: string; present: boolean; files?: number; mapping_file: string; mapping_present: boolean } };
 
 export type Overview = {
   controls: { status: string; built_at: string | null; tables: string[] }; populations: PopulationListItem[]; default_population_id: string | null;

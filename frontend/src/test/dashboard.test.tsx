@@ -33,6 +33,14 @@ describe("coverage note", () => {
   it("switches to full coverage by itself when every province has source data", () => {
     expect(coverageNote({ province_count: 81, provinces: all.map((c) => province(c, `P${c}`, true)) })).toBe("Official source data is loaded for all 81 provinces.");
   });
+
+  it("names the attributes covered everywhere and the ones no table supports", () => {
+    const tables = ["population_age_sex", "marital_status_sex", "education_sex", "urbanicity_sex"];
+    const provinces = all.map((c) => ({ ...province(c, `P${c}`, true), control_tables: tables }));
+    expect(coverageNote({ province_count: 81, provinces })).toBe("Official source data is loaded for all 81 provinces: age group × sex, "
+      + "marital status, education and settlement type. No province-level table supports labour status, household size and household type, "
+      + "so they stay unavailable.");
+  });
 });
 
 describe("featured recorded run", () => {
@@ -115,6 +123,16 @@ describe("pipeline status", () => {
     expect(stages[5]).toHaveTextContent("No national run yet · 2 completed historical runs recorded");
     expect(screen.getByText(/Source data loaded: 1 \/ 81/)).toBeInTheDocument();
     expect(screen.getByText(/2 source-table fit checks · 0 constraint violations · not a behavioural validation/)).toBeInTheDocument();
+  });
+
+  it("counts calibration margins that small provinces could not carry", () => {
+    const partial = { ...validation, calibration: [
+      { province_code: "69", calibrated: true, margins: ["population_age_sex"], margins_not_calibrated: [{ margin: "education_sex", records: 97, reason: "x" }] },
+      { province_code: "75", calibrated: true, margins: ["population_age_sex"], margins_not_calibrated: [{ margin: "marital_status_sex", records: 90, reason: "y" }] },
+      { province_code: "06", calibrated: true, margins: ["population_age_sex", "education_sex"], margins_not_calibrated: [] },
+    ] } as unknown as ValidationReport;
+    render(<PipelineStatus overview={overview} caps={caps as never} validation={partial} recordedCompleted={2} pop={null} />);
+    expect(screen.getByText(/0 constraint violations · 2 calibration margins not imposed \(small provinces\) · not a behavioural validation/)).toBeInTheDocument();
   });
 
   it("does not report stages as working before their inputs exist", () => {

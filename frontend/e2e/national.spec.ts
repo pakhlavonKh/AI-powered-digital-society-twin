@@ -157,9 +157,17 @@ test("validation and data sources report fit, coverage and missingness without s
   await expect(page.locator(".tile").filter({ hasText: "Constraint violations" })).toContainText("0");
   await expect(page.getByText("Fit by construction (calibrated)").first()).toBeVisible();
   await expect(page.getByText(/Passing it does not show that AI personas behave like real people/)).toBeVisible();
+  // Artificial Bayburt (about 30 records) cannot carry its marital margin: reported, not forced.
+  await expect(page.locator(".tile").filter({ hasText: "Margins not imposed" })).toContainText("1");
+  await expect(page.getByText("Calibrated in some provinces only").first()).toBeVisible();
+  await expect(page.getByText(/Not imposed on the weights in 1 of 3 provinces \(Bayburt \(69\)\)/)).toBeVisible();
   await page.goto("/data-sources");
   await expect(page.getByText("3/81 provinces").first()).toBeVisible();
-  await expect(page.getByText(/ARTIFICIAL air passengers/)).toBeVisible();
+  await expect(page.locator("summary").filter({ hasText: "ARTIFICIAL air passengers" })).toContainText("1/81 provinces");
+  await expect(page.getByRole("heading", { name: "Remaining gaps" })).toBeVisible();
+  await expect(page.getByText(/ARTIFICIAL air passengers: 1\/81 provinces; the others are STRUCTURALLY_UNAVAILABLE, not zero\./)).toBeVisible();
+  await expect(page.getByText(/No province-level table supports/)).toContainText("labour_status");
+  await expect(page.getByRole("heading", { name: "Package documentation compared with the data" })).toBeVisible();
   await expect(page.getByText(/accuracy|success rate/i)).toHaveCount(0);
   await page.goto("/settings");
   await expect(page.getByRole("heading", { name: "Constraint rules" })).toBeVisible();

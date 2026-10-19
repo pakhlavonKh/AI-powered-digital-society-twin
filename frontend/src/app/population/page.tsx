@@ -82,14 +82,33 @@ function Explorer({ populationId }: { populationId: string }) {
           </div>
         ) : null}
         {province && env.data ? (
-          <section className="card" aria-labelledby="env-h">
+          <section className="card stack" aria-labelledby="env-h">
             <div className="card-head"><h2 id="env-h">{env.data.province.province_name} environment</h2><span className="small muted">Province context, not person attributes</span></div>
             {env.data.empty ? <p className="muted small">No context indicators are loaded for this province.</p> : (
-              <div className="table-wrap"><table><caption>Value at or before reference year {env.data.reference_year}</caption>
-                <thead><tr><th>Domain</th><th>Indicator</th><th className="num">Value</th><th>Source year</th><th>Status</th></tr></thead>
-                <tbody>{Object.entries(env.data.domains).flatMap(([domain, rows]) => rows.map((r) => (
-                  <tr key={r.indicator_id}><td>{domain}</td><th>{r.label}</th><td className="num">{r.value === null ? "–" : `${r.value.toLocaleString("en-GB", { maximumFractionDigits: 1 })} ${r.unit}`}</td>
-                    <td>{r.source_year ?? "–"}</td><td className="status-pill">{r.value_status}</td></tr>)))}</tbody></table></div>
+              <>
+                <p className="small muted" style={{ margin: 0 }}>{fmtInt(env.data.indicator_count)} indicators: the latest observation whose reference period ends by {env.data.reference_year}, with its own period as published. Nothing is interpolated; projections are listed separately.</p>
+                {Object.entries(env.data.domains).map(([domain, rows]) => (
+                  <details key={domain}>
+                    <summary>{domain} <span className="small muted">({rows.length})</span></summary>
+                    <div className="table-wrap"><table><caption>{domain}: value at or before reference year {env.data!.reference_year}</caption>
+                      <thead><tr><th>Indicator</th><th className="num">Value</th><th>Period</th><th>Status</th><th>Note</th></tr></thead>
+                      <tbody>{rows.map((r) => (
+                        <tr key={r.indicator_id}><th>{r.label}{r.label_tr ? <div className="small muted">{r.label_tr}</div> : null}</th>
+                          <td className="num">{r.value === null ? "–" : `${r.value.toLocaleString("en-GB", { maximumFractionDigits: 1 })} ${r.unit}`}</td>
+                          <td>{r.source_period ?? r.source_year ?? "–"}{r.multi_year_period ? <div className="small muted">multi-year period</div> : null}</td>
+                          <td className="status-pill">{r.value_status}</td><td className="small muted">{r.note ?? ""}</td></tr>))}</tbody></table></div>
+                  </details>
+                ))}
+                {env.data.projections?.length ? (
+                  <details>
+                    <summary>Official projections <span className="small muted">({env.data.projections.length}; not observations)</span></summary>
+                    <div className="table-wrap"><table><caption>Projections are never used as current values, including years up to the reference year</caption>
+                      <thead><tr><th>Indicator</th><th>Periods</th></tr></thead>
+                      <tbody>{env.data.projections.map((r) => (
+                        <tr key={r.indicator_id}><th>{r.label}</th><td className="small">{r.points.map((pt) => `${pt.period}${pt.observation_type === "projection_baseline" ? " (baseline)" : ""}: ${pt.value === null ? "–" : pt.value.toLocaleString("en-GB", { maximumFractionDigits: 1 })}`).join(" · ")} {r.unit}</td></tr>))}</tbody></table></div>
+                  </details>
+                ) : null}
+              </>
             )}
             {env.data.structurally_unavailable_datasets.length ? <p className="small muted">Not covered for this province (structurally unavailable, not zero): {env.data.structurally_unavailable_datasets.map((d) => `${d.title ?? d.source_id} (${d.coverage})`).join(", ")}.</p> : null}
           </section>

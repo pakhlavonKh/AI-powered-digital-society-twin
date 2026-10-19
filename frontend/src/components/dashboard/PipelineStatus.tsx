@@ -63,6 +63,7 @@ export function PipelineStatus({ overview: o, caps, validation, recordedComplete
   ];
   const violations = validation?.constraint_violations;
   const tables = validation ? validation.provinces.reduce((n, p) => n + p.tables.length, 0) : 0;
+  const notImposed = validation?.calibration?.reduce((n, c) => n + (c.margins_not_calibrated?.length ?? 0), 0) ?? 0;
   return (
     <section className="card stack" aria-labelledby="pipeline-h">
       <div className="card-head" style={{ marginBottom: 0 }}>
@@ -84,7 +85,7 @@ export function PipelineStatus({ overview: o, caps, validation, recordedComplete
         {validation ? (
           <span className="row" style={{ gap: 6 }}>
             {violations === 0 ? state("good", "✓", "Validation report available") : state("warn", "!", `${fmtInt(violations)} constraint violations`)}
-            <span className="muted">{tables} source-table fit checks · {fmtInt(violations)} constraint violations · not a behavioural validation</span>
+            <span className="muted">{tables} source-table fit checks · {fmtInt(violations)} constraint violations{notImposed ? ` · ${fmtInt(notImposed)} calibration margins not imposed (small provinces)` : ""} · not a behavioural validation</span>
           </span>
         ) : <span className="muted">{hasPop ? "Reading the validation report…" : "Validation runs once a population exists."}</span>}
         <Link href={withPop("/validation", pop)}>Validation</Link>
