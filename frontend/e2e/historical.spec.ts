@@ -7,10 +7,10 @@ async function heading(page: Page, name: string) {
   await expect(page.getByRole("heading", { level: 1, name })).toBeVisible();
 }
 
-test("historical pages stay reachable from the sidebar archive", async ({ page }) => {
+test("historical pages stay reachable from the sidebar", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("navigation", { name: "Workbench" }).getByRole("link", { name: /Historical/ }).click();
-  await heading(page, "Historical Ankara experiment");
+  await page.getByRole("navigation", { name: "Workbench" }).getByRole("link", { name: /Historical Run3/ }).click();
+  await heading(page, "Historical Ankara Experiment");
   for (const [path, title] of [["/historical/population", "Population Explorer"], ["/historical/cohorts", "Cohorts"], ["/historical/personas", "Persona Explorer"],
     ["/historical/experiments/new", "New Experiment"], ["/historical/results", "Results"], ["/historical/validation", "Validation"], ["/historical/data-sources", "Data Sources"]] as const) {
     await page.goto(path);
@@ -18,14 +18,38 @@ test("historical pages stay reachable from the sidebar archive", async ({ page }
   }
 });
 
-test("historical overview shows backend-derived scope and recorded runs without invented metrics", async ({ page }) => {
+test("the dashboard features the recorded run as historical and links to its detail page", async ({ page }) => {
+  await page.goto("/");
+  const card = page.getByRole("region", { name: "Historical TESTLAND ab_complete" });
+  await expect(card).toContainText("Historical / Recorded");
+  await expect(card).toContainText("Completed");
+  await expect(card).toContainText("2 of 4 answers differ");
+  await expect(card).toContainText("fakeprov/artificial-model");
+  await card.getByRole("link", { name: /View ab_complete/ }).click();
+  await heading(page, "Historical Ankara Experiment");
+});
+
+test("historical page is an experiment detail view built from recorded evidence, without a national map", async ({ page }) => {
   await page.goto("/historical");
   await expect(page.getByText("Synthetic population generated from official aggregate statistics")).toBeVisible();
-  await expect(page.locator(".tile").filter({ hasText: "Synthetic residents in this build" })).toContainText("40");
-  await expect(page.locator(".tile").filter({ hasText: "Geography" })).toContainText("TESTLAND");
+  await expect(page.getByText("Historical / Recorded").first()).toBeVisible();
+  await expect(page.locator(".national-map, .population-map")).toHaveCount(0);
+  const location = page.getByRole("region", { name: "Location", exact: true });
+  await expect(location).toContainText("TESTLAND");
+  await expect(location).toContainText("40 synthetic residents");
+  await expect(location).toContainText("No other province has loaded data in this build.");
+  await expect(page.getByRole("heading", { level: 2, name: "Historical TESTLAND ab_complete" })).toBeVisible();
+  await expect(page.locator(".tile").filter({ hasText: "Answers that differed" })).toContainText("2 / 4");
+  await expect(page.getByRole("article", { name: "Persona A" })).toContainText("TST2099_000001");
+  await expect(page.getByRole("article", { name: "Persona B" })).toContainText("TST2099_000002");
+  await expect(page.getByRole("group", { name: "Recorded comparison" })).toContainText("2 / 4");
+  await expect(page.getByText("2 of 4 recorded values differ")).toBeVisible();
+  const meta = page.getByRole("region", { name: "Run metadata and reproducibility" });
+  await expect(meta).toContainText("fakeprov/artificial-model");
+  await expect(meta).toContainText("Not recorded");
+  await expect(page.getByRole("region", { name: "Research limitations" })).toBeVisible();
   await expect(page.getByRole("row").filter({ hasText: "ab_complete" })).toContainText("Completed");
   await expect(page.getByRole("row").filter({ hasText: "started_only" })).toContainText("Outcome unknown");
-  await expect(page.getByText("Any other province")).toBeVisible();
   await expect(page.getByText(/accuracy|success rate|budget remaining|active agents/i)).toHaveCount(0);
 });
 

@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { AnswerCell } from "@/components/AnswerCell";
-import { SafeMarkdown } from "@/components/Markdown";
+import { ArtifactTable } from "@/components/historical/ArtifactTable";
+import { coercionMap, ComparisonTable } from "@/components/historical/ComparisonTable";
 import { Notice, SyntheticNotice } from "@/components/Notices";
 import { PageHeader } from "@/components/PageHeader";
 import { ErrorState, Loading } from "@/components/States";
@@ -15,40 +16,6 @@ import { api, unwrap, type Schemas } from "@/lib/api/client";
 import { fmtInt, fmtUsd, fmtValue } from "@/lib/format";
 import { useApi } from "@/lib/useApi";
 import { apiPath, withBuild } from "@/lib/urls";
-
-function ArtifactRow({ artifact }: { artifact: Schemas["Artifact"] }) {
-  const [preview, setPreview] = useState<string | null>(null);
-  const [failed, setFailed] = useState(false);
-  const href = apiPath(`/artifacts/${artifact.artifact_id}`);
-  const isMarkdown = artifact.media_type.startsWith("text/markdown");
-  return (
-    <tr>
-      <th scope="row"><code>{artifact.relpath}</code>{artifact.caveat ? <div className="small muted">{artifact.caveat}</div> : null}
-        {preview !== null ? <div className="card" style={{ marginTop: 8 }}><SafeMarkdown text={preview} /></div> : null}
-        {failed ? <div className="small">Could not load the preview.</div> : null}
-      </th>
-      <td>{artifact.kind === "report" ? <Badge tone="warn" glyph="!">Descriptive report</Badge> : artifact.kind}</td>
-      <td className="num">{fmtInt(artifact.size)} B</td>
-      <td>
-        <div className="row">
-          <a className="button small" href={`${href}?download=true`} download>Download</a>
-          {isMarkdown ? (
-            <button type="button" className="button small" onClick={async () => {
-              if (preview !== null) { setPreview(null); return; }
-              try {
-                const res = await fetch(href);
-                if (!res.ok) throw new Error(String(res.status));
-                setPreview(await res.text());
-              } catch {
-                setFailed(true);
-              }
-            }}>{preview !== null ? "Hide preview" : "Preview"}</button>
-          ) : null}
-        </div>
-      </td>
-    </tr>
-  );
-}
 
 function EventsPanel({ experimentId, jobId }: { experimentId: string; jobId: string | null }) {
   const [offset, setOffset] = useState(0);
@@ -90,9 +57,7 @@ export default function ResultDetailPage() {
   const trials = useApi(`trials:${id}:${jobId}`, (signal) =>
     unwrap(api.GET("/api/v1/experiments/{experiment_id}/trials", { params: { path: { experiment_id: id }, query: { job_id: jobId } }, signal })));
   const r = results.data;
-  const coercions = new Map<string, Schemas["Coercion"]>();
-  for (const t of r?.trial_summaries ?? []) for (const c of t.coerced_answers) if (c.question_id) coercions.set(`${t.label}:${c.question_id}`, c);
-  const [a, b] = r?.trial_summaries ?? [];
+  const coercions = r ? coercionMap(r) : new Map<string, Schemas["Coercion"]>();
   const exportBase = apiPath(`/experiments/${encodeURIComponent(id)}/export`);
   const jobQuery = jobId ? `&job_id=${encodeURIComponent(jobId)}` : "";
 
@@ -158,22 +123,7 @@ export default function ResultDetailPage() {
                   {r.differing_values_recorded !== null ? ` (comparison file: ${r.differing_values_recorded})` : ""}
                 </span>
               </div>
-              <div className="table-wrap">
-                <table>
-                  <caption>Persona A {a?.persona_id ?? ""} versus persona B {b?.persona_id ?? ""}; one response each</caption>
-                  <thead><tr><th scope="col">Question</th><th scope="col">Persona A</th><th scope="col">Persona B</th><th scope="col">Values differ</th></tr></thead>
-                  <tbody>
-                    {r.comparison_rows.map((row) => (
-                      <tr key={row.question_id}>
-                        <th scope="row">{row.prompt ?? row.question_id}<div className="small muted"><code>{row.question_id}</code>{row.question_type ? ` · ${row.question_type}` : ""}</div></th>
-                        <td><AnswerCell answer={row.answer_a} coercion={a ? coercions.get(`${a.label}:${row.question_id}`) : undefined} /></td>
-                        <td><AnswerCell answer={row.answer_b} coercion={b ? coercions.get(`${b.label}:${row.question_id}`) : undefined} /></td>
-                        <td>{row.value_differs === null ? "–" : row.value_differs ? "Yes" : "No"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <ComparisonTable result={r} />
               <p className="small muted">The two personas differ in age band and marital status. Differences describe these two recorded responses only.</p>
             </section>
           ) : (
@@ -247,13 +197,7 @@ export default function ResultDetailPage() {
               </div>
             </div>
             <p className="small muted">Exports carry the synthetic-data label, provenance hashes and a column schema. Null stays null.</p>
-            <div className="table-wrap">
-              <table>
-                <caption>Files in the run folder, served by server-owned IDs</caption>
-                <thead><tr><th scope="col">File</th><th scope="col">Kind</th><th scope="col" className="num">Size</th><th scope="col">Actions</th></tr></thead>
-                <tbody>{r.artifacts.map((art) => <ArtifactRow key={art.artifact_id} artifact={art} />)}</tbody>
-              </table>
-            </div>
+            <ArtifactTable artifacts={r.artifacts} />
             <EventsPanel experimentId={id} jobId={jobId} />
             <details>
               <summary>Raw statuses and file evidence</summary>

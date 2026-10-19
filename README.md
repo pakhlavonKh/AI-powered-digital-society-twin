@@ -89,7 +89,7 @@ stub backend and MatrAIx's fake transport test the pipeline only, and live provi
 
 ## MatrAIx Simulation Experiment
 
-> Historical proof of concept, kept unchanged for reproducibility. In the UI it is under **Historical (Ankara run3)**.
+> Historical proof of concept, kept unchanged for reproducibility. In the UI it is **Historical Run3** in the Experiments group, and the dashboard features it as a recorded experiment.
 
 [experiments/matraix_simulation/](experiments/matraix_simulation/) is the first working end-to-end path from TÜİK data to persona-conditioned AI responses. It uses MatrAIx as an external framework (not vendored) and tracks only SocietyTwin-specific code and small fixtures.
 
@@ -135,7 +135,7 @@ Current limitations of this experiment:
 
 ## Research Workbench
 
-The local web UI and API. The main pages (Dashboard, Population, Cohorts, Personas, New Experiment, Experiments, Results, Validation, Data Sources, Settings) serve the national pipeline through `/api/v2`. The original Ankara workbench (fixture builds, two fixture personas, recorded MatrAIx runs including run3) is kept under **Historical** through `/api/v1`. Everything works offline; MatrAIx-backed runs need an external runtime; live provider runs are disabled by default.
+The local web UI and API. The main pages (Dashboard, Population, Cohorts, Personas, New Experiment, Experiments, Results, Validation, Data Sources, Settings) serve the national pipeline through `/api/v2`; the Dashboard is the Türkiye-wide overview (summary, province coverage map, population snapshot, pipeline status). The original Ankara workbench (fixture builds, two fixture personas, recorded MatrAIx runs including run3) is kept under **Historical Run3** through `/api/v1`, as an experiment detail and reproducibility page. Everything works offline; MatrAIx-backed runs need an external runtime; live provider runs are disabled by default.
 
 ```bash
 python3.12 -m venv .venv && .venv/bin/pip install -r requirements-api.lock && .venv/bin/pip install -e . --no-deps

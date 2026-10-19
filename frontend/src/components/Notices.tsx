@@ -1,4 +1,4 @@
-export const POPULATION_LABEL = "Synthetic population generated from official aggregate statistics (sources listed). Not a census.";
+export const POPULATION_LABEL = "Synthetic population generated from official aggregate statistics (sources listed). No real individual records; not a census.";
 export const RESPONSE_LABEL = "Synthetic personas and AI-generated responses. Not real people. Not a prediction of real behaviour.";
 
 export function SyntheticNotice({ kind }: { kind: "population" | "responses" }) {

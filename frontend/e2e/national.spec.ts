@@ -14,12 +14,16 @@ async function heading(page: Page, name: string | RegExp) {
   await expect(page.getByRole("heading", { level: 1, name })).toBeVisible();
 }
 
-test("sidebar lists the national workflow and the historical archive", async ({ page }) => {
+test("sidebar groups the recorded run with experiments, and the empty dashboard reports 0 / 81 honestly", async ({ page }) => {
   await page.goto("/");
+  await heading(page, "SocietyTwin Dashboard");
   const links = page.getByRole("navigation", { name: "Workbench" }).getByRole("link");
-  await expect(links).toHaveText([/Dashboard/, /Population/, /Cohorts/, /Personas/, /New Experiment/, /Experiments/, /Results/, /Validation/,
-    /Data Sources/, /Settings/, /Historical/]);
+  await expect(links).toHaveText([/Dashboard/, /Population/, /Cohorts/, /Personas/, /New Experiment/, /Experiments/, /Results/, /Historical Run3/,
+    /Validation/, /Data Sources/, /Settings/]);
   await expect(page.getByText("No experiment results yet.")).toBeVisible();
+  await expect(page.locator(".tile").filter({ hasText: "Province coverage" })).toContainText("0 / 81");
+  await expect(page.getByText(/supports all 81 provinces\. No official source data is loaded yet\./)).toBeVisible();
+  await expect(page.getByRole("region", { name: "Pipeline status" }).getByRole("listitem").first()).toContainText("Not built");
 });
 
 test("empty states lead to building controls and generating a population", async ({ page }) => {
@@ -35,11 +39,38 @@ test("empty states lead to building controls and generating a population", async
   await expect(page.getByText("3 of 81 provinces with source data")).toBeVisible();
 });
 
-test("the map has all 81 provinces and opens a province in the explorer", async ({ page }) => {
+test("the dashboard summarises real state and its map separates loaded from unloaded provinces", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator(".tile").filter({ hasText: "Synthetic records" })).toContainText("3,000");
+  await expect(page.locator(".tile").filter({ hasText: "Province coverage" })).toContainText("3 / 81");
+  await expect(page.locator(".tile").filter({ hasText: "Province coverage" })).toContainText("3 of 81 provinces loaded");
+  await expect(page.getByText(/Current official source data is loaded for Adana, Ankara and Bayburt only\./)).toBeVisible();
+  await expect(page.getByRole("region", { name: "Pipeline status" })).toContainText("Source data loaded: 3 / 81");
+  const snapshot = page.getByRole("region", { name: "Population snapshot" });
+  await expect(snapshot.getByText("Age and sex")).toBeVisible();
+  await expect(snapshot.getByText("Marital status")).toBeVisible();
+  const map = page.getByRole("region", { name: "Türkiye province coverage" });
+  await expect(map.locator("path.prov")).toHaveCount(81);
+  await expect(map.locator("a[href*='province=']")).toHaveCount(3);
+  await expect(map.locator("svg").getByRole("button")).toHaveCount(78);
+  await expect(map.getByText(/3 with records · 0 with source data only · 78 without source data/)).toBeVisible();
+  // An unloaded province explains itself (keyboard activation) instead of opening an empty explorer.
+  const izmir = map.getByRole("button", { name: /İzmir/ });
+  await izmir.focus();
+  await page.keyboard.press("Enter");
+  await expect(izmir).toHaveAttribute("aria-pressed", "true");
+  await expect(map.locator(".map-tip")).toContainText("No source data loaded");
+  await expect(page).not.toHaveURL(/province=/);
+  await snapshot.getByRole("link", { name: /Explore population/ }).click();
+  await heading(page, "Population Explorer");
+});
+
+test("the map opens a loaded province in the explorer", async ({ page }) => {
   await page.goto("/");
   const map = page.getByRole("region", { name: "Türkiye province coverage" });
-  await expect(map.locator("a[href*='province=']")).toHaveCount(81);
-  await expect(map.getByText(/3 with records · 0 with source data only · 78 without source data/)).toBeVisible();
+  await map.locator("a[href*='province=06']").hover();
+  await expect(map.locator(".map-tip")).toContainText("Synthetic records");
+  await expect(map.locator(".map-tip")).toContainText("Explore population");
   await map.locator("a[href*='province=69']").click();
   await expect(page).toHaveURL(/province=69/);
   await expect(page.locator(".tile").filter({ hasText: "Provinces" })).toContainText("Bayburt");

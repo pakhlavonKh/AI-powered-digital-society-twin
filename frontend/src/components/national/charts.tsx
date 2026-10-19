@@ -31,7 +31,8 @@ export function DistributionChart({ dist, title, label }: { dist: Distribution; 
   );
 }
 
-export function PopulationPyramid({ rows, weighted = true }: { rows: PyramidRow[]; weighted?: boolean }) {
+/** Age × sex pyramid. `height` shrinks it for the dashboard preview; the Population Explorer uses the full size. */
+export function PopulationPyramid({ rows, weighted = true, height = 360 }: { rows: PyramidRow[]; weighted?: boolean; height?: number }) {
   const tokens = useChartTokens();
   const id = useId();
   const [table, setTable] = useState(false);
@@ -54,8 +55,8 @@ export function PopulationPyramid({ rows, weighted = true }: { rows: PyramidRow[
           <tbody>{rows.map((r) => <tr key={r.age_group}><th>{r.age_group}</th><td className="num">{fmtInt(weighted ? r.male_weighted : r.male_records)}</td>
             <td className="num">{fmtInt(weighted ? r.female_weighted : r.female_records)}</td></tr>)}</tbody></table></div>
       ) : (
-        <div className="chart-box" style={{ height: 360 }} role="img" aria-label="Population pyramid by five-year age group and sex. Use the table view for values.">
-          <ResponsiveContainer width="100%" height={360} minWidth={0} initialDimension={{ width: 600, height: 360 }}>
+        <div className="chart-box" style={{ height }} role="img" aria-label="Population pyramid by five-year age group and sex. Use the table view for values.">
+          <ResponsiveContainer width="100%" height={height} minWidth={0} initialDimension={{ width: 600, height }}>
             <BarChart data={data} layout="vertical" stackOffset="sign" margin={{ top: 4, right: 12, bottom: 4, left: 4 }} barCategoryGap={1}>
               <CartesianGrid vertical horizontal={false} stroke={tokens.grid} />
               <XAxis type="number" domain={[-max, max]} ticks={ticks} tickFormatter={fmt} tick={{ fill: tokens["text-muted"], fontSize: 10 }} axisLine={{ stroke: tokens.axis }} tickLine={false} />

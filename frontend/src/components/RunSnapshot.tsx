@@ -1,15 +1,47 @@
 "use client";
 
 import Link from "next/link";
-import { api, unwrap } from "@/lib/api/client";
-import { useApi } from "@/lib/useApi";
-import { withBuild } from "@/lib/urls";
-import { fmtInt, fmtUsd } from "@/lib/format";
-import { RunStateBadge } from "./StatusBadge";
+import type { Schemas } from "@/lib/api/client";
+import { fmtInt } from "@/lib/format";
+import { NOT_RECORDED, runContext, useRecordedRun } from "@/lib/recordedRuns";
 import { Icon } from "./Icon";
+import { Badge, RunStateBadge } from "./StatusBadge";
 
-export function RunSnapshot({ id, name, build }: { id: string; name: string; build: string | null }) {
-  const result = useApi(`snapshot:${id}`, (signal) => unwrap(api.GET("/api/v1/experiments/{experiment_id}/results", {params:{path:{experiment_id:id}},signal})));
-  const r=result.data;
-  return <section className="card run-snapshot"><div className="snapshot-intro"><span className="eyebrow"><Icon name="experiment" size={16}/> Featured recorded experiment</span><h2>{name}</h2><p className="small muted">{r?.model ?? "Recorded results"} · {r?.trial_summaries.length ?? "—"} personas</p><div className="row"><RunStateBadge state={r?.display_state ?? "completed"}/><Link href={withBuild(`/historical/results/${encodeURIComponent(id)}`,build)} className="button primary small">View results <Icon name="arrow" size={14}/></Link></div></div><div className="snapshot-chart"><h3>Recorded answer comparison</h3>{r ? <><div className="answer-bar-row"><span>Different values</span><div><i style={{width:`${r.comparison_rows.length ? (r.differing_values_recomputed ?? 0)/r.comparison_rows.length*100 : 0}%`}}/></div><b>{fmtInt(r.differing_values_recomputed)}</b></div><div className="answer-bar-row"><span>Same values</span><div><i style={{width:`${r.comparison_rows.length ? (r.comparison_rows.length-(r.differing_values_recomputed ?? 0))/r.comparison_rows.length*100 : 0}%`}}/></div><b>{r.comparison_rows.length-(r.differing_values_recomputed ?? 0)}</b></div><p className="small muted">{r.comparison_rows.length} questions · {r.usage?.cost_usd != null ? `${fmtUsd(r.usage.cost_usd)} estimated cost` : "Cost not recorded"}<br/>A comparison of these recorded responses only.</p></> : <p className="muted">{result.error ? "Comparison unavailable" : "Loading saved comparison…"}</p>}</div></section>;
+/**
+ * Dashboard card for a recorded (historical) run. Every value is read from the saved run folder through the API;
+ * it is labelled as recorded so it is never mistaken for a run made in this session.
+ */
+export function RunSnapshot({ run, href, resultsHref }: { run: Schemas["ExperimentListItem"]; href: string; resultsHref: string }) {
+  const { results, trials } = useRecordedRun(run.experiment_id);
+  const r = results.data;
+  const ctx = runContext(trials.data?.trials);
+  const compared = r?.comparison_rows.length ?? 0;
+  const saved = r?.trial_summaries.filter((t) => t.answers !== null).length;
+  const pending = results.loading && !r ? "…" : NOT_RECORDED;
+  return (
+    <section className="card featured-run stack" aria-labelledby="featured-h">
+      <div className="card-head" style={{ marginBottom: 0 }}>
+        <span className="eyebrow"><Icon name="archive" size={15} /> Featured experiment</span>
+        <Badge tone="neutral" glyph="⧉">Historical / Recorded</Badge>
+      </div>
+      <div>
+        <h2 id="featured-h">Historical {ctx.location ? `${ctx.location} ` : ""}{run.name}</h2>
+        <p className="small muted" style={{ margin: 0 }}>Recorded MatrAIx proof of concept. Saved output only; nothing is re-run here.</p>
+      </div>
+      <dl className="facts">
+        <div><dt>Status</dt><dd><RunStateBadge state={run.display_state} /></dd></div>
+        <div><dt>Personas</dt><dd>{r ? `${saved} of ${r.trial_summaries.length} with saved answers` : pending}</dd></div>
+        <div><dt>Location</dt><dd>{ctx.location ?? (trials.loading ? "…" : NOT_RECORDED)}</dd></div>
+        <div><dt>Synthetic population</dt><dd>{ctx.referenceYear ? `${ctx.referenceYear} reference year` : trials.loading ? "…" : NOT_RECORDED}</dd></div>
+        <div><dt>Model</dt><dd><code>{run.model ?? NOT_RECORDED}</code></dd></div>
+        <div><dt>Recorded results</dt><dd>{r && compared ? `${fmtInt(r.differing_values_recomputed)} of ${compared} answers differ` : r ? "No comparison recorded" : pending}</dd></div>
+      </dl>
+      {results.error ? <p className="small muted" role="status">Saved results could not be loaded: {results.error.message}</p> : null}
+      <p className="small muted" style={{ margin: 0 }}>One recorded response per persona; differences describe these responses only.</p>
+      <div className="row">
+        <Link className="button primary small" href={href}>View {run.name} <Icon name="arrow" size={13} /></Link>
+        <Link className="small" href={resultsHref}>Full run evidence</Link>
+      </div>
+    </section>
+  );
 }

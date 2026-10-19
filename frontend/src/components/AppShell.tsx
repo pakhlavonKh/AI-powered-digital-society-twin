@@ -9,7 +9,8 @@ import { BuildBar } from "./BuildBar";
 import { Icon } from "./Icon";
 import { PopulationBar } from "./PopulationBar";
 
-export const NAV = [
+// Historical Run3 sits with the experiments it belongs to; its "Recorded" tag marks it as preserved output, not a live run.
+export const NAV: { href: string; label: string; icon: string; group: string; tag?: string; title?: string }[] = [
   { href: "/", label: "Dashboard", icon: "dashboard", group: "" },
   { href: "/population", label: "Population", icon: "population", group: "Population" },
   { href: "/cohorts", label: "Cohorts", icon: "cohorts", group: "Population" },
@@ -17,11 +18,12 @@ export const NAV = [
   { href: "/experiments/new", label: "New Experiment", icon: "experiment", group: "Experiments" },
   { href: "/experiments", label: "Experiments", icon: "layers", group: "Experiments" },
   { href: "/results", label: "Results", icon: "results", group: "Experiments" },
+  { href: "/historical", label: "Historical Run3", icon: "archive", group: "Experiments", tag: "Recorded proof of concept",
+    title: "Historical Ankara proof of concept (recorded MatrAIx run3)" },
   { href: "/validation", label: "Validation", icon: "validation", group: "Research" },
   { href: "/data-sources", label: "Data Sources", icon: "sources", group: "Research" },
-  { href: "/settings", label: "Settings", icon: "network", group: "Research" },
-  { href: "/historical", label: "Historical (Ankara run3)", icon: "chart", group: "Archive" },
-] as const;
+  { href: "/settings", label: "Settings", icon: "network", group: "" },
+];
 
 function isCurrent(href: string, pathname: string): boolean {
   if (href === "/") return pathname === "/";
@@ -51,9 +53,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {NAV.map((item, i) => (
             <li key={item.href}>
               {item.group && (i === 0 || NAV[i - 1].group !== item.group) ? <span className="nav-group">{item.group}</span> : null}
-              <Link className="nav-link" href={item.href === "/historical" ? withBuild(item.href, build) : withPop(item.href, pop)}
+              {!item.group && i > 0 ? <span className="nav-divider" aria-hidden="true" /> : null}
+              <Link className="nav-link" href={item.href === "/historical" ? withBuild(item.href, build) : withPop(item.href, pop)} title={item.title}
                     aria-current={isCurrent(item.href, pathname) ? "page" : undefined} onClick={() => setOpen(false)}>
-                <Icon name={item.icon} size={17}/><span>{item.label}</span>
+                <Icon name={item.icon} size={17}/><span>{item.label}{item.tag ? <> <small className="nav-tag">{item.tag}</small></> : null}</span>
               </Link>
             </li>
           ))}
