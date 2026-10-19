@@ -6,7 +6,7 @@ SocietyTwin is an Engineering Design II research project that aims to build a sy
 
 - The Türkiye-only, large-scale direction comes from the latest instructor feedback; the v2 architecture was drafted in response ([docs/](docs/)).
 - **Implemented:** a national pipeline in [`src/societytwin/national/`](src/societytwin/national/) with an API (`/api/v2`) and web UI: one Türkiye-wide generator (province is a dimension), source-fit validation, cohorts, personas, experiments with a stub and a MatrAIx backend, structured weighted results. See [National pipeline](#national-pipeline) and [docs/national-pipeline.md](docs/national-pipeline.md).
-- **Data gap:** the team's long-format TÜİK package (reported: 33 datasets, 577 indicators) is not in this repository. Until it is added under `data/raw/tuik_package/`, only the TÜİK-derived Ankara extracts are available, so 1 of 81 provinces has source data. Nothing is filled in for the others.
+- **Data:** the team's TÜİK province package (33 province-level datasets, TÜİK Veri Portalı) is integrated locally under `data/raw/tuik_package/` (git-ignored, never committed). All 81 provinces have official control tables for age group × sex, marital status, education and settlement type (2025), plus 472–497 province context indicators each. Labour status and household attributes have no person-level province table and stay unavailable. The package's own documentation overstates its counts (431,071 rows and 568 indicators in the data vs 411,132 and 577 claimed); see [docs/national-pipeline.md §3](docs/national-pipeline.md#3-data).
 - The first proof of concept is kept unchanged in [experiments/matraix_simulation/](experiments/matraix_simulation/): a 1,000-resident synthetic Ankara population with two personas run through a MatrAIx survey, including run3 (see [MatrAIx Simulation Experiment](#matraix-simulation-experiment)).
 - Architecture decisions still require instructor and team review.
 
@@ -79,13 +79,19 @@ PYTHONPATH=src .venv/bin/python -m societytwin.national generate --size 10000 --
 ./scripts/dev.sh   # http://127.0.0.1:3000
 ```
 
+The TÜİK province package is not committed: copy it into `data/raw/tuik_package/` from the team branch `data-turkey`
+first (commands in [data/README.md](data/README.md#setting-up-the-data-package-locally-teammates)); without it only
+Ankara has source data.
+
 Windows commands, the data workflow (how to add the TÜİK package and map indicators), the dependency model, weights,
 validation tolerances, experiment execution and limitations: [docs/national-pipeline.md](docs/national-pipeline.md).
 
-What the current data supports: Ankara 2025 population by age group × sex and marital status × sex (15+), reproduced
-exactly by the weighted 10K and 100K builds. Education, labour status, household and settlement type are implemented
-in the generator but have no real table loaded; socioeconomic status is not modelled. No model has been called: the
-stub backend and MatrAIx's fake transport test the pipeline only, and live provider runs are disabled by default.
+What the current data supports: for all 81 provinces, the 2025 population by age group × sex (root), marital status × sex
+(15+), education × sex (15+) and settlement type × sex; the national 100K build represents 86,092,168 residents with
+0 constraint violations and national record shares within sampling noise. Marital status and education are published
+by sex only, so their relationship with age is inferred, not observed. Labour status, household size and type have no
+person-level table; socioeconomic status, income and district are not modelled. No model has been called: the stub
+backend and MatrAIx's fake transport test the pipeline only, and live provider runs are disabled by default.
 
 ## MatrAIx Simulation Experiment
 

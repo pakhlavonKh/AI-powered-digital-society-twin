@@ -18,7 +18,7 @@ an experiment runs only the personas of a bounded, seeded cohort sample after an
 | Area | Status |
 |---|---|
 | 81-province reference table (plate, NUTS-1/2/3, ISO codes), checked against the map geometry | **Implemented** |
-| Standard control store; Ankara TÜİK extracts adapter; long-format package reader with mapping rules | **Implemented** (the package itself is not in this checkout; see §3) |
+| Standard control store; Ankara TÜİK extracts adapter; TÜİK province package reader (long + wide + metadata) with mapping rules | **Implemented**; the package is integrated locally (git-ignored, see §3) |
 | One national generator, dependency model, constraint engine, controlled-rounding allocation, raked weights | **Implemented** |
 | Source-fit validation with documented tolerances, constraint checks, cross-source checks | **Implemented** |
 | Parquet storage with manifests; 10K / 100K (and optional 1M) builds and benchmark | **Implemented** |
@@ -30,8 +30,9 @@ an experiment runs only the personas of a bounded, seeded cohort sample after an
 | MatrAIx live provider transport | **Partially implemented**: gated, never run against a provider |
 | Weighted aggregation with Kish effective n, intervals, small-group suppression | **Implemented** |
 | UI: Dashboard, Population, Cohorts, Personas, New Experiment, Experiments, Results, Validation, Data Sources, Settings | **Implemented** |
-| Real data for 80 of 81 provinces | **Not available**: the team's TÜİK package is not in this checkout |
-| Education, labour, household, settlement-type attributes on real data | **Not available** (code paths exist and are tested on artificial data; no real table loaded) |
+| Real data for all 81 provinces: age group × sex (root), marital status, education and settlement type, 2016–2025 | **Implemented** from the TÜİK province package (2025 for every province at the default reference year) |
+| Province context: 472–497 package indicators per province in 13 domains, with published periods and projections kept apart | **Implemented** |
+| Labour status, household size and household type on real data | **Not available**: the package publishes labour-force *rates* and household *counts*, not persons by status or household (§3.4) |
 | Socioeconomic status, income, employment status, district | **Not modelled** (no person-level source) |
 | Held-out validation, behavioural validation, cost price table | **Not implemented** |
 
@@ -69,36 +70,131 @@ The UI can do the last two steps itself (**Build control tables**, **Generate po
 
 ## 3. Data
 
-**What this checkout contains.** The only official statistics present are the TÜİK-derived Ankara extracts that ship
-with the historical MatrAIx experiment ([`experiments/matraix_simulation/processed/`](../experiments/matraix_simulation/processed/)):
-2025 population by five-year age group × sex, 2025 marital status × sex (ages 15+), and 2023–2025 totals, density and
-median ages. They are read, never modified, and recorded in [`data/manifest.yaml`](../data/manifest.yaml). The marital
-table's universe was verified arithmetically: for each sex its total equals the 15+ population of the age × sex table.
+### 3.1 What is loaded
 
-**What is missing.** The team reports a long-format package of 33 province-level datasets, 577 indicators and 411,132
-rows (`province_code, province_name, nuts3_code, year, indicator, value, unit` plus `data_catalog.csv`,
-`variable_metadata.csv`, `coverage_report.csv`, `not_province_level.csv`). It is not in this repository, the archive or
-any branch. Consequently 80 provinces have no source data, and the UI says so.
+| Source | Where | Use |
+|---|---|---|
+| **TÜİK province package** (team package, TÜİK Veri Portalı; 33 province-level datasets) | `data/raw/tuik_package/` (git-ignored; 71 files) | Control tables for all 81 provinces and all province context |
+| Historical Ankara extracts shipped with the MatrAIx experiment | [`experiments/matraix_simulation/processed/`](../experiments/matraix_simulation/processed/) (read-only) | Corroboration: every value equals the package's, so the package is cited |
 
-**Adding the package.** Copy it to `data/raw/tuik_package/` (git-ignored), then:
+The package was copied into `data/raw/tuik_package/` from the extracted folder `data/raw/tuik_province_data/`, which is
+kept unchanged; the SHA-256 of all 71 files is identical in both places. It contains 33 long-format dataset CSVs
+(`province_code, province_name, nuts3_code, year, indicator, value, unit`), their 33 `_wide.csv` twins,
+`data_catalog.csv`, `variable_metadata.csv`, `coverage_report.csv`, `not_province_level.csv` and `README.md`. No package
+file is committed; [`data/tuik_package_mapping.yaml`](../data/tuik_package_mapping.yaml) (rules, no data) is.
 
-1. `build-controls` loads every package indicator as **province context** (environment), grouped by catalog theme, with
-   its own year and missing-value status. Province identity is the code; names are only checked; NUTS-3 mismatches,
-   invalid codes, unparseable values and conflicting duplicates are rejected and listed.
-2. To make an indicator a **generator control table**, add a rule to
-   [`data/tuik_package_mapping.yaml`](../data/tuik_package_mapping.yaml): table, dataset, a regex with named groups
-   (`sex`, `age_group`, `category`) and the table's universe (minimum age). Labels map to codes through
-   [`vocab.py`](../src/societytwin/national/vocab.py); an unknown label is an error, never a dropped value.
-3. Rebuild the controls and generate. Provinces with the root table (age group × sex) become part of the national
-   population automatically; no province needs its own code.
+### 3.2 Package findings, re-counted from the data
+
+`build-controls` recounts these on every build and stores them in the control-store manifest (`audits`); the Data
+Sources page shows them, and `tests/regression/test_national_tuik_package.py` asserts them. The package README and
+metadata are treated as source information to check, not as proof.
+
+| Item | Package documentation says | The data contains |
+|---|---|---|
+| Long-format rows | 411,132 (README) | **431,071** |
+| Indicators | 577 (README and `variable_metadata.csv`) | **568** with rows. The 9 others are `transferred_vehicles_{total, car, minibus, bus, small_truck, truck, motorcycle, special_purpose, tractor}` of `road_motor_vehicles_and_transfers`, defined but never reported |
+| Datasets | 33 | 33 long + 33 wide |
+| Province coverage | 30 datasets 81/81; air traffic 51, agricultural wages 35, opera and ballet 6 | Same. `provinces_covered`, `missing_provinces` and `coverage_report.csv` all agree with the rows |
+| Reference years, units | `data_catalog.csv` | Agree for all 33 datasets (period counts include multi-year labels) |
+| Province identity | `01`–`81`, NUTS-3 `TR100`–`TRC34` | Every row has a valid plate code whose NUTS-3 code and name match the reference table |
+| Duplicate province × period × indicator keys | none | None in any dataset |
+| Long vs wide files | same values | 431,071 cells compared, 0 mismatches, no value only in a wide file. Wide files are verified and **not imported** |
+| Blank values | `""` for suppressed (`c`) or absent (`-`) cells | **20,431** blanks (prison convicts 10,259; health 6,538; air traffic 1,702; agricultural wages 776; sports/media 772; deaths by cause 300; SES 81; mortality 3). All `NOT_REPORTED`; none is zero |
+| Multi-year reference periods | – | **1,923** rows: `2013-2014` non-formal education (810); life expectancy `2013-2014`, `2015-2017`, `2018-2020`, `2021-2023` (972); opera/ballet seasons `2023-2024`, `2024-2025` (60); projected growth rate `2023-2030` (81) |
+| Projections | "2023 ADNKS baseline + 2024–2030 projections" | 729 rows. The 2023 baseline equals ADNKS 2023 in all 81 provinces; the 2024 and 2025 projections differ from the observed populations in all 81 (national 2025: 86,239,196 projected vs 86,092,168 observed) |
+| Negative values | – | 2,427, all in signed indicators (net migration, growth rates, annual index changes) |
+| Absent rows inside covered provinces | – | Some province rows are missing (not blank): urban/rural 1,242 (town/village rows of the 30 metropolitan provinces from 2013; DEGURBA dense-urban rows of 6 provinces), air traffic 1,408, agricultural wages 804, marital status 202 (the "unknown" category exists only for 2008), prison 100, traffic 16, international migration 13. Absent rows are not created and are not zeros |
+| Not province level | 10 datasets | 10 listed in `not_province_level.csv` (SILC income and poverty, household budget, ICT use, regional PPP, detailed labour force, family structure, health survey, domestic tourism, time use); shown on Data Sources, not loaded |
+
+Province coverage of a dataset does not mean every indicator and year has a value: blanks, absent rows and
+multi-year periods are reported per dataset.
+
+### 3.3 How the package is read
+
+[`sources.py`](../src/societytwin/national/sources.py) (`tuik_package`), configured by
+[`tuik_package_mapping.yaml`](../data/tuik_package_mapping.yaml):
+
+- **Metadata columns** are the package's actual ones: `data_catalog.csv` (`file_name`, `wide_file_name`,
+  `dataset_title_tr`, `dataset_title_en`, `theme`, `source_url`, `publication_date`, `reference_year(s)`, `unit`,
+  `provinces_covered`, `missing_provinces`, `retrieval_date`, `notes`), `variable_metadata.csv` (`file_name`,
+  `indicator`, `original_name_tr`, `description_en`, `unit`, `source_table_or_flow`), `coverage_report.csv` (province ×
+  dataset 1/0 matrix) and `not_province_level.csv`. Older aliases (`dataset_id`, `title_en`, …) still work.
+- **Dataset identity** is the CSV file name without `.csv` (`tuik_pkg:population_by_age_sex`). Each source records its
+  titles, URL, publication and retrieval dates, the TÜİK tables/flows it combines (e.g. `DF_ADNKS_T16_V1.0`), units,
+  reference periods, coverage, blank and absent-row counts, the SHA-256 of the long and wide files, and its mapping
+  decision. Each indicator keeps its Turkish name, English description and unit; each observation keeps `file:line`.
+- **Every row is accounted for**: read = control cells + context observations + rejected + agreeing duplicates (real
+  package: 76,980 + 354,091 + 0 + 0 = 431,071).
+- **Row checks**: plate code 01–81, NUTS-3 code matches, name matches (a different name is a warning; the code is used),
+  reference period, numeric value, unit against `variable_metadata.csv`, indicator defined, conflicting duplicate keys
+  (rejected and listed).
+- **Missing values**: blank → `NOT_REPORTED`; a province the dataset does not cover → `STRUCTURALLY_UNAVAILABLE`;
+  absent rows are not created; nothing is zero unless the source printed 0.
+- **Reference periods** are stored exactly as published (`period` = `2025` or `2021-2023`). A multi-year period has no
+  single `year` (it is `null`); for selection only its last year is compared with the reference year, and the period
+  label is what the environment, the API and prompts show. Control tables accept single years only.
+- **Projections** are declared in the mapping (`observation_type: projection`, baseline `2023`). They are context only,
+  never a current value (also for 2024 and 2025, which are ≤ the reference year), listed separately in the
+  environment, and can never become control cells.
+
+### 3.4 Mapping decisions
+
+Control rules were written after inspecting the indicator names, the Turkish source names, units and universes. Each
+rule maps detailed cells only; published aggregate rows (sex totals, all-ages totals, category totals) stay context and
+are used to check that the cells add up (a total is never summed into a cell, so nothing is double-counted). Every
+mapped indicator's Turkish name is checked for the mapped sex, age band and category (70 indicators, 0 mismatches).
+
+| Dataset | Control table | Verified |
+|---|---|---|
+| `population_by_age_sex` (ADNKS T16, 2016–2025) | `population_age_sex` (root): 19 bands × 2 sexes | Bands sum to the sex totals, male + female = total, and the total equals `total_population` (T30) in every province and year |
+| `marital_status_by_sex` (T10, 15+, 2008–2025) | `marital_status_sex`: never married, married, divorced, widowed | Categories (+ "unknown", 2008 only, 44 persons nationally) sum to the totals. The total equals the ADNKS 15+ population **exactly in 2021–2025**; in 2016–2020 it is 0.05–8.7 % smaller |
+| `education_attainment_by_sex` (15+, 2008–2025) | `education_sex`: the 10 TÜİK levels incl. "unknown" (`primary_school` → İlkokul, `primary_education` → İlköğretim, …) | Categories sum to the totals. The total is **below** the ADNKS 15+ population in every province and year (2025: 0.1–6.3 % per province, 1.34 million nationally); the gap correlates 0.9998 with the foreign resident population, consistent with a universe excluding most foreign nationals (an inference; the metadata does not say) |
+| `population_urban_rural` (T14) | `urbanicity_sex`: province/district centres vs towns/villages | Centres + towns/villages = the total per sex. The 30 metropolitan provinces have no town/village rows from 2013; their centres hold the whole population, so no record is assigned there |
+
+The generator applies each table's distribution to the root population (scaled per sex); the scale per province is in
+the validation report. Context only, with the reason recorded per dataset in the mapping file and on Data Sources:
+
+- `labor_force_indicators`: labour-force participation, employment and unemployment **rates** with 95 % CIs (HLFS). No
+  counts by labour status exist per province; converting survey rates to counts would invent precision, so
+  `labour_status` stays unavailable.
+- `households_size_and_types`: **households** by type and average size, not persons by household type or size, so
+  `household_size_class` and `household_type` stay unavailable.
+- `socioeconomic_status_and_human_development`: SES classes as **household** shares (3-year average) and HDI/HCI
+  indices; no person-level SES.
+- `population_urban_rural` DEGURBA split: a different classification from the administrative settlement type.
+- `population_structural_indicators` (derived from the same ADNKS counts), `literacy_and_nonformal_education`
+  (different universe, overlaps education), vital rates and life expectancy, deaths by cause, marriages and divorces,
+  migration flows, GDP, housing, vehicles, traffic, air traffic, well-being (2013/2015), sports and media, opera and
+  ballet, health infrastructure, agriculture, municipal services, prison convicts (sensitive; never a person field),
+  population projections.
+
+The historical Ankara extracts are loaded after the package: their 38 age × sex cells, 8 marital cells and 17 context
+values (totals, density, median ages for 2023–2025) equal the package's, so they are marked `corroborating`, the
+package is cited, and they are not listed as coverage gaps.
+
+### 3.5 Adding or updating the package
+
+Teammates: the package files are on the team branch `data-turkey` (`tuik_province_data/`); copy them out with the
+commands in [data/README.md](../data/README.md#setting-up-the-data-package-locally-teammates) rather than merging that
+branch.
+
+1. Put all files directly in `data/raw/tuik_package/` (no nested folder).
+2. `PYTHONPATH=src .venv/bin/python -m societytwin.national build-controls`, then read the audit on Data Sources (or
+   `data/processed/national/manifest.json` → `audits`): counts, documentation discrepancies, wide-file check, rejected
+   rows, per-table checks.
+3. A changed indicator name, unit or label makes the rule's rows fail loudly (rejected with a reason), never silently
+   remapped. New control rules go into the mapping file; `use`, `domain` and `reason` are recorded per dataset.
+4. Run `.venv/bin/python -m pytest -m tuik_package` (the regression asserts the counts above; update it deliberately
+   when a new package version changes them).
 
 **Standard control tables** ([`controls.py`](../src/societytwin/national/controls.py)): `population_age_sex` (root),
 `marital_status_age_sex`, `marital_status_sex`, `education_age_sex`, `education_sex`, `labour_status_age_sex`,
 `labour_status_sex`, `household_size_persons`, `household_type_persons`, `urbanicity_sex`, `urbanicity`. Each cell
-has `geo_level` (province, nuts2, nuts1, country), year, value and **value status**.
+has `geo_level` (province, nuts2, nuts1, country), year, value and **value status**. Loaded from the package:
+`population_age_sex`, `marital_status_sex`, `education_sex`, `urbanicity_sex`, each for all 81 provinces.
 
 **Missing values are never zero.** `OBSERVED` (a published number, 0 included), `NOT_REPORTED` (row present, no number:
-`-`, `..`, empty), `UNKNOWN`, `NOT_APPLICABLE`, `STRUCTURALLY_UNAVAILABLE` (the dataset does not cover the province,
+blank, `-`, `..`), `UNKNOWN`, `NOT_APPLICABLE`, `STRUCTURALLY_UNAVAILABLE` (the dataset does not cover the province,
 e.g. 51/81 for air traffic). Coverage is shown as k/81 on Data Sources and in the environment.
 
 ## 4. Reference-year strategy
@@ -107,7 +203,13 @@ The population reference year defaults to **2025**. For every table and province
 **not after** the reference year; later years (e.g. projections) are never used, and nothing is interpolated or
 carried forward silently. Each field's source year is stored in the provenance profile and shown next to the
 population reference year (Population Explorer, persona detail, run manifest). A source year that differs from the
-reference year adds an explicit limitation.
+reference year adds an explicit limitation. With the package, every province's four tables come from 2025.
+
+Province context follows the same rule with the published reference **period**: the current value of an indicator is
+the latest observed value whose period ends no later than the reference year (life expectancy at reference year 2025:
+`2021-2023`, shown as such). Official projections are never current values, even for 2024 and 2025. When a province's
+series stops before the dataset's latest period (e.g. town/village population of a metropolitan province, last row
+2012), the value is shown with its own year and a note that later rows are absent, not zero.
 
 ## 5. Person schema and evidence
 
@@ -137,19 +239,25 @@ province ──► (age group × sex)   DIRECT_SOURCE, joint ADNKS cell
                  ├─► age           ASSUMED: uniform within band, 90+ top-coded at 90
                  ├─► marital       age×sex×marital table → CONDITIONAL_SOURCE
                  │                 else sex×marital table → IPF per sex → MARGINAL_INFERENCE (age joint not observed)
-                 ├─► education     same options; IPF seeded with structural zeros from the constraint engine
+                 ├─► education     same options; IPF over single years of age with structural zeros (constraint engine)
                  ├─► labour        same options; regional (NUTS-2/1) tables applied to each province and flagged
-                 └─► household size / type, settlement type   province (×sex) table → MARGINAL_INFERENCE
+                 ├─► settlement    sex × settlement table → IPF per sex → MARGINAL_INFERENCE
+                 └─► household size / type   province table → MARGINAL_INFERENCE (no table loaded: UNAVAILABLE)
 ```
 
 Why IPF: when only `sex × category` is published, the two-way IPF of the root's age-group margin and the category
 margin, per sex, is the maximum-entropy joint consistent with both. Without structural zeros it reduces exactly to
-conditioning on sex alone, which is what the Ankara data supports. With structural zeros (education) it moves mass
-away from impossible combinations while still matching both margins. It is not used where a joint table exists.
+conditioning on sex alone, which is what the marital and settlement tables support. With structural zeros (education)
+the fit runs over single years of age (each band's population spread uniformly over its ages, the same assumption as
+the exact-age draw), so a zero at an exact age inside a band, such as higher education below 18 in the 15–19 band, is
+part of the fit. (An earlier band-level seed let the draw remove fitted mass at those ages; on the 81-province data that
+under-drew higher education by 1.2 percentage points, |z| ≈ 6. The single-age fit removes the bias: national |z| 1.87.)
+It is not used where a joint table exists.
 
-**Not supported by the loaded data (and therefore not claimed):** province × age × sex × marital status (only
-province × sex × marital exists for Ankara); any relationship between education, labour status and household; district
-geography; income or socioeconomic status at person level.
+**Not supported by the loaded data (and therefore not claimed):** province × age × sex × marital status or education
+(only province × sex × category is published); any relationship between marital status, education and settlement type
+beyond age and sex; labour status and household attributes (no person-level table); district geography; income or
+socioeconomic status at person level.
 
 ## 7. Constraints
 
@@ -176,7 +284,15 @@ No demographic rule beyond a source's own universe is added (e.g. no invented mi
 3. Design weight = cell population ÷ records in the cell (stratified sample with proportional allocation).
 4. Raking (iterative proportional fitting of the weights) to every province-level control table used, until the
    largest relative deviation is ≤ 1e-10. Unreachable cells (no record at this size) are reported and their mass is
-   redistributed within the same parent group.
+   redistributed within the same parent group. Margins are added in priority order (marital status, education,
+   settlement type) and kept only if raking with them converges (up to 5,000 iterations) **and** every final weight
+   stays within ×0.05–×20 of its design weight (`WEIGHT_RATIO_BOUNDS`). With few records in a province the margins
+   can be jointly unattainable: raking then drives some weights towards zero, or meets the margin only by nearly
+   deleting a record. Such a margin is **not imposed**; raking for it is abandoned once a weight falls 1,000× below the
+   lower bound. It is listed in the manifest (`calibration[].margins_not_calibrated`, with the reason), recorded in
+   the attribute's provenance (`calibration.imposed = false` and a limitation shown on persona detail), and reported
+   by validation (§9). More records per province (`--min-per-province`) avoid it. Generator version
+   `national-generator-1.1` introduced these rules and the single-age education IPF.
 
 `population_weight` is the number of residents a record represents. Weighted analysis is the default for population
 estimates; record shares are shown alongside. Diagnostics: weight CV, Kish design effect, raking iterations, and the
@@ -195,19 +311,54 @@ record share's z score. Per table: TVD (weighted and records), JSD, SRMSE, maxim
 | `familywise_alpha` | 0.01 | Record shares are judged against binomial sampling noise with a Bonferroni-adjusted z over the table's cells |
 | `min_group_records_for_noise_test` | 30 | Below this, the normal approximation is unreliable; reported as "not assessed", not as passed |
 
+Each table also carries plain-language **notes** (shown under the table on the Validation page): a margin not imposed
+in that province and why; cells that received no record at this size (population redistributed within the parent group;
+root table: merged into the nearest age band); and, when the source universe differs from the root population
+(education), the size of the difference per sex and the fact that the source is scaled to the root population per sex,
+so the table checks shares within sex rather than the source's absolute counts. The national table status is
+`partially_calibrated` when a margin was imposed in some provinces only, and its notes name those provinces. The
+summary counts margins not imposed (Validation tile, dashboard pipeline status). With a per-province floor, a national
+note says record shares are not expected to follow the source.
+
 Also: constraint results, and cross-source checks (Ankara: the age × sex total equals the separate workbook's total,
 female and male populations exactly). **Source-fit validation does not show that AI responses resemble human
 behaviour.** Held-out tables and behavioural validation are not implemented.
 
-Real-data result (Ankara, 10K and 100K, seed 42): weighted age × sex and marital × sex reproduce TÜİK exactly (e.g.
-633,169 never-married women, 33,210 widowed men); record shares within sampling noise (max |z| 2.26 at 10K, threshold
-3.23); 0 constraint violations; cross-source totals agree.
+Cross-source checks per province also compare the root table with the package's own published totals (T30 total
+population and the T16 sex totals); all 327 agree for the national builds below.
+
+Real-data result, all 81 provinces, seed 42, generator 1.1 (`pop-TR-2025-n100000-s42-99ece554` and
+`pop-TR-2025-n10000-s42-8751f71f`):
+
+| | 100,000 records | 10,000 records |
+|---|---|---|
+| Represented population | 86,092,168 = the sum of the 81 provincial ADNKS 2025 totals | same |
+| Constraint violations | 0 | 0 |
+| Margins not imposed | 5 of 243: marital status in Bilecik (no convergence, 267 records) and Muş (weights outside ×0.05–×20); education in Tunceli and Bayburt (outside the range) and Ardahan (no convergence) | 145 of 243 in 65 provinces (education 62, marital 45, settlement 38): small provinces get about 10–100 records |
+| Root table | 31 provinces with collapsed cells (44 cells), so their weighted age × sex cells differ from TÜİK; national max error 0.009 pp | 80 provinces with collapsed cells; national max error 0.13 pp |
+| National weighted status and max error (education / marital / settlement) | partially calibrated 0.065 pp / partially calibrated 0.047 pp / exact | all partially calibrated: 0.77 / 0.47 / 0.25 pp |
+| National record shares | within sampling noise for all four tables (max \|z\| 1.86, 1.22, 0.18, 0.92; thresholds 3.48, 3.23, 3.65, 3.02) | within sampling noise |
+| Province tables fit exactly (weighted) | age × sex 50, marital 71, education 19, settlement 81 of 81 | age × sex 1, marital 17, education 1, settlement 43 |
+| Province tables outside record sampling noise | 5 of 324 (about 3 expected at α = 0.01 per table) | 3; 145 not assessed (fewer than 30 records) |
+| Weights | CV 0.15, Kish deff 1.02 | CV 0.28, deff 1.08 |
+
+At province level the weighted fit is exact (`fit_by_construction`) wherever the margin was imposed and every cell
+received a record. The other province tables have cells with no record at that size (e.g. doctorate or "unknown"
+education in smaller provinces; all 59 remaining education gaps at 100K are of this kind), whose population is
+redistributed within sex and reported, or a margin that was not imposed. Ankara reproduces TÜİK 2025 exactly in all four tables (e.g.
+633,169 never-married women, 33,210 widowed men). Tables whose universe differs from the root (education) are compared
+after scaling to the root's 15+ population per sex, as in calibration; the scales are in the report (Ankara education:
+×1.0210 male, ×1.0231 female). For province-level analysis of small provinces use a per-province floor; with a floor, national record shares are not
+expected to follow the source (the validation report says so) and the weighted counts are the national check.
 
 ## 10. Environment, cohorts and personas
 
-- **Environment** (`GET /api/v2/environments/{code}`): every context indicator for the province by domain, the value at
-  or before the reference year with its own year and status, the history, the generator tables available, and the
-  datasets that do not cover the province.
+- **Environment** (`GET /api/v2/environments/{code}`): every context indicator for the province by domain (demographics,
+  economy, education, households, housing, health, migration, mobility, urbanization, wellbeing, culture, environment,
+  justice), the value at or before the reference year with its own published period (`source_period`; `source_year` is
+  null for multi-year periods) and status, a note when the province's series ends early, the history, official
+  projections in a separate list, the generator tables available, and the datasets that do not cover the province.
+  Experiment prompts quote the indicator with its period, never a projection.
 - **Cohorts**: a definition (population + filters on province, age range, adults only, sex, marital status, education,
   labour, household, settlement type) is stored separately from samples. Samples are seeded and deduplicated by
   configuration: `simple_random`, `weighted` (systematic PPS on a seeded order, certainty units for large weights) or
@@ -283,11 +434,21 @@ serves the historical Ankara workbench under `/historical` in the UI.
 geography and codes, ingestion and missing values, store integrity, generator size, determinism, coverage, weights,
 universes, structural zeros, collapsing, floors, validation, constraint detection, cohort filters and designs, persona
 mapping, experiment schema, structured-output parsing, budget guard, retries, failures, cache and replay, and the API
-flow. `tests/regression/test_national_ankara_extracts.py` checks the real Ankara controls are reproduced exactly and
-the historical files are untouched. `tests/integration/test_matraix_national.py` runs arbitrary personas through
-MatrAIx (opt-in). Frontend: Vitest component tests and Playwright (`frontend/e2e/national.spec.ts`).
+flow. `tests/national/test_tuik_package_format.py` writes a tiny artificial package in the team package's exact layout
+and covers its metadata columns, wide-file verification, multi-year periods, projections, blanks, totals and label
+checks. `tests/regression/test_national_ankara_extracts.py` checks the real Ankara controls are reproduced exactly and
+the historical files are untouched. `tests/regression/test_national_tuik_package.py` (marker `tuik_package`, skipped
+without the package) asserts the package findings of §3.2, the 81-province control tables and checks, the
+environment's periods and projections, and a 20,000-record national build (about 11 s).
+`tests/integration/test_matraix_national.py` runs arbitrary personas through MatrAIx (opt-in). Frontend: Vitest
+component tests and Playwright (`frontend/e2e/national.spec.ts`).
 
-Benchmark on this machine (Apple silicon, Python 3.12, one province, `benchmark` command):
+`build-controls` on the real package takes about 7 s (431,071 rows, 33 wide files compared) and writes a 53 MB
+`context.csv`; reading the store takes about 1 s. Generating all 81 provinces (seed 42): 10,000 records 2.9 s,
+100,000 records 1.2 s (the smaller build is slower because raking trials fail in provinces with about 10 records),
+validation 0.15 s and 0.4 s, Parquet about 124 KB and 710 KB, peak memory about 0.5 GB.
+
+Earlier benchmark (one province, before the package was added):
 
 | Records | Generate | Validate | Write | Filter + 3 distributions | PPS sample of 100 | Parquet |
 |---|---|---|---|---|---|---|
@@ -295,17 +456,32 @@ Benchmark on this machine (Apple silicon, Python 3.12, one province, `benchmark`
 | 100,000 | 0.28 s | 0.21 s | 0.04 s | 0.004 s | 0.02 s | 268 KB |
 | 1,000,000 (optional) | 2.8 s | 2.1 s | 0.3 s | 0.03 s | 0.24 s | 1.7 MB |
 
-Peak memory at 1M was about 1.2 GB (generation holds Python lists). With 81 provinces, per-province IPF and raking add
-overhead not measured here, because only one province has data.
+Peak memory at 1M was about 1.2 GB (generation holds Python lists). A 1,000,000-record national build has not been
+benchmarked.
 
 ## 15. Limitations and claims to avoid
 
-- One real province. The national code path is exercised on artificial data only.
-- Marital status is conditioned on sex only (age relationship assumed independent within sex); single-year age is
-  assumed uniform within bands; the 90+ band is top-coded.
+- Person attributes from official tables: age group, sex, marital status, education and settlement type. Labour status,
+  household size and household type stay null (no person-level province table); socioeconomic status, income,
+  employment status and district are not modelled.
+- Marital status and education are published by sex only: their relationship with age is inferred by IPF (education
+  under minimum-completion-age zeros), not observed; single-year age is assumed uniform within bands; 90+ is top-coded.
+  No joint relationship between marital status, education and settlement type beyond age and sex is observed.
+- The education table's universe is smaller than the ADNKS 15+ population (likely excluding most foreign nationals;
+  an inference); its distribution is applied to the whole 15+ population, scaled per sex, which assumes the residents
+  outside that universe have the same education distribution within age and sex. Marital totals match ADNKS exactly
+  only from 2021.
+- Small provinces cannot carry every margin at small sizes: 5 of 243 province margins are not imposed at 100K and 145
+  at 10K; their weighted counts follow the drawn records only. Each is reported (manifest, provenance, validation).
+  Rare categories (doctorate, "unknown" education) receive no record in many provinces, so those province tables are
+  not exact even when calibrated. Use `--min-per-province` (and weighted national figures) for province analysis.
+- Context indicators are province-level: the newest well-being data is from 2015, prison data from 2020, housing
+  characteristics from the 2021 census; each shows its own period. Air traffic (51), agricultural wages (35) and opera
+  and ballet (6) do not cover every province.
+- The package documentation overstates its row and indicator counts (§3.2); the data is what is used.
 - Regional tables (e.g. HLFS at NUTS-2) would be applied unchanged to every province in the region.
-- Raw TÜİK files, URLs, publication and retrieval dates are not recorded for the Ankara extracts; reuse terms are an
-  OPEN DECISION.
+- Reuse terms for TÜİK portal tables are an OPEN DECISION. The package records URLs and dates per dataset; the
+  historical Ankara extracts do not.
 - No model has been called: stub and MatrAIx fake-transport runs test the pipeline only.
 
 SocietyTwin is a synthetic population calibrated to official aggregate statistics, made of fictional synthetic

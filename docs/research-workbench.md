@@ -162,8 +162,8 @@ The brief was written against `AI-powered-digital-society-twin-matraix-simulatio
 ## Tests
 
 ```bash
-.venv/bin/python -m pytest                       # backend: artificial fixtures + local Ankara/run3 regression
-.venv/bin/python -m pytest -m "not local_fixture and not matraix"   # what CI runs
+.venv/bin/python -m pytest                       # backend: artificial fixtures + local Ankara/run3 and TÜİK package regression
+.venv/bin/python -m pytest -m "not local_fixture and not matraix and not tuik_package"   # what CI runs
 SOCIETYTWIN_TEST_MATRAIX_ROOT=... SOCIETYTWIN_TEST_RUNTIME_PYTHON=... .venv/bin/python -m pytest tests/integration
 (cd frontend && npx tsc --noEmit && npx vitest run)
 ./scripts/e2e.sh                                 # production build + Playwright (historical + national) on artificial fixtures
