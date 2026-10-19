@@ -56,19 +56,22 @@ ATTRIBUTE_NAMES = tuple(a.attribute for a in ATTRIBUTES)
 
 # Fields the project schema names but that no loaded official table supports at person level.
 NOT_MODELLED: dict[str, str] = {
-    "socioeconomic_status": "No person-level socioeconomic-status distribution is loaded. Province-level indices "
-                            "(for example development rankings) are environment context, not personal attributes.",
+    "socioeconomic_status": "No person-level socioeconomic-status distribution exists. The TÜİK package publishes SES classes "
+                            "as household shares (A+ to E, 3-year average) and HDI/HCI indices by province; they are "
+                            "environment context, not personal attributes.",
     "employment_status": "Status in employment (employee, employer, own-account…) needs an HLFS table conditional on being "
-                         "employed; none is loaded.",
-    "income": "SILC income is published at NUTS-2 or above without the joint distributions needed for person-level draws.",
+                         "employed; it is published only at NUTS-2 (not_province_level.csv), so none is loaded.",
+    "income": "SILC income is published at NUTS-2 or above without the joint distributions needed for person-level draws; "
+              "provincial GDP per capita is environment context.",
     "district": "District-level tables are not loaded; records are placed at province level only.",
 }
 
 METHOD_TEXT = {
     "conditional_age_sex": "Drawn from the official age group × sex × category table of the province (conditional sampling).",
-    "ipf_sex": "Two-way IPF per sex of the age-group margin (root table) and the sex × category margin, seeded with "
-               "structural zeros where a rule applies; then drawn conditionally on age group and sex. Without "
-               "structural zeros this equals conditioning on sex only.",
+    "ipf_sex": "Two-way IPF per sex of the age margin (root table) and the sex × category margin, then drawn conditionally "
+               "on age and sex. Where a structural-zero rule applies the fit runs over single years of age (band "
+               "population spread uniformly, as for the exact-age draw) with the zeros in the seed; otherwise over age "
+               "groups, which equals conditioning on sex only.",
     "marginal": "Drawn from the province's category distribution; independence from age and sex is assumed.",
 }
 

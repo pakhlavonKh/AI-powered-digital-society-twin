@@ -4,9 +4,10 @@
 
 | Suite | Command | Data |
 |---|---|---|
-| Unit and API (`tests/unit`, `tests/api`) | `.venv/bin/python -m pytest -m "not local_fixture and not matraix"` | Artificial fixture in `tests/fixtures/artificial_experiment/` |
-| National pipeline (`tests/national`) | same command | Artificial long-format package in `tests/fixtures/artificial_tuik_package/` |
+| Unit and API (`tests/unit`, `tests/api`) | `.venv/bin/python -m pytest -m "not local_fixture and not matraix and not tuik_package"` | Artificial fixture in `tests/fixtures/artificial_experiment/` |
+| National pipeline (`tests/national`) | same command | Artificial long-format package in `tests/fixtures/artificial_tuik_package/`, and a tiny artificial package in the team package's exact layout written by `test_tuik_package_format.py` |
 | Supplied-fixture regression (`tests/regression`) | `.venv/bin/python -m pytest -m local_fixture` | The tracked Ankara fixtures and, if present, the git-ignored run folders |
+| TÜİK package regression (`tests/regression/test_national_tuik_package.py`) | `.venv/bin/python -m pytest -m tuik_package` | The git-ignored real package in `data/raw/tuik_package/`; skipped when absent |
 | MatrAIx integration (`tests/integration`) | set `SOCIETYTWIN_TEST_MATRAIX_ROOT` and `SOCIETYTWIN_TEST_RUNTIME_PYTHON` | External MatrAIx checkout; no provider keys |
 | Frontend | `cd frontend && npx vitest run`, `./scripts/e2e.sh` | Mocked API / artificial fixture |
 

@@ -148,3 +148,60 @@ def test_constraint_checks_detect_injected_violations(generated):
     c["population_weight"][1] = -1.0
     results = {r["rule_id"]: r["violations"] for r in check_records(c, generated.profiles)}
     assert results["source_universe"] >= 1 and results["geography_consistent"] >= 1 and results["weight_positive_finite"] >= 1
+
+
+def test_unattainable_margin_is_reported_everywhere_not_forced(store, monkeypatch):
+    """A margin raking cannot meet in a province is dropped and reported in the calibration report, the field provenance
+    (persona limitations) and the validation report; it is never forced onto degenerate weights. Adana (about 1,650
+    records here) is made to fail; artificial Bayburt (about 50 records) cannot meet its marital margin at all."""
+    import societytwin.national.generator as gen
+    from societytwin.national.fitting import RakeReport
+    from societytwin.national.personas import build_persona
+
+    real = gen.rake
+
+    def failing_for_adana(weights, margins, **kw):
+        if 1000 < len(weights) < 2500 and margins[-1].name == "marital_status_sex":
+            return RakeReport(False, 1, 0.5, [])
+        return real(weights, margins, **kw)
+
+    monkeypatch.setattr(gen, "rake", failing_for_adana)
+    pop = generate(store, GenerationConfig(synthetic_size=5000, seed=42))
+    cal = {c["province_code"]: c for c in pop.manifest["calibration"]}
+    assert {code: [d["margin"] for d in c["margins_not_calibrated"]] for code, c in cal.items()} == {
+        "01": ["marital_status_sex"], "06": [], "69": ["marital_status_sex"]}
+    assert cal["01"]["margins"] == ["population_age_sex", "education_sex"]
+    assert cal["01"]["margins_not_calibrated"][0]["reason"].startswith("Not imposed on the weights")
+    field = pop.manifest["profiles"]["prov-01"]["fields"]["marital_status"]
+    assert field["calibration"]["imposed"] is False and any("not calibrated to marital_status_sex" in x for x in field["limitations"])
+    assert pop.manifest["profiles"]["prov-06"]["fields"]["marital_status"]["calibration"] == {"imposed": True}
+    assert min(pop.columns["population_weight"]) > 0
+    report = validate(pop.columns, pop.manifest, store)
+    adana = next(t for p in report["provinces"] if p["province_code"] == "01" for t in p["tables"] if t["table_id"] == "marital_status_sex")
+    assert adana["weighted_status"] == "not_calibrated" and adana["notes"][0].startswith("Not imposed on the weights")
+    national = next(t for t in report["national"]["tables"] if t["table_id"] == "marital_status_sex")
+    assert national["weighted_status"] == "partially_calibrated" and national["provinces_not_calibrated"] == ["01", "69"]
+    assert "Adana (01), Bayburt (69)" in national["notes"][0]
+    record = next(i for i, c in enumerate(pop.columns["province_code"]) if c == "01" and pop.columns["age"][i] >= 18)
+    persona = build_persona({k: pop.columns[k][record] for k in pop.columns}, pop.manifest)
+    assert any("not calibrated to marital_status_sex" in x for x in persona["limitations"])
+
+
+def test_degenerate_weights_are_rejected_by_the_ratio_bounds(store, monkeypatch):
+    import societytwin.national.generator as gen
+
+    real = gen.rake
+
+    def squeeze_one_record(weights, margins, **kw):
+        rr = real(weights, margins, **kw)
+        if margins[-1].name == "education_sex" and 1000 < len(weights) < 2500:
+            weights[0] *= 0.001  # pretend raking only "converged" by nearly deleting a record
+        return rr
+
+    monkeypatch.setattr(gen, "rake", squeeze_one_record)
+    pop = generate(store, GenerationConfig(synthetic_size=5000, seed=42))
+    dropped = {c["province_code"]: c["margins_not_calibrated"] for c in pop.manifest["calibration"]}
+    assert [d["margin"] for d in dropped["01"]] == ["education_sex"]
+    assert "accepted range ×0.05–×20" in dropped["01"][0]["reason"]
+    assert all(c["weight_ratio_bounds"] == [0.05, 20.0] for c in pop.manifest["calibration"])
+    assert min(pop.columns["population_weight"]) > 0

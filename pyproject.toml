@@ -32,5 +32,6 @@ pythonpath = ["src"]
 addopts = "-ra --strict-markers"
 markers = [
   "local_fixture: regression checks against the supplied Ankara/run3 files; skipped when they are absent",
+  "tuik_package: regression checks against the git-ignored TÜİK province package in data/raw/tuik_package; skipped when absent",
   "matraix: integration checks that need an external MatrAIx checkout and runtime interpreter; skipped unless configured",
 ]

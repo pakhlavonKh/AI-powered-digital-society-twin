@@ -11,4 +11,4 @@ The geography reference table (``geography``) lists all 81 provinces whether or 
 statistics are loaded for them; coverage is always reported separately from the reference list.
 """
 
-GENERATOR_VERSION = "national-generator-1.0"
+GENERATOR_VERSION = "national-generator-1.1"

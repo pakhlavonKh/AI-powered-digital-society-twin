@@ -1,45 +1,245 @@
-# Mapping from the team's long-format TÜİK package to SocietyTwin's standard control tables.
+# Mapping from the team's long-format TÜİK package to SocietyTwin's standard control tables and province context.
 #
-# The package itself is NOT in this repository. Put its files in data/raw/tuik_package/ (git-ignored):
-# one or more data CSVs with the columns
-#     province_code, province_name, nuts3_code, year, indicator, value, unit   (+ optional dataset_id)
-# and, if available, data_catalog.csv, variable_metadata.csv, coverage_report.csv, not_province_level.csv.
-# Then run:  python -m societytwin.national build-controls
+# The package itself is NOT in this repository. Put its 71 files directly in data/raw/tuik_package/ (git-ignored):
+#   <dataset>.csv        long format: province_code, province_name, nuts3_code, year, indicator, value, unit
+#   <dataset>_wide.csv   the same values, one column per indicator (verified against the long file, never imported)
+#   data_catalog.csv, variable_metadata.csv, coverage_report.csv, not_province_level.csv, README.md
+# Then run:  PYTHONPATH=src .venv/bin/python -m societytwin.national build-controls
 #
-# Without any rule below, every package indicator is still loaded as PROVINCE CONTEXT (environment),
-# grouped by its catalog theme, with its own source year and missing-value status. A rule is needed only
-# when an indicator should become a generator control table (a person attribute).
+# Every long-format row is accounted for: it becomes a control cell (a rule below matched it), a province context
+# observation, or a rejected row with a reason in the build report. Nothing is dropped silently.
 #
-# Rules: `table` is one of the standard tables in src/societytwin/national/controls.py (TABLE_KINDS);
-# `dataset` is the package dataset id (dataset_id column, or the CSV file name without .csv);
-# `indicator_pattern` is a Python regex matched against the whole indicator string, with named groups for
-# the table's dimensions: sex, age_group (five-year bands 0-4 … 85-89, 90+) and/or category.
-# Labels are mapped to codes through src/societytwin/national/vocab.py; an unknown label is reported as an
-# error and the row is not loaded (nothing is guessed). Optional `<dim>_labels: {source label: code}` maps
-# labels explicitly. `universe_min_age` must state the table's population universe (e.g. 15 for marital status).
+# ---------------------------------------------------------------- control rules
+# `table` is a standard table in src/societytwin/national/controls.py (TABLE_KINDS); `dataset` is the package dataset id
+# (the CSV file name without .csv). `indicator_pattern` is a Python regex matched against the whole indicator name,
+# with named groups for the table's dimensions: sex, age_group (five-year bands; 0_4 … 85_89 and 90_plus are accepted)
+# and/or category. Labels map to codes through src/societytwin/national/vocab.py or an explicit `<dim>_labels` map; an
+# unknown label is an error and the row is rejected (nothing is guessed).
+#   total_patterns    published aggregate rows (e.g. the "total" sex or the all-ages total). They are NEVER summed into
+#                     cells (that would double-count); they stay province context and are used to check that the mapped
+#                     cells add up to them, per province and year.
+#   residual_pattern  a published category outside the vocabulary that is part of the total (checked, not mapped).
+#   universe_min_age  the table's population universe; `universe_check: root_universe` compares the table total per sex
+#                     with the root age × sex population aged universe_min_age+ for the same province and year.
+#   source_units      units accepted for the mapped rows (person counts only).
+# Each mapped indicator is also checked against its original Turkish name in variable_metadata.csv: the mapped sex,
+# age band and category must be recognisable in it.
 #
-# No rule is active yet because the actual indicator strings of the package have not been seen in this
-# checkout. Example (adapt the pattern to the real indicator names, then uncomment):
-#
-# controls:
-#   - table: population_age_sex
-#     dataset: population_by_age_sex
-#     indicator_pattern: '^(?P<sex>Erkek|Kadın) (?P<age_group>\d+-\d+|90\+)$'
-#     universe_min_age: 0
-#     universe_note: All registered residents (ADNKS)
-#   - table: marital_status_sex
-#     dataset: marital_status_by_sex
-#     indicator_pattern: '^(?P<sex>Erkek|Kadın) - (?P<category>.+)$'
-#     universe_min_age: 15
-#     universe_note: Residents aged 15 and over
-#   - table: education_sex
-#     dataset: education_attainment_by_sex
-#     indicator_pattern: '^(?P<sex>Erkek|Kadın) - (?P<category>.+)$'
-#     universe_min_age: 15          # verify the table's universe (TÜİK publishes 6+, 15+ and 25+ variants)
-#     universe_note: Residents aged 15 and over
-
+# Verified on the package received 2026-10-18 (see docs/national-pipeline.md §3 for the numbers):
+# * age × sex: the 19 bands sum exactly to the published sex totals, male + female = total, and the total equals
+#   total_population of population_total_and_growth (T30) for all 81 provinces and 2016–2025.
+# * marital status 15+: the four categories (+ "unknown", published only for 2008) sum exactly to the published totals;
+#   the total equals the age × sex 15+ population exactly in 2021–2025 but is smaller in 2016–2020.
+# * education 15+: the ten categories sum exactly to the published totals; the total is below the age × sex 15+
+#   population in every year and province (0.1–6.3 % per province in 2025, up to 10.6 % in earlier years; see the rule).
+# * settlement type: province/district centres + towns/villages = the published total per sex.
 version: 1
-controls: []
 
-# Extra source markers for missing values (case-insensitive), added to the defaults in sources.py.
+controls:
+  - table: population_age_sex
+    dataset: population_by_age_sex
+    indicator_pattern: '^pop_age_(?P<age_group>\d+_\d+|90_plus)_(?P<sex>male|female)$'
+    total_patterns:
+      - '^pop_age_total_(?P<sex>male|female)$'
+      - '^pop_age_(?P<age_group>\d+_\d+|90_plus)_total$'
+      - '^pop_age_total_total$'
+    source_units: [person]
+    universe_min_age: 0
+    universe_note: All residents registered in the Address Based Population Registration System (ADNKS, TÜİK DF_ADNKS_T16), 31 December of the year
+
+  - table: marital_status_sex
+    dataset: marital_status_by_sex
+    indicator_pattern: '^pop_15plus_marital_(?P<category>never_married|married|divorced|widowed)_(?P<sex>male|female)$'
+    total_patterns:
+      - '^pop_15plus_marital_total_(?P<sex>male|female)$'
+      - '^pop_15plus_marital_(?P<category>never_married|married|divorced|widowed)_total$'
+      - '^pop_15plus_marital_total_total$'
+    residual_pattern: '^pop_15plus_marital_unknown_(?P<sex>male|female)$'
+    source_units: [person]
+    universe_min_age: 15
+    universe_check: root_universe
+    universe_note: Residents aged 15 and over by legal marital status (ADNKS, TÜİK DF_ADNKS_T10)
+    limitations:
+      - "Marital status is published by sex only (15+); its joint distribution with age is not observed."
+      - "An 'unknown' marital status (Bilinmeyen) is published only for 2008 (44 persons nationally); it is kept as province context and counted in the total check, not mapped to a person category."
+
+  - table: education_sex
+    dataset: education_attainment_by_sex
+    indicator_pattern: '^edu_15plus_(?P<category>illiterate|literate_no_diploma|primary_school|primary_education|lower_secondary_school|upper_secondary_high_school|higher_education_bachelor_associate|masters_degree|doctorate|unknown)_(?P<sex>male|female)$'
+    category_labels:
+      primary_school: primary
+      primary_education: basic_8yr
+      lower_secondary_school: lower_secondary
+      upper_secondary_high_school: upper_secondary
+      higher_education_bachelor_associate: higher_education
+      masters_degree: masters
+    total_patterns:
+      - '^edu_15plus_total_(?P<sex>male|female)$'
+      - '^edu_15plus_(?P<category>illiterate|literate_no_diploma|primary_school|primary_education|lower_secondary_school|upper_secondary_high_school|higher_education_bachelor_associate|masters_degree|doctorate|unknown)_total$'
+      - '^edu_15plus_total_total$'
+    source_units: [person]
+    universe_min_age: 15
+    universe_check: root_universe
+    universe_note: Population aged 15 and over by completed education level (TÜİK National Education Statistics Database, DF_ULUSAL_EGITIM_ISTATISTIK_BED_NUFUS)
+    limitations:
+      - "Educational attainment is published by sex only (15+); its joint distribution with age is not observed. Age is fitted by IPF under the minimum-completion-age structural zeros."
+      - "The education totals are smaller than the ADNKS 15+ population in every year (by 1.34 million nationally in 2025). Across provinces the gap correlates 0.9998 with the foreign resident population (international_migration_and_foreign_population), which is consistent with a universe that excludes most foreign nationals; the package metadata does not state this, so it is an inference."
+      - "'Unknown' (Bilinmeyen) is a published category and is kept as reported."
+
+  - table: urbanicity_sex
+    dataset: population_urban_rural
+    indicator_pattern: '^pop_(?P<category>province_district_centers|towns_and_villages)_(?P<sex>male|female)$'
+    category_labels:
+      province_district_centers: province_district_centre
+      towns_and_villages: town_village
+    total_patterns:
+      - '^pop_(?P<category>province_district_centers|towns_and_villages)_total$'
+    source_units: [person]
+    universe_min_age: 0
+    universe_check: root_universe
+    universe_note: All ADNKS residents by settlement type of the registered address (TÜİK DF_ADNKS_T14)
+    limitations:
+      - "For the 30 metropolitan-municipality provinces the package has no town/village rows from 2013 on (consistent with the 2012 metropolitan law, Law 6360, which turned their villages into neighbourhoods; this reason is an interpretation). Their centre population equals the total population exactly, so no record is assigned to towns or villages there. The absent rows are not stored as zeros."
+      - "This is the administrative settlement type, not the DEGURBA degree of urbanisation (kept as context)."
+
+# ---------------------------------------------------------------- datasets
+# One entry per package dataset: the environment domain, whether the dataset feeds control tables, and (for context-only
+# datasets) why it is not mapped. `observation_type: projection` marks official projections: they are context only and
+# never used as current observations; `projection_baseline_period` is the base year the projection reproduces.
+datasets:
+  population_total_and_growth:
+    domain: demographics
+    use: context
+    reason: Province totals, growth rate and density (rates and densities are context; total_population is the cross-check for the age × sex table).
+  population_by_age_sex:
+    domain: demographics
+    use: controls
+    note: Root table of the generator (province × five-year age group × sex).
+  population_structural_indicators:
+    domain: demographics
+    use: context
+    reason: Broad age groups, median ages and dependency ratios are derived from the same ADNKS counts as the root table; mapping them would duplicate it.
+  population_urban_rural:
+    domain: urbanization
+    use: controls
+    note: Administrative settlement type (centres vs towns/villages) by sex is a control; DEGURBA (2022–2025) is a different classification and stays context.
+  vital_fertility_and_birth_indicators:
+    domain: demographics
+    use: context
+    reason: Rates and mean ages describe the province's births; they are not a person attribute of the current population.
+  vital_mortality_and_life_expectancy:
+    domain: demographics
+    use: context
+    reason: Mortality rates and life expectancy (the latter for multi-year periods such as 2021-2023, kept as published) are province context.
+  deaths_by_cause:
+    domain: health
+    use: context
+    reason: Deaths by cause are event counts, not attributes of living residents.
+  population_projections_2024_2030:
+    domain: demographics
+    use: context
+    observation_type: projection
+    projection_baseline_period: '2023'
+    reason: TÜİK main-scenario projections. The 2023 baseline equals ADNKS 2023 for all 81 provinces; 2024–2030 values are projections and differ from the observed 2024 and 2025 populations. Never used as current observations.
+  households_size_and_types:
+    domain: households
+    use: context
+    reason: Published as numbers of households by type (unit household) and average household size. The person-level tables (persons by household type or size) cannot be derived without persons per household type, so no household attribute is generated.
+  marital_status_by_sex:
+    domain: households
+    use: controls
+  marriage_and_divorce_indicators:
+    domain: households
+    use: context
+    reason: Marriage and divorce events, rates and mean ages at first marriage are flows, not the stock of marital statuses.
+  education_attainment_by_sex:
+    domain: education
+    use: controls
+  education_duration_and_schooling_expectancy:
+    domain: education
+    use: context
+    reason: Mean years of schooling and school life expectancy are province-level summary measures.
+  literacy_and_nonformal_education:
+    domain: education
+    use: context
+    reason: Illiteracy 6+ overlaps with the education table (which already has an illiterate category for 15+) and has a different universe; 2021 census literacy and 2013-2014 non-formal education statistics are context.
+  labor_force_indicators:
+    domain: economy
+    use: context
+    reason: Labour force participation, employment and unemployment RATES with 95% confidence intervals from the Household Labour Force Survey. Counts by labour status (needed for a person-level labour attribute) are not published by province, and converting survey rates to counts would invent precision, so labour status stays unavailable.
+  gdp_and_economy_by_sector:
+    domain: economy
+    use: context
+    reason: Provincial GDP and sectoral value added describe the economy, not persons.
+  socioeconomic_status_and_human_development:
+    domain: economy
+    use: context
+    reason: SES classes are household shares (3-year average households, A+ to E) and HDI/HCI are indices; no person-level socioeconomic distribution exists, so socioeconomic status is not modelled for persons.
+  housing_stock_and_dwelling_characteristics:
+    domain: housing
+    use: context
+    reason: 2021 census dwelling characteristics counted in households and percentages; no household or dwelling unit is generated.
+  housing_sales_and_building_permits:
+    domain: housing
+    use: context
+    reason: Sales and permits are market flows.
+  internal_migration_and_place_of_birth:
+    domain: migration
+    use: context
+    reason: Migration flows and place-of-birth shares are province context (birthplace by age and sex is not published, so it is not a person attribute).
+  internal_migration_by_reason:
+    domain: migration
+    use: context
+    reason: Migration flows by reason.
+  international_migration_and_foreign_population:
+    domain: migration
+    use: context
+    reason: Flows and the foreign resident population by sex; citizenship is not modelled as a person attribute.
+  road_motor_vehicles_and_transfers:
+    domain: mobility
+    use: context
+    reason: Registered vehicles by type. variable_metadata.csv defines nine transferred_vehicles_* indicators that have no rows in the data.
+  traffic_accidents_and_casualties:
+    domain: mobility
+    use: context
+    reason: Accident and casualty counts.
+  air_traffic_by_province:
+    domain: mobility
+    use: context
+    reason: Airport traffic; 51 provinces with commercial airports are covered, the other 30 are structurally unavailable (not zero).
+  wellbeing_and_life_satisfaction_indicators:
+    domain: wellbeing
+    use: context
+    reason: Provincial Well-Being Index 2015 (and 2013 inputs); survey-based indicators and ranks, old relative to the 2025 reference year.
+  sports_clubs_and_media_indicators:
+    domain: culture
+    use: context
+    reason: Counts of clubs and official-advertisement publications.
+  opera_and_ballet_by_province:
+    domain: culture
+    use: context
+    reason: State Opera and Ballet seasons 2023-2024 and 2024-2025 (kept as published periods); only 6 provinces have halls, the others are structurally unavailable.
+  health_infrastructure_and_personnel:
+    domain: health
+    use: context
+    reason: Hospitals, beds and personnel; blank values are NOT_REPORTED, never zero.
+  agricultural_land_by_province:
+    domain: environment
+    use: context
+    reason: Land use in decares.
+  agricultural_wages_by_province:
+    domain: economy
+    use: context
+    reason: Survey wage estimates published for 35 provinces; suppressed or absent cells are blank (NOT_REPORTED).
+  municipal_water_and_waste_services:
+    domain: environment
+    use: context
+    reason: Municipal service indicators for 2020, 2022 and 2024.
+  prison_convicts_by_crime:
+    domain: justice
+    use: context
+    reason: Convicts received into prison by crime type and sex (2011–2020). Sensitive; never a person attribute or persona field.
+
+# Extra source markers for missing values (case-insensitive), added to the defaults in sources.py. The package already
+# writes suppressed ("c") and absent ("-") cells as empty strings, which are NOT_REPORTED by default.
 missing_value_markers: {}

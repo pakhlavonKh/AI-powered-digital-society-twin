@@ -1,15 +1,19 @@
 # SocietyTwin data manifest
 #
 # One entry per dataset the pipeline uses. This file records metadata only; the data files themselves
-# stay out of Git (see data/README.md). Fields the project never recorded are null, not guessed.
+# stay out of Git (see data/README.md). Fields the project never recorded are null (or omitted), not guessed.
 # Reuse terms for TÜİK portal tables are an OPEN DECISION (docs/data-strategy.md).
 #
-# The three entries below are the TÜİK-derived Ankara extracts shipped with the historical MatrAIx
-# experiment. Their raw TÜİK downloads are NOT in this repository, so the checksums are of the processed
-# extracts (LF bytes as checked out here; the historical persona files recorded CRLF variants).
-# The team's long-format TÜİK package (reported: 33 datasets, 577 indicators) is not in this checkout;
-# when it is added under data/raw/tuik_package/, its datasets are catalogued automatically in the
-# control store manifest (data/processed/national/manifest.json) and should be summarised here.
+# Entries 1–3 are the TÜİK-derived Ankara extracts shipped with the historical MatrAIx experiment. Their raw
+# TÜİK downloads are NOT in this repository, so the checksums are of the processed extracts (LF bytes as checked
+# out here; the historical persona files recorded CRLF variants). With the package loaded they are
+# corroborating evidence: every value equals the package's, and the package is cited.
+#
+# The tuik_pkg:* entries are the 33 datasets of the team's TÜİK province package, integrated locally in
+# data/raw/tuik_package/ (git-ignored; received 2026-10-18 as data/raw/tuik_province_data/, kept unchanged).
+# They were generated from the control-store manifest (data/processed/national/manifest.json), which also holds
+# the per-indicator metadata, value-status counts and the package audit. Checksums are of the long-format CSV
+# and its _wide twin as received. See docs/national-pipeline.md §3 for the verified findings and discrepancies.
 #
 # Entry template:
 #   - id, source, title (official Turkish title or null), title_en, url, identifier, publication_date,
@@ -38,6 +42,7 @@ datasets:
       - Normalised to the standard control table population_age_sex by societytwin.national.sources
     limitations:
       - Ankara only; raw-source verification unavailable
+      - Corroborating since the package was added (all 38 cells equal tuik_pkg:population_by_age_sex)
     held_out: false
   - id: legacy:tuik_t10_marital_sex
     source: TÜİK, marital status statistics (administrative registers)
@@ -60,6 +65,7 @@ datasets:
       - Labels mapped to codes (Hiç evlenmedi, Evli, Boşandı, Eşi öldü); universe checked equal to the 15+ population
     limitations:
       - Ankara only; no age breakdown, so the age × marital-status joint is not observed
+      - Corroborating since the package was added (all 8 cells equal tuik_pkg:marital_status_by_sex)
     held_out: false
   - id: legacy:tuik_province_workbooks
     source: TÜİK provincial workbooks
@@ -81,4 +87,788 @@ datasets:
       - Extracted by process_tuik_controls.py; used as province environment context and a cross-source total check
     limitations:
       - Ankara only; the settlement-type split in the same workbook was not extracted
+      - Corroborating since the package was added (all 17 values equal the package's)
+    held_out: false
+  - id: tuik_pkg:agricultural_land_by_province
+    source: TÜİK (Turkish Statistical Institute), TÜİK Veri Portalı; team province package
+    title: İllere Göre Tarım Alanları (2020-2025)
+    title_en: Provincial Agricultural Land by Crop and Land Use Type (2020-2025)
+    url: https://veriportali.tuik.gov.tr/tr/press-release/58091
+    identifier: agricultural_land_prov.xls
+    publication_date: '2026-03-20'
+    retrieval_date: '2026-10-18'
+    reference_year: 2020–2025
+    geography: NUTS-3 (province)
+    province_coverage: all 81
+    variables: 6 indicators (variable_metadata.csv)
+    units: decare
+    licence: OPEN DECISION
+    file: data/raw/tuik_package/agricultural_land_by_province.csv
+    checksum: sha256:bba1712cfd3834f782b165229ad28effc4eb7b8f944b3110016e5dc58d79c65f
+    wide_file_checksum: sha256:7dad697f1c002939c4d619b3ff4d0f1a5f6d5c4466ade455d674217a147c7329
+    use: province context only
+    transformations:
+    - Long-format rows read verbatim; reference periods kept as published; the _wide twin is verified, not imported
+    limitations:
+    - Land use in decares.
+    held_out: false
+  - id: tuik_pkg:agricultural_wages_by_province
+    source: TÜİK (Turkish Statistical Institute), TÜİK Veri Portalı; team province package
+    title: İllere Göre Tarımsal İşletme İşgücü Ücretleri (Mevsimlik Günlük ve Sürekli Aylık Ücretler)
+    title_en: Average Daily Wages of Seasonal Agricultural Workers and Monthly Wages of Permanent Agricultural Workers by Province and Sex
+    url: https://veriportali.tuik.gov.tr/tr/press-release/58094
+    identifier: agricultural_wages_prov.xls
+    publication_date: '2026-03-12'
+    retrieval_date: '2026-10-18'
+    reference_year: 2002–2025
+    geography: NUTS-3 (province)
+    province_coverage: '35 of 81: 01, 03, 05, 06, 07, 09, 10, 16, 17, 20, 22, 26, 27, 28, 31, 32, 33, 35, 38, 42, 44, 45, 46, 51, 52, 53, 54, 55, 67, 68, 75, 76, 79, 80, 81'
+    variables: 4 indicators (variable_metadata.csv)
+    units: try
+    licence: OPEN DECISION
+    file: data/raw/tuik_package/agricultural_wages_by_province.csv
+    checksum: sha256:527d246203b952f13fddce4746e7b2d56a3cbaaa17c638f0c051efca18e4e91f
+    wide_file_checksum: sha256:a36ddf21b725704cd73974d3794fcfe2d2eb3685a3c1a26f028fb366fcc68906
+    use: province context only
+    transformations:
+    - Long-format rows read verbatim; reference periods kept as published; the _wide twin is verified, not imported
+    limitations:
+    - Covers 35 of 81 provinces; uncovered provinces are STRUCTURALLY_UNAVAILABLE, not zero.
+    - 776 blank value(s) are NOT_REPORTED (never zero). The package does not distinguish confidentiality suppression from absence.
+    - 804 province row(s) are absent within indicator-periods that other covered provinces report; absent rows are not created and are not zero.
+    - Survey wage estimates published for 35 provinces; suppressed or absent cells are blank (NOT_REPORTED).
+    held_out: false
+  - id: tuik_pkg:air_traffic_by_province
+    source: TÜİK (Turkish Statistical Institute), TÜİK Veri Portalı; team province package
+    title: İBBS'ye Göre Havalimanlarında İniş-Kalkış Yapan Uçak Sayısı ile İç ve Dış Hatlarda Yolcu ve Yük Taşıma (2004-2025)
+    title_en: Commercial Airport Aircraft Traffic, Passengers, and Freight by Province (2004-2025)
+    url: https://veriportali.tuik.gov.tr/tr/press-release/53712
+    identifier: air_traffic_prov.xls
+    publication_date: '2026-04-15'
+    retrieval_date: '2026-10-18'
+    reference_year: 2004–2025
+    geography: NUTS-3 (province)
+    province_coverage: '51 of 81: 01, 02, 04, 05, 06, 07, 09, 10, 12, 16, 17, 20, 21, 23, 24, 25, 26, 27, 30, 31, 32, 34, 35, 36, 37, 38, 41, 42, 43, 44, 46, 47, 48, 49, 50, 52, 53, 55, 56, 57, 58, 59, 60, 61, 63, 64, 65, 67, 72, 73, 76'
+    variables: 11 indicators (variable_metadata.csv)
+    units: count, person, ton
+    licence: OPEN DECISION
+    file: data/raw/tuik_package/air_traffic_by_province.csv
+    checksum: sha256:0331efaaaef4e5e7b490a7fb0a6727ee5564cae81bc30e632b3bb54c6f1846af
+    wide_file_checksum: sha256:8e2f5072b126d6f49ec0ffde8a1615298c877a865f7bc2974fd6f59fcbb68ea1
+    use: province context only
+    transformations:
+    - Long-format rows read verbatim; reference periods kept as published; the _wide twin is verified, not imported
+    limitations:
+    - Covers 51 of 81 provinces; uncovered provinces are STRUCTURALLY_UNAVAILABLE, not zero.
+    - 1702 blank value(s) are NOT_REPORTED (never zero). The package does not distinguish confidentiality suppression from absence.
+    - 1408 province row(s) are absent within indicator-periods that other covered provinces report; absent rows are not created and are not zero.
+    - Airport traffic; 51 provinces with commercial airports are covered, the other 30 are structurally unavailable (not zero).
+    held_out: false
+  - id: tuik_pkg:deaths_by_cause
+    source: TÜİK (Turkish Statistical Institute), TÜİK Veri Portalı; team province package
+    title: İl ve Seçilmiş Ölüm Nedenlerine Göre Ölümler
+    title_en: Deaths by Province and Selected Causes of Death
+    url: https://veriportali.tuik.gov.tr/tr/press-release/58082
+    identifier: deaths_by_cause_prov.xls
+    publication_date: '2026-06-23'
+    retrieval_date: '2026-10-18'
+    reference_year: 2018–2025
+    geography: NUTS-3 (province)
+    province_coverage: all 81
+    variables: 10 indicators (variable_metadata.csv)
+    units: person
+    licence: OPEN DECISION
+    file: data/raw/tuik_package/deaths_by_cause.csv
+    checksum: sha256:8d4deb7e254c801c879deee8c4639b0e258b1a91f9690d6239f5901e84426579
+    wide_file_checksum: sha256:2525b0837727abcd2b3a90be7da62c118c8f3b79af70aa3da1cb417ab12f55af
+    use: province context only
+    transformations:
+    - Long-format rows read verbatim; reference periods kept as published; the _wide twin is verified, not imported
+    limitations:
+    - 300 blank value(s) are NOT_REPORTED (never zero). The package does not distinguish confidentiality suppression from absence.
+    - Deaths by cause are event counts, not attributes of living residents.
+    held_out: false
+  - id: tuik_pkg:education_attainment_by_sex
+    source: TÜİK (Turkish Statistical Institute), TÜİK Veri Portalı; team province package
+    title: Bitirilen Eğitim Durumuna ve Cinsiyete Göre Nüfus (15+ Yaş)
+    title_en: Population Aged 15+ by Attained Education Level and Sex by Province
+    url: https://veriportali.tuik.gov.tr/tr/data-table/6737?pressId=58104
+    identifier: DF_ULUSAL_EGITIM_ISTATISTIK_BED_NUFUS_V1.0
+    publication_date: '2026-05-14'
+    retrieval_date: '2026-10-18'
+    reference_year: 2008–2025
+    geography: NUTS-3 (province)
+    province_coverage: all 81
+    variables: 33 indicators (variable_metadata.csv)
+    units: person
+    licence: OPEN DECISION
+    file: data/raw/tuik_package/education_attainment_by_sex.csv
+    checksum: sha256:8b0800228b831d16e4cbbedb9c4e48e322598ca8d6defb20c32dff97ca1c161b
+    wide_file_checksum: sha256:cd8b2df3fada0b42f20385c7cf0302be05e9ea95ab18f0ed2e73fe0f19df2d71
+    use: 'controls: education_sex (other indicators are context)'
+    transformations:
+    - Long-format rows read verbatim; reference periods kept as published; the _wide twin is verified, not imported
+    - Mapped to education_sex by data/tuik_package_mapping.yaml
+    held_out: false
+  - id: tuik_pkg:education_duration_and_schooling_expectancy
+    source: TÜİK (Turkish Statistical Institute), TÜİK Veri Portalı; team province package
+    title: İllere Göre Ortalama Eğitim Süresi, Muhtemel Eğitim Süresi (ISCED 0, 1-3, 1-8) ve Cinsiyet Eşitliği Endeksi
+    title_en: Mean Years of Schooling, School Life Expectancy (ISCED 0, 1-3, 1-8), and Gender Parity Index by Province
+    url: https://veriportali.tuik.gov.tr/tr/data-table/6739?pressId=58104
+    identifier: DF_MUHTEMEL_EGITIM_SURE_CINSIYET_ESITSIZLIK_ENDEKS_V1.0; DF_MUHTEMEL_EGITIM_SURE_ISCED1_3_V1.0; DF_MUHTEMEL_EGITIM_SURE_ISCED_0_V1.0; DF_MUHTEMEL_EGITIM_SURE_ISCED_1_8_V1.0; DF_ORTALAMA_EGITIM_SURE_V1.0
+    publication_date: '2026-05-14'
+    retrieval_date: '2026-10-18'
+    reference_year: 2011–2025
+    geography: NUTS-3 (province)
+    province_coverage: all 81
+    variables: 16 indicators (variable_metadata.csv)
+    units: index, year
+    licence: OPEN DECISION
+    file: data/raw/tuik_package/education_duration_and_schooling_expectancy.csv
+    checksum: sha256:02b3e4dc5fd04c762fdb562ad013c43562c15dfddc3f92bd81452f009546c160
+    wide_file_checksum: sha256:21f80947cd984d9903448e009423d5a82215557e8962a6b95ccc3c04d6ebe3b0
+    use: province context only
+    transformations:
+    - Long-format rows read verbatim; reference periods kept as published; the _wide twin is verified, not imported
+    limitations:
+    - Mean years of schooling and school life expectancy are province-level summary measures.
+    held_out: false
+  - id: tuik_pkg:gdp_and_economy_by_sector
+    source: TÜİK (Turkish Statistical Institute), TÜİK Veri Portalı; team province package
+    title: İl Bazında Kişi Başına GSYH (TL ve Dolar) ve İktisadi Faaliyet Kollarına (A10) Göre GSYH
+    title_en: Provincial Per Capita GDP (TRY & USD) and GDP by Economic Activity (NACE Rev.2 A10) at Current Prices
+    url: https://veriportali.tuik.gov.tr/tr/press-release/53810
+    identifier: gdp_current_by_sector_prov.xls; gdp_per_capita_prov.xls
+    publication_date: '2025-12-18'
+    retrieval_date: '2026-10-18'
+    reference_year: 2000–2024
+    geography: NUTS-3 (province)
+    province_coverage: all 81
+    variables: 16 indicators (variable_metadata.csv)
+    units: thousand_try, try, usd
+    licence: OPEN DECISION
+    file: data/raw/tuik_package/gdp_and_economy_by_sector.csv
+    checksum: sha256:89529207b0dd262348a62724eb24d37c6ea2536047e82d58efacffdc7d33b8e5
+    wide_file_checksum: sha256:e01bea5ddc07f5cc1e3cda2a8b4627e21c2c431ae94d2bca76f14592378d44e8
+    use: province context only
+    transformations:
+    - Long-format rows read verbatim; reference periods kept as published; the _wide twin is verified, not imported
+    limitations:
+    - Provincial GDP and sectoral value added describe the economy, not persons.
+    held_out: false
+  - id: tuik_pkg:health_infrastructure_and_personnel
+    source: TÜİK (Turkish Statistical Institute), TÜİK Veri Portalı; team province package
+    title: İllere Göre Hastane Sayısı, Hastane Yatak Sayısı ve Sağlık Personeli Sayıları (2002-2024)
+    title_en: Hospitals, Hospital Beds by Institution Type, and Health Care Professionals by Category and Province (2002-2024)
+    url: https://veriportali.tuik.gov.tr/tr/data-table/8780?pressId=37198
+    identifier: health_beds_prov.xls; health_hospitals_prov.xls; health_personnel_prov.xls
+    publication_date: '2025-11-20'
+    retrieval_date: '2026-10-18'
+    reference_year: 2002–2024
+    geography: NUTS-3 (province)
+    province_coverage: all 81
+    variables: 19 indicators (variable_metadata.csv)
+    units: bed, hospital, person
+    licence: OPEN DECISION
+    file: data/raw/tuik_package/health_infrastructure_and_personnel.csv
+    checksum: sha256:1cadd3ae99b4a1193405c20e31160a7271b723a96dd9941bea4e5a53ba0dcbda
+    wide_file_checksum: sha256:b647df0d57e563502b28a7a39e37c4c7da72f75d96c115e7bb836aaa5a985be9
+    use: province context only
+    transformations:
+    - Long-format rows read verbatim; reference periods kept as published; the _wide twin is verified, not imported
+    limitations:
+    - 6538 blank value(s) are NOT_REPORTED (never zero). The package does not distinguish confidentiality suppression from absence.
+    - Hospitals, beds and personnel; blank values are NOT_REPORTED, never zero.
+    held_out: false
+  - id: tuik_pkg:households_size_and_types
+    source: TÜİK (Turkish Statistical Institute), TÜİK Veri Portalı; team province package
+    title: İllere Göre Ortalama Hanehalkı Büyüklüğü ve Hanehalkı Tiplerine Göre Hanehalkı Sayısı
+    title_en: Average Household Size and Number of Households by Family Composition Type by Province
+    url: https://veriportali.tuik.gov.tr/tr/data-table/6781?pressId=58074
+    identifier: DF_ADNKS_T06_V1.1; DF_ADNKS_T08_V1.1; DF_ADNKS_T25_V1.1
+    publication_date: '2026-05-08'
+    retrieval_date: '2026-10-18'
+    reference_year: 2008–2025
+    geography: NUTS-3 (province)
+    province_coverage: all 81
+    variables: 11 indicators (variable_metadata.csv)
+    units: household, persons
+    licence: OPEN DECISION
+    file: data/raw/tuik_package/households_size_and_types.csv
+    checksum: sha256:cf4e83f5a2266e7e84f247d81eb8232241b7cdfa35d08f73ec816bc1f3de01ae
+    wide_file_checksum: sha256:abb4d0bc67faaa7a7560011d88b6d0afe5149dcb7efcfae886936d87c4664eaa
+    use: province context only
+    transformations:
+    - Long-format rows read verbatim; reference periods kept as published; the _wide twin is verified, not imported
+    limitations:
+    - Published as numbers of households by type (unit household) and average household size. The person-level tables (persons by household type or size) cannot be derived without persons per household type, so no household attribute is generated.
+    held_out: false
+  - id: tuik_pkg:housing_sales_and_building_permits
+    source: TÜİK (Turkish Statistical Institute), TÜİK Veri Portalı; team province package
+    title: İllere Göre Konut ve İş Yeri Satış Sayıları (2013-2025) ile Yapı Belgesi Verilen Daire Sayıları (2010-2025)
+    title_en: Provincial House and Commercial Property Sales by Type (2013-2025) and Dwellings Granted Building Permits (2010-2025)
+    url: https://veriportali.tuik.gov.tr/tr/press-release/58134
+    identifier: DF_SATIS_SEKLI_DURUMU_ILILCE_V3_V1.0; building_permits_apartments_prov.xls
+    publication_date: '2026-08-19'
+    retrieval_date: '2026-10-18'
+    reference_year: 2010–2025
+    geography: NUTS-3 (province)
+    province_coverage: all 81
+    variables: 12 indicators (variable_metadata.csv)
+    units: count, dwelling
+    licence: OPEN DECISION
+    file: data/raw/tuik_package/housing_sales_and_building_permits.csv
+    checksum: sha256:3b148c9b9d648d389b97049278937efcb75f02ff9f6ac3845a664c1521db1dc8
+    wide_file_checksum: sha256:d51dfa082e5361446c290f4da26546bb330db0071ba7805c6c80280ec857bcab
+    use: province context only
+    transformations:
+    - Long-format rows read verbatim; reference periods kept as published; the _wide twin is verified, not imported
+    limitations:
+    - Sales and permits are market flows.
+    held_out: false
+  - id: tuik_pkg:housing_stock_and_dwelling_characteristics
+    source: TÜİK (Turkish Statistical Institute), TÜİK Veri Portalı; team province package
+    title: 'Bina ve Konut Nitelikleri Araştırması: İllere Göre Konut Mülkiyeti, Oda Sayısı, Isıtma Sistemi, Yakıt Türü, Bina Yaşı ve Kat Sayısı (2021)'
+    title_en: 'Building and Dwelling Characteristics by Province: Ownership, Rooms, Heating, Fuel, Building Age, Floors, Elevator & Parking (2021)'
+    url: https://veriportali.tuik.gov.tr/tr/press-release/45870
+    identifier: housing_construction_year_prov.xls; housing_elevator_prov.xls; housing_floors_prov.xls; housing_heating_fuel_prov.xls; housing_heating_system_prov.xls; housing_ownership_prov.xls; housing_parking_prov.xls; housing_rooms_count_prov.xls; housing_rooms_per_person_prov.xls
+    publication_date: '2022-12-02'
+    retrieval_date: '2026-10-18'
+    reference_year: '2021'
+    geography: NUTS-3 (province)
+    province_coverage: all 81
+    variables: 49 indicators (variable_metadata.csv)
+    units: floors, household, percent, rooms
+    licence: OPEN DECISION
+    file: data/raw/tuik_package/housing_stock_and_dwelling_characteristics.csv
+    checksum: sha256:05b93ad0101228d26a35476fb6ed4f1d70bafa065a1c9f1b1924a2d670da4dd7
+    wide_file_checksum: sha256:75ae9359e563092705133958abea288bdf48ada335252bbf5bd453e76a207120
+    use: province context only
+    transformations:
+    - Long-format rows read verbatim; reference periods kept as published; the _wide twin is verified, not imported
+    limitations:
+    - 2021 census dwelling characteristics counted in households and percentages; no household or dwelling unit is generated.
+    held_out: false
+  - id: tuik_pkg:internal_migration_and_place_of_birth
+    source: TÜİK (Turkish Statistical Institute), TÜİK Veri Portalı; team province package
+    title: İllerin Aldığı Göç, Verdiği Göç, Net Göç Hızı (2008-2024) ve Doğum Yeri Durumuna Göre Nüfus (2014-2025)
+    title_en: Provincial Internal In-Migration, Out-Migration, Net Migration Rate, and Lifetime Migration Stock (Place of Birth Status)
+    url: https://veriportali.tuik.gov.tr/tr/press-release/58080
+    identifier: DF_ADNKS_T4_V1_2; internal_migration_summary_prov.xls
+    publication_date: '2026-07-17'
+    retrieval_date: '2026-10-18'
+    reference_year: 2008–2025
+    geography: NUTS-3 (province)
+    province_coverage: all 81
+    variables: 10 indicators (variable_metadata.csv)
+    units: per_thousand, percent, person
+    licence: OPEN DECISION
+    file: data/raw/tuik_package/internal_migration_and_place_of_birth.csv
+    checksum: sha256:fb689e695a2db5edc21328a3046ad6a6ed59c88a3b5e227d82a79b6537627f89
+    wide_file_checksum: sha256:d92724aedc8508c93d3cc4def315a688fc7b9d3fef44aaabe7a3ac7af7665ad6
+    use: province context only
+    transformations:
+    - Long-format rows read verbatim; reference periods kept as published; the _wide twin is verified, not imported
+    limitations:
+    - Migration flows and place-of-birth shares are province context (birthplace by age and sex is not published, so it is not a person attribute).
+    held_out: false
+  - id: tuik_pkg:internal_migration_by_reason
+    source: TÜİK (Turkish Statistical Institute), TÜİK Veri Portalı; team province package
+    title: Göç Etme Nedenine Göre İllerin Aldığı ve Verdiği İç Göç (2018-2025)
+    title_en: Provincial Internal In-Migration and Out-Migration by Reason for Migration (2018-2025)
+    url: https://veriportali.tuik.gov.tr/tr/press-release/58080
+    identifier: internal_in_migration_reason_prov.xls; internal_out_migration_reason_prov.xls
+    publication_date: '2026-07-17'
+    retrieval_date: '2026-10-18'
+    reference_year: 2018–2025
+    geography: NUTS-3 (province)
+    province_coverage: all 81
+    variables: 26 indicators (variable_metadata.csv)
+    units: person
+    licence: OPEN DECISION
+    file: data/raw/tuik_package/internal_migration_by_reason.csv
+    checksum: sha256:c5d1e46e34287055efe0f54b68a6c2a27f8fb49885c6d3d168e4e841b189a598
+    wide_file_checksum: sha256:9d49b659a788fff4fdb931c57cd9e52a01158fad6568db9de8bab1692db6fe9b
+    use: province context only
+    transformations:
+    - Long-format rows read verbatim; reference periods kept as published; the _wide twin is verified, not imported
+    limitations:
+    - Migration flows by reason.
+    held_out: false
+  - id: tuik_pkg:international_migration_and_foreign_population
+    source: TÜİK (Turkish Statistical Institute), TÜİK Veri Portalı; team province package
+    title: İllere, Cinsiyete ve Vatandaşlığa Göre Uluslararası Göç (2016-2025) ve Yabancı Nüfus (2007-2025)
+    title_en: Provincial International Migration by Sex and Citizenship (2016-2025) and Foreign Resident Population (2007-2025)
+    url: https://veriportali.tuik.gov.tr/tr/press-release/58086
+    identifier: DF_ADNKS_T12_V1.1; intl_migration_citizenship_prov.xls; intl_migration_sex_prov.xls
+    publication_date: '2026-07-23'
+    retrieval_date: '2026-10-18'
+    reference_year: 2007–2025
+    geography: NUTS-3 (province)
+    province_coverage: all 81
+    variables: 14 indicators (variable_metadata.csv)
+    units: person
+    licence: OPEN DECISION
+    file: data/raw/tuik_package/international_migration_and_foreign_population.csv
+    checksum: sha256:6b24571fcbed08e84a7c9b75fa183fb6db34b5980005bba9206bedb13c3abb3f
+    wide_file_checksum: sha256:2d54d87c8270657bc74791929df2e0f63396e98ecca521967f3b9cc15309451c
+    use: province context only
+    transformations:
+    - Long-format rows read verbatim; reference periods kept as published; the _wide twin is verified, not imported
+    limitations:
+    - 13 province row(s) are absent within indicator-periods that other covered provinces report; absent rows are not created and are not zero.
+    - Flows and the foreign resident population by sex; citizenship is not modelled as a person attribute.
+    held_out: false
+  - id: tuik_pkg:labor_force_indicators
+    source: TÜİK (Turkish Statistical Institute), TÜİK Veri Portalı; team province package
+    title: İl Düzeyinde Temel İşgücü Göstergeleri (İşgücüne Katılma, İstihdam ve İşsizlik Oranları)
+    title_en: Provincial Headline Labor Force Indicators (LFPR, Employment Rate, Unemployment Rate and 95% CIs)
+    url: https://veriportali.tuik.gov.tr/tr/press-release/58059
+    identifier: employment_rate_prov.xls; lfpr_prov.xls; unemployment_rate_prov.xls
+    publication_date: '2026-03-30'
+    retrieval_date: '2026-10-18'
+    reference_year: 2022, 2023, 2024, 2025
+    geography: NUTS-3 (province)
+    province_coverage: all 81
+    variables: 9 indicators (variable_metadata.csv)
+    units: percent
+    licence: OPEN DECISION
+    file: data/raw/tuik_package/labor_force_indicators.csv
+    checksum: sha256:1ddc43fb5dac2df07afd87d904992a0767ec7b676826f796e852d3c09ca6ed25
+    wide_file_checksum: sha256:1b364c3476b6a4ecddc86a63ea48bce750563a307dee76abe86ac7044692fc07
+    use: province context only
+    transformations:
+    - Long-format rows read verbatim; reference periods kept as published; the _wide twin is verified, not imported
+    limitations:
+    - Labour force participation, employment and unemployment RATES with 95% confidence intervals from the Household Labour Force Survey. Counts by labour status (needed for a person-level labour attribute) are not published by province, and converting survey rates to counts would invent precision, so labour status stays unavailable.
+    held_out: false
+  - id: tuik_pkg:literacy_and_nonformal_education
+    source: TÜİK (Turkish Statistical Institute), TÜİK Veri Portalı; team province package
+    title: İl ve Cinsiyete Göre Okuryazarlık (6+ Yaş, 2008-2025) ve Yaygın Eğitim İstatistikleri
+    title_en: Provincial Literacy (Age 6+, 2008-2025) and Non-Formal Education Institutions, Participants, and Graduates
+    url: https://veriportali.tuik.gov.tr/tr/press-release/45866
+    identifier: DF_ULUSAL_EGITIM_ISTATISTIK_BED_NUFUS_V1.0; literacy_2021_census_prov.xls; nonformal_edu_prov.xls
+    publication_date: '2026-05-14'
+    retrieval_date: '2026-10-18'
+    reference_year: 2008–2025
+    reference_periods_multi_year: 2013-2014
+    geography: NUTS-3 (province)
+    province_coverage: all 81
+    variables: 19 indicators (variable_metadata.csv)
+    units: classroom, course, institution, person
+    licence: OPEN DECISION
+    file: data/raw/tuik_package/literacy_and_nonformal_education.csv
+    checksum: sha256:0591a3d67949b83fc9063b93e450e16bd34d2d2d7be76fff71df09e64b2fbe46
+    wide_file_checksum: sha256:679f2914c829a613f00331789399ab4a663e9cd79ab73bc5ef20f36c9792944d
+    use: province context only
+    transformations:
+    - Long-format rows read verbatim; reference periods kept as published; the _wide twin is verified, not imported
+    limitations:
+    - 810 observation(s) refer to multi-year periods (2013-2014); the period is kept as published.
+    - Illiteracy 6+ overlaps with the education table (which already has an illiterate category for 15+) and has a different universe; 2021 census literacy and 2013-2014 non-formal education statistics are context.
+    held_out: false
+  - id: tuik_pkg:marital_status_by_sex
+    source: TÜİK (Turkish Statistical Institute), TÜİK Veri Portalı; team province package
+    title: İl, Medeni Durum ve Cinsiyete Göre Nüfus (15+ Yaş)
+    title_en: Population Aged 15+ by Province, Marital Status, and Sex
+    url: https://veriportali.tuik.gov.tr/tr/data-table/6785?pressId=57877
+    identifier: DF_ADNKS_T10_V1.1
+    publication_date: '2026-02-06'
+    retrieval_date: '2026-10-18'
+    reference_year: 2008–2025
+    geography: NUTS-3 (province)
+    province_coverage: all 81
+    variables: 18 indicators (variable_metadata.csv)
+    units: person
+    licence: OPEN DECISION
+    file: data/raw/tuik_package/marital_status_by_sex.csv
+    checksum: sha256:de911a9499fad261508601ea0a3cd400c996f364f69658c1dbef1057a32c6100
+    wide_file_checksum: sha256:1f9f1f61707b39604c34b31583db28b3ec2b6eb909dd4d936a8c87e1d75d8e55
+    use: 'controls: marital_status_sex (other indicators are context)'
+    transformations:
+    - Long-format rows read verbatim; reference periods kept as published; the _wide twin is verified, not imported
+    - Mapped to marital_status_sex by data/tuik_package_mapping.yaml
+    limitations:
+    - 202 province row(s) are absent within indicator-periods that other covered provinces report; absent rows are not created and are not zero.
+    held_out: false
+  - id: tuik_pkg:marriage_and_divorce_indicators
+    source: TÜİK (Turkish Statistical Institute), TÜİK Veri Portalı; team province package
+    title: İllere Göre Evlenme, Boşanma, Ortalama İlk Evlenme Yaşı ve Akraba Evliliği İstatistikleri
+    title_en: Marriages, Divorces, Mean Age at First Marriage, and Consanguineous Marriages by Province
+    url: https://veriportali.tuik.gov.tr/tr/press-release/58071
+    identifier: DF_EVLENME_AKRABA_EVLILIK_V1.0; DF_EVLENME_ORT_ILK_EVL_YAS_V1.0; crude_divorce_rate_prov.xls; crude_marriage_rate_prov.xls; divorces_count_prov.xls; marriages_count_prov.xls
+    publication_date: '2026-02-24'
+    retrieval_date: '2026-10-18'
+    reference_year: 2001–2025
+    geography: NUTS-3 (province)
+    province_coverage: all 81
+    variables: 8 indicators (variable_metadata.csv)
+    units: count, per_thousand, percent, year
+    licence: OPEN DECISION
+    file: data/raw/tuik_package/marriage_and_divorce_indicators.csv
+    checksum: sha256:4f864edddd35a6e21a46b4c80e8f08ad43d65fa97eb624e356328b82ff6e1430
+    wide_file_checksum: sha256:6c516f23d1af4ea88eb624ef9481abf6785d6ff93315545dd078bacf379c574e
+    use: province context only
+    transformations:
+    - Long-format rows read verbatim; reference periods kept as published; the _wide twin is verified, not imported
+    limitations:
+    - Marriage and divorce events, rates and mean ages at first marriage are flows, not the stock of marital statuses.
+    held_out: false
+  - id: tuik_pkg:municipal_water_and_waste_services
+    source: TÜİK (Turkish Statistical Institute), TÜİK Veri Portalı; team province package
+    title: İllere Göre Belediye Su, Atıksu ve Atık Hizmeti İstatistikleri (2020, 2022, 2024)
+    title_en: Municipal Water Abstraction, Distribution, Wastewater Discharge, and Solid Waste Services by Province (2020, 2022, 2024)
+    url: https://veriportali.tuik.gov.tr/tr/press-release/53798
+    identifier: DF_ATIK_BELEDIYE_HIZMET_V1_V1.0; DF_SU_ATIKSU_BELEDIYE_CEKILEN_DAGITILAN_V1_V1.0
+    publication_date: '2025-11-28'
+    retrieval_date: '2026-10-18'
+    reference_year: 2020, 2022, 2024
+    geography: NUTS-3 (province)
+    province_coverage: all 81
+    variables: 10 indicators (variable_metadata.csv)
+    units: count, kg_per_capita_day, percent, person, thousand_m3, ton
+    licence: OPEN DECISION
+    file: data/raw/tuik_package/municipal_water_and_waste_services.csv
+    checksum: sha256:bf654998389d918db32ab193bee333d77b0eccbf044184935405bdb94daeaa83
+    wide_file_checksum: sha256:e05560925d18af9b543023c08fff960e44f04ca336ae5546a6b1fcf51ad38515
+    use: province context only
+    transformations:
+    - Long-format rows read verbatim; reference periods kept as published; the _wide twin is verified, not imported
+    limitations:
+    - Municipal service indicators for 2020, 2022 and 2024.
+    held_out: false
+  - id: tuik_pkg:opera_and_ballet_by_province
+    source: TÜİK (Turkish Statistical Institute), TÜİK Veri Portalı; team province package
+    title: Opera ve Bale Salonu Bulunan İllerde Oynanan Eser, Gösteri ve Seyirci Sayısı (2023-2024 ve 2024-2025 Sezonları)
+    title_en: Opera and Ballet Halls, Seats, Shows, Performances, and Audiences by Province (2023-2024 and 2024-2025 Seasons)
+    url: https://veriportali.tuik.gov.tr/tr/press-release/58101
+    identifier: cinema_theatre_press_8.xls
+    publication_date: '2026-07-02'
+    retrieval_date: '2026-10-18'
+    reference_periods_multi_year: 2023-2024, 2024-2025
+    geography: NUTS-3 (province)
+    province_coverage: '6 of 81: 06, 07, 33, 34, 35, 55'
+    variables: 5 indicators (variable_metadata.csv)
+    units: count, performance, person, seat, show
+    licence: OPEN DECISION
+    file: data/raw/tuik_package/opera_and_ballet_by_province.csv
+    checksum: sha256:fa0cded22eaa980386e53505a799cdb0b3e290d7dca2e139d4702fdc85ce5749
+    wide_file_checksum: sha256:8954d9242b2919c17e2e2495a0b3724754e09f94438f2e87d8ef828e56180706
+    use: province context only
+    transformations:
+    - Long-format rows read verbatim; reference periods kept as published; the _wide twin is verified, not imported
+    limitations:
+    - Covers 6 of 81 provinces; uncovered provinces are STRUCTURALLY_UNAVAILABLE, not zero.
+    - 60 observation(s) refer to multi-year periods (2023-2024, 2024-2025); the period is kept as published.
+    - State Opera and Ballet seasons 2023-2024 and 2024-2025 (kept as published periods); only 6 provinces have halls, the others are structurally unavailable.
+    held_out: false
+  - id: tuik_pkg:population_by_age_sex
+    source: TÜİK (Turkish Statistical Institute), TÜİK Veri Portalı; team province package
+    title: İl, Yaş Grubu ve Cinsiyete Göre Nüfus
+    title_en: Population by Province, 5-Year Age Group, and Sex
+    url: https://veriportali.tuik.gov.tr/tr/data-table/6791?pressId=57877
+    identifier: DF_ADNKS_T16_V1.0
+    publication_date: '2026-02-06'
+    retrieval_date: '2026-10-18'
+    reference_year: 2016–2025
+    geography: NUTS-3 (province)
+    province_coverage: all 81
+    variables: 60 indicators (variable_metadata.csv)
+    units: person
+    licence: OPEN DECISION
+    file: data/raw/tuik_package/population_by_age_sex.csv
+    checksum: sha256:edbde119e93691d2a9dbe28a7fe5e9989569af5611a2572cbfe29958d1bb4ace
+    wide_file_checksum: sha256:f76518babefedf00807e80bd4e509259580525266d3c264a59b32d85bc488564
+    use: 'controls: population_age_sex (other indicators are context)'
+    transformations:
+    - Long-format rows read verbatim; reference periods kept as published; the _wide twin is verified, not imported
+    - Mapped to population_age_sex by data/tuik_package_mapping.yaml
+    held_out: false
+  - id: tuik_pkg:population_projections_2024_2030
+    source: TÜİK (Turkish Statistical Institute), TÜİK Veri Portalı; team province package
+    title: 'Nüfus Projeksiyonları: Yıllara Göre İl Nüfusları ve Yıllık Ortalama Artış Hızları (2023-2030)'
+    title_en: Provincial Population Projections and Projected Average Annual Growth Rate (2023-2030)
+    url: https://veriportali.tuik.gov.tr/tr/press-release/53685
+    identifier: pop_projections_growth_prov.xls; pop_projections_prov.xls
+    publication_date: '2024-07-31'
+    retrieval_date: '2026-10-18'
+    reference_year: 2023–2030
+    reference_periods_multi_year: 2023-2030
+    geography: NUTS-3 (province)
+    province_coverage: all 81
+    variables: 2 indicators (variable_metadata.csv)
+    units: per_thousand, person
+    licence: OPEN DECISION
+    file: data/raw/tuik_package/population_projections_2024_2030.csv
+    checksum: sha256:de992408bd8ee3a1027f12dd477933d9bcdc4200d948890558d373205d7f38ab
+    wide_file_checksum: sha256:cf3398fc50dd34f508d594d5dd0861f8114733da2f5b234524608ce3a7e8734f
+    use: province context only
+    transformations:
+    - Long-format rows read verbatim; reference periods kept as published; the _wide twin is verified, not imported
+    limitations:
+    - 81 observation(s) refer to multi-year periods (2023-2030); the period is kept as published.
+    - 'Official projections: never used as current observations (period 2023 is the projection baseline).'
+    - TÜİK main-scenario projections. The 2023 baseline equals ADNKS 2023 for all 81 provinces; 2024–2030 values are projections and differ from the observed 2024 and 2025 populations. Never used as current observations.
+    held_out: false
+  - id: tuik_pkg:population_structural_indicators
+    source: TÜİK (Turkish Statistical Institute), TÜİK Veri Portalı; team province package
+    title: Geniş Yaş Grupları, Ortanca Yaş ve Yaş Bağımlılık Oranları
+    title_en: Population by Broad Age Groups, Median Age by Sex, and Age Dependency Ratios
+    url: https://veriportali.tuik.gov.tr/tr/data-table/6798?pressId=57877
+    identifier: DF_ADNKS_T23_V1.1; DF_ADNKS_T24_V1.1; DF_ADNKS_T35_V1.1
+    publication_date: '2026-02-06'
+    retrieval_date: '2026-10-18'
+    reference_year: 2007–2025
+    geography: NUTS-3 (province)
+    province_coverage: all 81
+    variables: 9 indicators (variable_metadata.csv)
+    units: percent, person, year
+    licence: OPEN DECISION
+    file: data/raw/tuik_package/population_structural_indicators.csv
+    checksum: sha256:e357a737af19edb34920ba1ed813c8cbe0a0739c907850d1e7e4971c96b338e2
+    wide_file_checksum: sha256:986ae89d5a89e4935b4de33997457cd38b1f35a4996388c8d9b41304ca6ace2e
+    use: province context only
+    transformations:
+    - Long-format rows read verbatim; reference periods kept as published; the _wide twin is verified, not imported
+    limitations:
+    - Broad age groups, median ages and dependency ratios are derived from the same ADNKS counts as the root table; mapping them would duplicate it.
+    held_out: false
+  - id: tuik_pkg:population_total_and_growth
+    source: TÜİK (Turkish Statistical Institute), TÜİK Veri Portalı; team province package
+    title: Yıllara Göre İl Nüfusları, Yıllık Nüfus Artış Hızı ve Nüfus Yoğunluğu
+    title_en: Provincial Population, Annual Population Growth Rate, and Population Density by Year
+    url: https://veriportali.tuik.gov.tr/tr/data-table/6805?pressId=57877
+    identifier: DF_ADNKS_T29_V1.1; DF_ADNKS_T30_V1.1
+    publication_date: '2026-02-06'
+    retrieval_date: '2026-10-18'
+    reference_year: 2007–2025
+    geography: NUTS-3 (province)
+    province_coverage: all 81
+    variables: 3 indicators (variable_metadata.csv)
+    units: per_thousand, person, persons_per_km2
+    licence: OPEN DECISION
+    file: data/raw/tuik_package/population_total_and_growth.csv
+    checksum: sha256:b26d5e1e9184760be127eb40f05030f8d9dd85c301b50adcc1b78f520da138e6
+    wide_file_checksum: sha256:0c27db3bcd25c79e1b3a211b730c9f2515619a0ff04a7ba781502f78c73805b3
+    use: province context only
+    transformations:
+    - Long-format rows read verbatim; reference periods kept as published; the _wide twin is verified, not imported
+    limitations:
+    - Province totals, growth rate and density (rates and densities are context; total_population is the cross-check for the age × sex table).
+    held_out: false
+  - id: tuik_pkg:population_urban_rural
+    source: TÜİK (Turkish Statistical Institute), TÜİK Veri Portalı; team province package
+    title: İl/İlçe Merkezi - Belde/Köy Nüfusu ve Kent-Kır (DEGURBA) Sınıflamasına Göre İl Nüfusları
+    title_en: Population by Administrative Urban/Rural Centers (2007-2025) and DEGURBA Classification (2022-2025)
+    url: https://veriportali.tuik.gov.tr/tr/data-table/6789?pressId=57877
+    identifier: DF_ADNKS_T14_V1.1; DF_ADNKS_T37_V1.1
+    publication_date: '2026-02-06'
+    retrieval_date: '2026-10-18'
+    reference_year: 2007–2025
+    geography: NUTS-3 (province)
+    province_coverage: all 81
+    variables: 15 indicators (variable_metadata.csv)
+    units: person
+    licence: OPEN DECISION
+    file: data/raw/tuik_package/population_urban_rural.csv
+    checksum: sha256:7f223faf84c77bf91842f0903618528218967dffe4db3ac928ec073f86e5f6c1
+    wide_file_checksum: sha256:68b3902c3447395fab7fd844aac24edf35826e2dc35dc7549edf661033e9a965
+    use: 'controls: urbanicity_sex (other indicators are context)'
+    transformations:
+    - Long-format rows read verbatim; reference periods kept as published; the _wide twin is verified, not imported
+    - Mapped to urbanicity_sex by data/tuik_package_mapping.yaml
+    limitations:
+    - 1242 province row(s) are absent within indicator-periods that other covered provinces report; absent rows are not created and are not zero.
+    held_out: false
+  - id: tuik_pkg:prison_convicts_by_crime
+    source: TÜİK (Turkish Statistical Institute), TÜİK Veri Portalı; team province package
+    title: İBBS 3. Düzeyde Daimi İkametgah ve Suç Türüne Göre Ceza İnfaz Kurumuna Giren Hükümlüler (2011-2020)
+    title_en: Convicts Received into Prison by Permanent Residence Province and Type of Crime (2011-2020)
+    url: https://veriportali.tuik.gov.tr/tr/press-release/37202
+    identifier: prison_convicts_prov.xls
+    publication_date: '2021-11-02'
+    retrieval_date: '2026-10-18'
+    reference_year: 2011–2020
+    geography: NUTS-3 (province)
+    province_coverage: all 81
+    variables: 40 indicators (variable_metadata.csv)
+    units: person
+    licence: OPEN DECISION
+    file: data/raw/tuik_package/prison_convicts_by_crime.csv
+    checksum: sha256:026ebb27772406536cb8345a1d9bbf6f95e4f426e0ba196f94aef95b2630849d
+    wide_file_checksum: sha256:04d3d2028ec24aa1576ad0b0078ea742b087b3235f7be82701233e30e11d847a
+    use: province context only
+    transformations:
+    - Long-format rows read verbatim; reference periods kept as published; the _wide twin is verified, not imported
+    limitations:
+    - 10259 blank value(s) are NOT_REPORTED (never zero). The package does not distinguish confidentiality suppression from absence.
+    - 100 province row(s) are absent within indicator-periods that other covered provinces report; absent rows are not created and are not zero.
+    - Convicts received into prison by crime type and sex (2011–2020). Sensitive; never a person attribute or persona field.
+    held_out: false
+  - id: tuik_pkg:road_motor_vehicles_and_transfers
+    source: TÜİK (Turkish Statistical Institute), TÜİK Veri Portalı; team province package
+    title: İllere Göre Motorlu Kara Taşıtları Sayısı (2005-2025) ve Devri Yapılan Motorlu Kara Taşıtları Sayısı (2010-2025)
+    title_en: Registered Road Motor Vehicles (Year-End, 2005-2025) and Annual Transferred Vehicles (2010-2025) by Type and Province
+    url: https://veriportali.tuik.gov.tr/tr/press-release/58107
+    identifier: DF_MOTORLU_KARA_TASIT_ILLER_V3_V1.0
+    publication_date: '2026-08-20'
+    retrieval_date: '2026-10-18'
+    reference_year: 2005–2025
+    geography: NUTS-3 (province)
+    province_coverage: all 81
+    variables: 9 indicators (variable_metadata.csv)
+    units: vehicle
+    licence: OPEN DECISION
+    file: data/raw/tuik_package/road_motor_vehicles_and_transfers.csv
+    checksum: sha256:16f28786073e742c0059aca09088a68501ec5ee07fd47fe07eb6a1a7ee1a4666
+    wide_file_checksum: sha256:8f269317c51102386887890ee04896fc06ccada29815a5bb95ef0f663fed83c1
+    use: province context only
+    transformations:
+    - Long-format rows read verbatim; reference periods kept as published; the _wide twin is verified, not imported
+    limitations:
+    - Registered vehicles by type. variable_metadata.csv defines nine transferred_vehicles_* indicators that have no rows in the data.
+    held_out: false
+  - id: tuik_pkg:socioeconomic_status_and_human_development
+    source: TÜİK (Turkish Statistical Institute), TÜİK Veri Portalı; team province package
+    title: İllere Göre Sosyoekonomik Seviye (SES, 2023), Beşeri Kalkınma Endeksi (2018-2022) ve Beşeri Sermaye Endeksi (2021-2023)
+    title_en: Provincial Socioeconomic Status (SES, 2023), Human Development Index (HDI, 2018-2022), and Human Capital Index (HCI, 2021-2023)
+    url: https://veriportali.tuik.gov.tr/tr/press-release/53845
+    identifier: DF_BESERI_KALKINMA_ENDEKS_V1.0; human_capital_press_0.xls; ses_households_count_prov.xls; ses_score_and_pct_prov.xls
+    publication_date: '2025-09-18'
+    retrieval_date: '2026-10-18'
+    reference_year: 2018–2023
+    geography: NUTS-3 (province)
+    province_coverage: all 81
+    variables: 24 indicators (variable_metadata.csv)
+    units: households_3yr_avg, index, percent, score
+    licence: OPEN DECISION
+    file: data/raw/tuik_package/socioeconomic_status_and_human_development.csv
+    checksum: sha256:a711043f1f7b2f4811b8fc0f1ee8e8a319a2d9cd4e33ad15bdf0726b6998c3b1
+    wide_file_checksum: sha256:66f321db9a9846370ec3209745116a90db284b4c156230ff9927e222e3c418e2
+    use: province context only
+    transformations:
+    - Long-format rows read verbatim; reference periods kept as published; the _wide twin is verified, not imported
+    limitations:
+    - 81 blank value(s) are NOT_REPORTED (never zero). The package does not distinguish confidentiality suppression from absence.
+    - SES classes are household shares (3-year average households, A+ to E) and HDI/HCI are indices; no person-level socioeconomic distribution exists, so socioeconomic status is not modelled for persons.
+    held_out: false
+  - id: tuik_pkg:sports_clubs_and_media_indicators
+    source: TÜİK (Turkish Statistical Institute), TÜİK Veri Portalı; team province package
+    title: İllere Göre Spor Kulüpleri (2007-2014) ve Resmi İlan Yayımlayan Süreli Yayın / İnternet Haber Siteleri (2024)
+    title_en: Provincial Sports Clubs by Type (2007-2014) and Print/Internet News Media Publishing Official Announcements (2024)
+    url: https://veriportali.tuik.gov.tr/tr/press-release/58101
+    identifier: DF_RESMI_ILAN_KONTENJAN_V1_0; sports_clubs_prov.xls
+    publication_date: '2026-07-02'
+    retrieval_date: '2026-10-18'
+    reference_year: 2007–2024
+    geography: NUTS-3 (province)
+    province_coverage: all 81
+    variables: 9 indicators (variable_metadata.csv)
+    units: club, publication
+    licence: OPEN DECISION
+    file: data/raw/tuik_package/sports_clubs_and_media_indicators.csv
+    checksum: sha256:bde057cc6ec7c1b83c69b84fb8cfb33e9b4996ba4bc20788ede4ffa763aa0be2
+    wide_file_checksum: sha256:97e57ceaa3f09ab76f9a37aec78be7b20f94794b575edb75ed5c1208998ee309
+    use: province context only
+    transformations:
+    - Long-format rows read verbatim; reference periods kept as published; the _wide twin is verified, not imported
+    limitations:
+    - 772 blank value(s) are NOT_REPORTED (never zero). The package does not distinguish confidentiality suppression from absence.
+    - Counts of clubs and official-advertisement publications.
+    held_out: false
+  - id: tuik_pkg:traffic_accidents_and_casualties
+    source: TÜİK (Turkish Statistical Institute), TÜİK Veri Portalı; team province package
+    title: İllere Göre Trafik Kaza, Ölü ve Yaralı Sayısı (2015-2025)
+    title_en: Number of Road Traffic Accidents, Persons Killed, and Persons Injured by Province (2015-2025)
+    url: https://veriportali.tuik.gov.tr/tr/press-release/58089
+    identifier: DF_TRAFIK_KAZA_OLU_YARALI_V2_V1.0
+    publication_date: '2026-05-13'
+    retrieval_date: '2026-10-18'
+    reference_year: 2015–2025
+    geography: NUTS-3 (province)
+    province_coverage: all 81
+    variables: 6 indicators (variable_metadata.csv)
+    units: accident, person
+    licence: OPEN DECISION
+    file: data/raw/tuik_package/traffic_accidents_and_casualties.csv
+    checksum: sha256:ceb66605ffdd7e13149420da4d9cfbc0f8101553924abf04e7bea47ce25f20ff
+    wide_file_checksum: sha256:9a6928bb59e9dd890a207cded2c7c36b8420fe30304c2b4cfedbec6f62c1099f
+    use: province context only
+    transformations:
+    - Long-format rows read verbatim; reference periods kept as published; the _wide twin is verified, not imported
+    limitations:
+    - 16 province row(s) are absent within indicator-periods that other covered provinces report; absent rows are not created and are not zero.
+    - Accident and casualty counts.
+    held_out: false
+  - id: tuik_pkg:vital_fertility_and_birth_indicators
+    source: TÜİK (Turkish Statistical Institute), TÜİK Veri Portalı; team province package
+    title: İllere Göre Kaba Doğum Hızı, Toplam Doğurganlık Hızı ve Annenin Ortalama Yaşı
+    title_en: Crude Birth Rate, Total Fertility Rate, and Mean Age of Mother by Province
+    url: https://veriportali.tuik.gov.tr/tr/press-release/58100
+    identifier: DF_DOGUM_ANNE_ORTYAS_C_V1.0; DF_DOGUM_ORTYAS_ILKDOG_C_V1.0; crude_birth_rate_prov.xls; total_fertility_rate_prov.xls
+    publication_date: '2026-05-15'
+    retrieval_date: '2026-10-18'
+    reference_year: 2009–2025
+    geography: NUTS-3 (province)
+    province_coverage: all 81
+    variables: 4 indicators (variable_metadata.csv)
+    units: children_per_woman, per_thousand, year
+    licence: OPEN DECISION
+    file: data/raw/tuik_package/vital_fertility_and_birth_indicators.csv
+    checksum: sha256:8526497097adf295b65d0ba2973d96833d8a0abb75f0bae581094e3db568607b
+    wide_file_checksum: sha256:a12eee6321a205502877b8afa7253911379fbe396055b614e11cd8fec17f10d6
+    use: province context only
+    transformations:
+    - Long-format rows read verbatim; reference periods kept as published; the _wide twin is verified, not imported
+    limitations:
+    - Rates and mean ages describe the province's births; they are not a person attribute of the current population.
+    held_out: false
+  - id: tuik_pkg:vital_mortality_and_life_expectancy
+    source: TÜİK (Turkish Statistical Institute), TÜİK Veri Portalı; team province package
+    title: İllere Göre Ölüm Hızları (Kaba, Bebek, Beş Yaş Altı, İntihar) ve Doğuşta Beklenen Yaşam Süreleri
+    title_en: Provincial Mortality Rates (Crude, Infant, Under-5, Suicide) and Life Expectancy at Birth
+    url: https://veriportali.tuik.gov.tr/tr/press-release/58082
+    identifier: crude_death_rate_prov.xls; infant_mortality_rate_prov.xls; life_expectancy_prov.xls; suicides_rate_prov.xls; under5_mortality_rate_prov.xls
+    publication_date: '2026-06-23'
+    retrieval_date: '2026-10-18'
+    reference_year: 2009–2025
+    reference_periods_multi_year: 2013-2014, 2015-2017, 2018-2020, 2021-2023
+    geography: NUTS-3 (province)
+    province_coverage: all 81
+    variables: 7 indicators (variable_metadata.csv)
+    units: per_100k, per_thousand, year
+    licence: OPEN DECISION
+    file: data/raw/tuik_package/vital_mortality_and_life_expectancy.csv
+    checksum: sha256:3539112377b90eba19648bb28e23a5f869d2b3aa7b867c97438d0ccf544a695b
+    wide_file_checksum: sha256:7b67d4957251395df10c8aa251e2ed53ccb5af1c11c6e11bed809b027419eabc
+    use: province context only
+    transformations:
+    - Long-format rows read verbatim; reference periods kept as published; the _wide twin is verified, not imported
+    limitations:
+    - 3 blank value(s) are NOT_REPORTED (never zero). The package does not distinguish confidentiality suppression from absence.
+    - 972 observation(s) refer to multi-year periods (2013-2014, 2015-2017, 2018-2020, 2021-2023); the period is kept as published.
+    - Mortality rates and life expectancy (the latter for multi-year periods such as 2021-2023, kept as published) are province context.
+    held_out: false
+  - id: tuik_pkg:wellbeing_and_life_satisfaction_indicators
+    source: TÜİK (Turkish Statistical Institute), TÜİK Veri Portalı; team province package
+    title: İllerde Yaşam Endeksi Gösterge Değerleri, Boyut Endeksleri ve Sıralamaları (2015) ile İllere ve Cinsiyete Göre Mutluluk Düzeyi (2013)
+    title_en: Provincial Well-Being Index (41 Indicators, 11 Dimension Scores & Ranks, 2015) and Happiness Level by Sex (2013)
+    url: https://veriportali.tuik.gov.tr/tr/press-release/24561
+    identifier: happiness_by_sex_prov.xls; wellbeing_index_ranks_prov.xls; wellbeing_index_values_prov.xls
+    publication_date: '2016-01-22'
+    retrieval_date: '2026-10-18'
+    reference_year: 2013, 2015
+    geography: NUTS-3 (province)
+    province_coverage: all 81
+    variables: 74 indicators (variable_metadata.csv)
+    units: applications_per_doctor, index, m2_per_1000_persons, per_100_persons, per_million, per_thousand, percent, points, rank, rooms, try, ug_per_m3, year
+    licence: OPEN DECISION
+    file: data/raw/tuik_package/wellbeing_and_life_satisfaction_indicators.csv
+    checksum: sha256:bb901ee579c015c849621e4685767a93e8876942951f99597338aa62693e4467
+    wide_file_checksum: sha256:3ebf4169a653a30e599d28bec1123ea6827958682999de9e468782f588788e8e
+    use: province context only
+    transformations:
+    - Long-format rows read verbatim; reference periods kept as published; the _wide twin is verified, not imported
+    limitations:
+    - Provincial Well-Being Index 2015 (and 2013 inputs); survey-based indicators and ranks, old relative to the 2025 reference year.
     held_out: false

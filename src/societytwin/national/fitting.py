@@ -95,11 +95,14 @@ class RakeReport:
     unreachable_cells: list[dict] = field(default_factory=list)
 
 
-def rake(weights: list[float], margins: list[Margin], tol: float = 1e-10, max_iter: int = 500) -> RakeReport:
+def rake(weights: list[float], margins: list[Margin], tol: float = 1e-10, max_iter: int = 500,
+         abandon_below: list[float] | None = None) -> RakeReport:
     """Iterative proportional fitting of record weights to every margin (raking ratio estimation).
 
     Cells with a positive target but no records cannot be matched; they are reported and excluded
     from the convergence test. Weights are modified in place and stay strictly positive.
+    ``abandon_below`` (per record) stops early, unconverged, once a weight falls below it: the caller
+    would reject such weights anyway, and an unattainable margin otherwise runs to ``max_iter``.
     """
     unreachable = []
     reachable: list[list[bool]] = []
@@ -136,4 +139,6 @@ def rake(weights: list[float], margins: list[Margin], tol: float = 1e-10, max_it
                     worst = max(worst, abs(sums[k] / m.targets[k] - 1.0))
         if worst <= tol:
             return RakeReport(True, iteration, worst, unreachable)
+        if abandon_below is not None and any(w < f for w, f in zip(weights, abandon_below)):
+            return RakeReport(False, iteration, worst, unreachable)
     return RakeReport(False, max_iter, worst, unreachable)

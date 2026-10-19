@@ -112,9 +112,17 @@ class NationalService:
             years = sorted({r.year for r in store.rows if r.table_id == tid})
             tables.append({**meta.as_dict(), "province_coverage": len(covered), "provinces": covered, "years": years,
                            "rows": sum(1 for r in store.rows if r.table_id == tid)})
+        indicators = store.indicators()
+        domains: dict[str, int] = {}
+        for info in indicators.values():
+            domains[info["theme"]] = domains.get(info["theme"], 0) + 1
         return {"status": "built", "built_at": store.built_at, "fingerprint": store.fingerprint, "tables": tables,
                 "sources": store.sources, "inputs": store.inputs, "warnings": store.warnings[:200],
-                "context_indicators": len({c.indicator_id for c in store.context}),
+                "context_indicators": len(indicators), "context_observations": len(store.context),
+                "context_domains": dict(sorted(domains.items())),
+                "multi_year_observations": sum(1 for c in store.context if c.is_multi_year),
+                "projection_observations": sum(1 for c in store.context if c.is_projection),
+                "audits": store.audits,
                 "package_dir_present": self.settings.tuik_package_dir.is_dir(), "builder_version": BUILDER_VERSION}
 
     # ================================================================ geography / environment
@@ -381,7 +389,7 @@ class NationalService:
             e = found.get(ind)
             if e and e["value"] is not None and e["value_status"] == "OBSERVED":
                 out.append({"indicator_id": ind, "label": e["label"], "value": e["value"], "unit": e["unit"], "source_year": e["source_year"],
-                            "source_ref": e["source_ref"]})
+                            "source_period": e.get("source_period"), "source_ref": e["source_ref"]})
             else:
                 missing.append(ind)
         notes = [f"{geo.province(code).name}: indicator(s) {missing} not available; omitted from the prompt (never invented)."] if missing else []

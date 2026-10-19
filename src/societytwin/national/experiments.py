@@ -154,9 +154,14 @@ def _fmt_value(value) -> str:
     return str(value)
 
 
+UNIT_DISPLAY = {"percent": "%", "per_thousand": "per 1,000", "per_100k": "per 100,000", "persons_per_km2": "persons per km²",
+                "person": "persons", "per_100_persons": "per 100 persons", "thousand_try": "thousand TRY", "try": "TRY", "usd": "USD"}
+
+
 def _with_unit(value, unit: str | None) -> str:
     if not unit:
         return _fmt_value(value)
+    unit = UNIT_DISPLAY.get(unit, unit.replace("_", " ") if "_" in unit else unit)
     return f"{_fmt_value(value)}{unit}" if unit == "%" else f"{_fmt_value(value)} {unit}"
 
 
@@ -167,7 +172,7 @@ def render_prompts(definition: ExperimentDefinition, persona: dict, context: lis
     if context:
         lines.append(f"Context: {context_province}, as published in official statistics")
         for c in context:
-            lines.append(f"- {c['label']}: {_with_unit(c['value'], c.get('unit'))} ({c['source_year']})")
+            lines.append(f"- {c['label']}: {_with_unit(c['value'], c.get('unit'))} ({c.get('source_period') or c['source_year']})")
         lines.append("")
     lines.append(f"Scenario{' (hypothetical)' if scenario.hypothetical else ''}: {scenario.title}")
     lines.append(scenario.description.strip())

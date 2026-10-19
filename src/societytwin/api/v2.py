@@ -111,6 +111,8 @@ def build_router() -> APIRouter:
         wb = request.app.state.workbench
         return {"controls": s.controls_status(), "root_manifest": wb.datasets()["manifest"],
                 "package": {"directory": "data/raw/tuik_package", "present": s.settings.tuik_package_dir.is_dir(),
+                            "files": sum(1 for p in s.settings.tuik_package_dir.iterdir() if p.is_file() and not p.name.startswith("."))
+                            if s.settings.tuik_package_dir.is_dir() else 0,
                             "mapping_file": "data/tuik_package_mapping.yaml", "mapping_present": s.settings.tuik_mapping_path.is_file()}}
 
     @r.get("/populations", tags=["population"])

@@ -26,7 +26,7 @@ from dataclasses import dataclass, field
 from societytwin.common import canonical_hash, utc_now
 from societytwin.national import GENERATOR_VERSION
 from societytwin.national import geography as geo
-from societytwin.national.constraints import RULES, band_feasible, structural_zero
+from societytwin.national.constraints import RULES, structural_zero
 from societytwin.national.controls import TABLE_KINDS, ControlStore, Selection
 from societytwin.national.fitting import Margin, ipf_2d, largest_remainder, rake
 from societytwin.national.model import ATTRIBUTES, METHOD_TEXT, NOT_MODELLED, dependency_graph
@@ -38,6 +38,11 @@ COLUMNS = ("synthetic_id", "province_code", "province_name", "nuts1_code", "nuts
            "household_type", "urbanicity", "population_weight", "design_weight", "provenance_profile", "reference_year")
 SEXES = VOCABULARIES["sex"].codes
 MAX_SIZE = 1_000_000
+# An attribute margin is imposed only if raking converges with every final weight within these multiples of its design
+# weight. A margin that can only be met by shrinking a record almost to nothing (or inflating it far beyond its cell)
+# is effectively unattainable at that sample size; it is reported instead of forced.
+WEIGHT_RATIO_BOUNDS = (0.05, 20.0)
+RAKE_MAX_ITER = 5000
 
 
 class GenerationError(ValueError):
@@ -78,6 +83,11 @@ def _universe_fraction(band: str, min_age: int) -> float:
     return (high - min_age + 1) / (high - low + 1)  # uniform-within-band, consistent with the exact-age assumption
 
 
+def _band_ages(band: str) -> list[int]:
+    low, high = band_bounds(band)
+    return [TOP_CODE_AGE] if high is None else list(range(low, high + 1))
+
+
 def _root(store: ControlStore, p: geo.Province, year: int) -> Selection | None:
     sel = store.best("population_age_sex", p, year)
     return sel if sel and sel.geo_level == "province" else None
@@ -105,18 +115,27 @@ def _conditionals(spec, store: ControlStore, p: geo.Province, year: int, root_co
         elif option.method == "ipf_sex":
             bands = [b for b in AGE_GROUPS if _universe_fraction(b, min_age) > 0]
             diagnostics["ipf"] = {}
+            # With structural zeros the fit runs over single years of age (band population spread uniformly over its
+            # ages, the same assumption as the exact-age draw), so that a zero at an exact age inside a band (e.g. higher
+            # education below 18 in the 15–19 band) is part of the fit instead of removing fitted mass at draw time.
+            if spec.structural_zeros:
+                units = [(b, a) for b in bands for a in _band_ages(b) if a >= min_age]
+            else:
+                units = [(b, None) for b in bands]
             for sex in SEXES:
-                rows = [root_counts.get((b, sex), 0.0) * _universe_fraction(b, min_age) for b in bands]
+                rows = [root_counts.get((b, sex), 0.0) * (_universe_fraction(b, min_age) if a is None else 1 / len(_band_ages(b)))
+                        for b, a in units]
                 cols = [counts.get((sex, c), 0.0) for c in vocab.codes]
                 if sum(rows) <= 0 or sum(cols) <= 0:
                     continue
-                seed = [[(1.0 if (not spec.structural_zeros or band_feasible(spec.attribute, c, b)) else 0.0)
-                         for c in vocab.codes] for b in bands]
+                seed = [[(0.0 if spec.structural_zeros and structural_zero(spec.attribute, c, a) else 1.0)
+                         for c in vocab.codes] for b, a in units]
                 fit = ipf_2d(rows, cols, seed)
                 diagnostics["ipf"][sex] = {"converged": fit.converged, "iterations": fit.iterations,
-                                           "max_abs_residual": fit.max_abs_residual, "column_scale": fit.column_scale}
-                for b, row in zip(bands, fit.table):
-                    cond[(b, sex)] = row
+                                           "max_abs_residual": fit.max_abs_residual, "column_scale": fit.column_scale,
+                                           "rows": "single_year_age" if spec.structural_zeros else "age_group"}
+                for (b, a), row in zip(units, fit.table):
+                    cond[(b, sex) if a is None else (b, sex, a)] = row
             evidence = Evidence.MARGINAL_INFERENCE
             conditioning, unobserved = ["sex"], ["age_group"]
         else:
@@ -143,7 +162,7 @@ def _conditionals(spec, store: ControlStore, p: geo.Province, year: int, root_co
             "selection": sel, "option": option, "conditionals": cond, "min_age": min_age, "codes": vocab.codes,
             "provenance": {"evidence": evidence, "table_id": option.table_id, "method": option.method,
                            "method_text": METHOD_TEXT[option.method], "geo_level": sel.geo_level, "geo_code": sel.geo_code,
-                           "source_year": sel.year, "source_ids": meta.source_ids, "conditioning": conditioning,
+                           "source_year": sel.year, "source_ids": sel.source_ids, "conditioning": conditioning,
                            "unobserved_joint_with": unobserved, "universe_min_age": min_age, "universe_note": meta.universe_note,
                            "outside_universe": f"'{NOT_APPLICABLE}' below age {min_age} ({Evidence.RULE_CONSTRAINED})" if min_age else None,
                            "structural_zeros": spec.structural_zeros and option.method == "ipf_sex",
@@ -151,7 +170,8 @@ def _conditionals(spec, store: ControlStore, p: geo.Province, year: int, root_co
         }
     later = sorted({y for o in spec.options for y in store.later_years_only(o.table_id, p, year)})
     reason = (f"Only years after the reference year exist ({later}); none is used." if later
-              else f"No {spec.attribute} table is loaded for this province.")
+              else f"No {spec.attribute} control table is loaded for this province; related official data, if any, is "
+                   "province context only (see Data Sources for the reason).")
     return {"selection": None, "provenance": {"evidence": Evidence.UNAVAILABLE, "reason": reason, "universe_min_age": None}}
 
 
@@ -269,11 +289,11 @@ def _draw(name: str, info: dict, band: str, sex: str, age: int, stream: Stream, 
         return None
     if age < info["min_age"]:
         return NOT_APPLICABLE
-    weights = info["conditionals"].get((band, sex))
+    structural = info["provenance"]["structural_zeros"]
+    weights = info["conditionals"].get((band, sex, age) if structural else (band, sex))
     if not weights:
         return None
     codes = info["codes"]
-    structural = info["provenance"]["structural_zeros"]
     key = (name, band, sex, age if structural else None)
     cum = cache.get(key)
     if cum is None:
@@ -298,7 +318,7 @@ def _weights(columns: dict, start: int, end: int, root_targets: dict, attr: dict
         columns["design_weight"][i] = design[j]
     weights = list(design)
     margins = [Margin("population_age_sex", cells, [root_targets[k] for k in cells], root_membership)]
-    used = []
+    used, info_of = [], {}
     for name, info in attr.items():
         sel = info.get("selection")
         if sel is None or sel.geo_level != "province":
@@ -307,11 +327,48 @@ def _weights(columns: dict, start: int, end: int, root_targets: dict, attr: dict
         if margin is not None:
             margins.append(margin)
             used.append(info["option"].table_id)
-    report = {"province_code": code, "calibrated": False, "margins": ["population_age_sex", *used]}
+            info_of[margin.name] = info
+    report = {"province_code": code, "calibrated": False, "margins": ["population_age_sex", *used], "margins_not_calibrated": [],
+              "weight_ratio_bounds": list(WEIGHT_RATIO_BOUNDS)}
     if config.calibrate and len(margins) > 1:
-        rr = rake(weights, margins)
-        report.update(calibrated=True, converged=rr.converged, iterations=rr.iterations,
-                      max_relative_error=rr.max_relative_error, unreachable_cells=rr.unreachable_cells)
+        # Margins are added in the dependency model's priority order and kept only if raking with them converges.
+        # With few records in a province the margins can be jointly unattainable; raking would then oscillate and drive
+        # weights towards zero. A dropped margin is reported (validation shows it as not calibrated), never forced.
+        kept, best, best_rr = [margins[0]], list(weights), None
+        lo_bound, hi_bound = WEIGHT_RATIO_BOUNDS
+        hopeless = [d * lo_bound / 1000 for d in design]  # 1000× below the accepted range: raking for this margin is abandoned
+        for margin in margins[1:]:
+            trial = list(best)
+            rr = rake(trial, kept + [margin], max_iter=RAKE_MAX_ITER, abandon_below=hopeless)
+            provenance = info_of[margin.name]["provenance"]
+            finite = all(w > 0 and math.isfinite(w) for w in trial)
+            ratios = [w / d for w, d in zip(trial, design)] if finite else []
+            if rr.converged and finite and lo_bound <= min(ratios) and max(ratios) <= hi_bound:
+                kept.append(margin)
+                best, best_rr = trial, rr
+                provenance["calibration"] = {"imposed": True}
+                continue
+            n = end - start
+            if not (rr.converged and finite):
+                why = f"raking with this margin did not converge with {n} records in the province"
+            else:
+                why = (f"matching it with {n} records would need weights from ×{min(ratios):.3g} to ×{max(ratios):.3g} of the "
+                       f"design weights (accepted range ×{lo_bound:g}–×{hi_bound:g})")
+            reason = (f"Not imposed on the weights: {why}. More records per province (e.g. --min-per-province) help.")
+            report["margins_not_calibrated"].append({"margin": margin.name, "max_relative_error": rr.max_relative_error,
+                                                     "records": n, "converged": rr.converged, "reason": reason})
+            provenance["calibration"] = {"imposed": False, "reason": reason}
+            provenance["limitations"].append(
+                f"Population weights in this province are not calibrated to {margin.name} ({why}); weighted counts of this "
+                "attribute follow the drawn records only.")
+        weights = best
+        report["margins"] = [m.name for m in kept]
+        if best_rr is None:
+            report.update(calibrated=False, converged=True, iterations=0, max_relative_error=0.0, unreachable_cells=[],
+                          note="No attribute margin could be matched; design weights reproduce the root table exactly.")
+        else:
+            report.update(calibrated=True, converged=best_rr.converged, iterations=best_rr.iterations,
+                          max_relative_error=best_rr.max_relative_error, unreachable_cells=best_rr.unreachable_cells)
     else:
         report.update(converged=True, iterations=0, max_relative_error=0.0, unreachable_cells=[],
                       note="Only the root table applies; design weights reproduce it exactly." if len(margins) == 1 else "Calibration disabled.")
@@ -375,7 +432,7 @@ def _attribute_margin(name: str, info: dict, columns: dict, idx: range, root_tar
 
 def _profile(profile_id: str, p: geo.Province, root: Selection, attr: dict, config: GenerationConfig) -> dict:
     root_prov = {"evidence": Evidence.DIRECT_SOURCE, "table_id": "population_age_sex", "geo_level": root.geo_level,
-                 "geo_code": root.geo_code, "source_year": root.year, "source_ids": root.meta.source_ids,
+                 "geo_code": root.geo_code, "source_year": root.year, "source_ids": root.source_ids,
                  "method": "Controlled rounding of the record count over the province's age × sex cells."}
     fields = {
         "province_code": dict(root_prov),
