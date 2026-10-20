@@ -1,0 +1,79 @@
+scenario_id: transport_fare_001
+version: "1.0.0"
+name: Ankara Public Transportation Fare Increase
+description: >-
+  A hypothetical municipal policy intervention simulating a 20% increase in the standard
+  electronic single-ride transit fare in Ankara (EGO bus, Ankaray, and Metro).
+location:
+  province_code: "06"
+  province_name: Ankara
+  nuts2_code: TR51
+
+metadata:
+  hypothetical: true
+  source_note: >-
+    Baseline single-use electronic card fare is derived from the August 2024 UKOME tariff
+    for Ankara EGO General Directorate (21.00 TL). The 20% increase to 25.20 TL is a
+    controlled simulation parameter.
+  author: SocietyTwin Scenario Engine Module
+  reference_year: 2024
+
+policy:
+  category: transportation
+  type: fare_increase
+  parameters:
+    baseline_fare: 21.0
+    new_fare: 25.2
+    increase_percentage: 20.0
+    currency: TL
+    fare_category: full_adult_standard
+    effective_date: "2024-08-01"
+    subsidized_exemptions_note: >-
+      Student concession tariffs (10.50 TL) and statutory free concession for citizens
+      aged 65+ (Law No. 4736) remain unchanged under this reference intervention.
+
+target_population:
+  minimum_age: 18
+  maximum_age: null
+  province_codes:
+    - "06"
+  adult_only: true
+  required_attributes:
+    - age
+    - province_code
+    - sex
+
+questions:
+  - id: q1_usage_change
+    text: "If standard public transportation fares in Ankara increase by 20% (from 21.00 TL to 25.20 TL), how would your transit usage most likely change?"
+    type: single_choice
+    options:
+      - id: maintain_usage
+        label: "Continue using public transit as before (no significant change)"
+      - id: reduce_optional_trips
+        label: "Reduce optional, non-essential trips (shopping, leisure, off-peak outings)"
+      - id: switch_to_walking
+        label: "Walk more for short or intermediate distances"
+      - id: switch_to_private_car_or_taxi
+        label: "Use a private car, carpool, or taxi more frequently"
+      - id: unsure
+        label: "Unsure / It depends on other factors"
+    allow_other: false
+    ask_rationale: true
+
+  - id: q2_policy_support
+    text: "Would you support or oppose this municipal fare adjustment to cover increasing transit operational costs?"
+    type: single_choice
+    options:
+      - id: strongly_support
+        label: "Strongly support"
+      - id: somewhat_support
+        label: "Somewhat support"
+      - id: neutral
+        label: "Neutral / Indifferent"
+      - id: somewhat_oppose
+        label: "Somewhat oppose"
+      - id: strongly_oppose
+        label: "Strongly oppose"
+    allow_other: false
+    ask_rationale: true
