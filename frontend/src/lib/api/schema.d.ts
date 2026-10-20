@@ -825,6 +825,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/scenarios": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Scenarios
+         * @description List all available policy scenarios from registered scenario directories.
+         */
+        get: operations["list_scenarios_api_v2_scenarios_get"];
+        put?: never;
+        /**
+         * Create Scenario
+         * @description Create and register a custom policy scenario definition.
+         */
+        post: operations["create_scenario_api_v2_scenarios_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/scenarios/{scenario_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Scenario Detail
+         * @description Retrieve full scenario configuration by scenario_id.
+         */
+        get: operations["get_scenario_detail_api_v2_scenarios__scenario_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/scenarios/{scenario_id}/experiment-definition": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Scenario Experiment Definition
+         * @description Transform a scenario into an experiment definition for a given cohort.
+         */
+        get: operations["get_scenario_experiment_definition_api_v2_scenarios__scenario_id__experiment_definition_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/examples/fare-experiment": {
         parameters: {
             query?: never;
@@ -2335,6 +2399,58 @@ export interface components {
             synthetic_label: string;
         };
         /**
+         * PolicyConfig
+         * @description High-level policy category and configuration.
+         */
+        PolicyConfig: {
+            /**
+             * Category
+             * @description E.g., 'transportation', 'energy', 'housing'
+             */
+            category: string;
+            /**
+             * Type
+             * @description E.g., 'fare_increase', 'subsidy', 'tax_relief'
+             */
+            type: string;
+            parameters: components["schemas"]["PolicyParameters"];
+        };
+        /**
+         * PolicyParameters
+         * @description Parameters specific to a public policy intervention.
+         */
+        PolicyParameters: {
+            /**
+             * Baseline Fare
+             * @description Pre-intervention baseline fare in currency units
+             */
+            baseline_fare?: number | null;
+            /**
+             * New Fare
+             * @description Post-intervention fare in currency units
+             */
+            new_fare?: number | null;
+            /**
+             * Increase Percentage
+             * @description Percentage change in tariff (e.g. 20.0 for +20%)
+             */
+            increase_percentage?: number | null;
+            /**
+             * Currency
+             * @default TL
+             */
+            currency: string;
+            /**
+             * Fare Category
+             * @default full_adult_standard
+             */
+            fare_category: string | null;
+            /** Effective Date */
+            effective_date?: string | null;
+            /** Subsidized Exemptions Note */
+            subsidized_exemptions_note?: string | null;
+        };
+        /**
          * PopulationFilter
          * @description AND across fields, OR within a field. ``unavailable`` matches records without a source value.
          */
@@ -2367,6 +2483,44 @@ export interface components {
              * @default false
              */
             adult_only: boolean;
+        };
+        /**
+         * PopulationFilterConfig
+         * @description Criteria defining which synthetic residents are eligible to participate in the scenario.
+         */
+        PopulationFilterConfig: {
+            /**
+             * Minimum Age
+             * @default 0
+             */
+            minimum_age: number | null;
+            /** Maximum Age */
+            maximum_age?: number | null;
+            /**
+             * Province Codes
+             * @description List of 2-digit province codes
+             */
+            province_codes?: string[] | null;
+            /**
+             * Sexes
+             * @description E.g. ['male', 'female']
+             */
+            sexes?: string[] | null;
+            /** Marital Statuses */
+            marital_statuses?: string[] | null;
+            /** Education Levels */
+            education_levels?: string[] | null;
+            /**
+             * Adult Only
+             * @description Strict filter requiring age >= 18
+             * @default true
+             */
+            adult_only: boolean;
+            /**
+             * Required Attributes
+             * @description Attributes that must not be null/missing in the synthetic resident record to evaluate eligibility
+             */
+            required_attributes?: string[];
         };
         /** Preflight */
         Preflight: {
@@ -2526,6 +2680,61 @@ export interface components {
             scale: components["schemas"]["Scale"] | null;
             /** Choices */
             choices: components["schemas"]["Choice"][];
+        };
+        /**
+         * QuestionConfig
+         * @description Specification of an individual question presented to an AI persona.
+         */
+        QuestionConfig: {
+            /**
+             * Id
+             * @description Unique alphanumeric identifier for the question
+             */
+            id: string;
+            /**
+             * Text
+             * @description The prompt/question text
+             */
+            text: string;
+            /**
+             * Type
+             * @default single_choice
+             * @enum {string}
+             */
+            type: "single_choice" | "multiple_choice";
+            /**
+             * Options
+             * @description Permitted answer options
+             */
+            options: components["schemas"]["QuestionOption"][];
+            /**
+             * Allow Other
+             * @description Whether free-text input is allowed for an 'other' option
+             * @default false
+             */
+            allow_other: boolean;
+            /**
+             * Ask Rationale
+             * @description Whether the agent is asked to supply a 1-2 sentence reason
+             * @default true
+             */
+            ask_rationale: boolean;
+        };
+        /**
+         * QuestionOption
+         * @description A single allowed option in a survey or choice question.
+         */
+        QuestionOption: {
+            /**
+             * Id
+             * @description Unique alphanumeric identifier for the option
+             */
+            id: string;
+            /**
+             * Label
+             * @description Human-readable text presented to the respondent/agent
+             */
+            label: string;
         };
         /** Questionnaire */
         Questionnaire: {
@@ -2747,6 +2956,39 @@ export interface components {
             /** Max */
             max: number;
         };
+        /**
+         * ScenarioConfig
+         * @description Root configuration model representing a complete policy scenario.
+         */
+        ScenarioConfig: {
+            /**
+             * Scenario Id
+             * @description Unique identifier for the scenario (e.g. 'transport_fare_001')
+             */
+            scenario_id: string;
+            /**
+             * Version
+             * @description Semantic version string
+             * @default 1.0.0
+             */
+            version: string;
+            /**
+             * Name
+             * @description Short human-readable title
+             */
+            name: string;
+            /**
+             * Description
+             * @description Detailed narrative of the policy change
+             */
+            description: string;
+            location: components["schemas"]["ScenarioLocation"];
+            metadata?: components["schemas"]["ScenarioMetadata"];
+            policy: components["schemas"]["PolicyConfig"];
+            target_population?: components["schemas"]["PopulationFilterConfig"];
+            /** Questions */
+            questions: components["schemas"]["QuestionConfig"][];
+        };
         /** ScenarioKind */
         ScenarioKind: {
             /**
@@ -2761,6 +3003,42 @@ export interface components {
             status: "executable" | "draft_only";
             /** Description */
             description: string;
+        };
+        /**
+         * ScenarioLocation
+         * @description Geographic scope of the scenario.
+         */
+        ScenarioLocation: {
+            /**
+             * Province Code
+             * @description Two-digit TÜİK province code (e.g. '06' for Ankara)
+             */
+            province_code: string;
+            /** Province Name */
+            province_name: string;
+            /** Nuts2 Code */
+            nuts2_code?: string | null;
+        };
+        /**
+         * ScenarioMetadata
+         * @description Metadata describing authorship, reference periods, and empirical grounding.
+         */
+        ScenarioMetadata: {
+            /**
+             * Hypothetical
+             * @description Whether the policy intervention is a hypothetical simulation rather than enacted law.
+             * @default true
+             */
+            hypothetical: boolean;
+            /**
+             * Source Note
+             * @description Citation or description of empirical baselines, tariffs, or survey instruments used.
+             */
+            source_note?: string | null;
+            /** Author */
+            author?: string | null;
+            /** Reference Year */
+            reference_year?: number | null;
         };
         /** ScenarioOut */
         ScenarioOut: {
@@ -5631,6 +5909,125 @@ export interface operations {
             header?: never;
             path: {
                 sample_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_scenarios_api_v2_scenarios_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    create_scenario_api_v2_scenarios_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ScenarioConfig"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_scenario_detail_api_v2_scenarios__scenario_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                scenario_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_scenario_experiment_definition_api_v2_scenarios__scenario_id__experiment_definition_get: {
+        parameters: {
+            query?: {
+                cohort_id?: string | null;
+                question_id?: string | null;
+                seed?: number;
+            };
+            header?: never;
+            path: {
+                scenario_id: string;
             };
             cookie?: never;
         };

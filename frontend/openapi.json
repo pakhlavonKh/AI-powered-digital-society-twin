@@ -3919,6 +3919,188 @@
         }
       }
     },
+    "/api/v2/scenarios": {
+      "get": {
+        "tags": [
+          "experiments"
+        ],
+        "summary": "List Scenarios",
+        "description": "List all available policy scenarios from registered scenario directories.",
+        "operationId": "list_scenarios_api_v2_scenarios_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "experiments"
+        ],
+        "summary": "Create Scenario",
+        "description": "Create and register a custom policy scenario definition.",
+        "operationId": "create_scenario_api_v2_scenarios_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScenarioConfig"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/scenarios/{scenario_id}": {
+      "get": {
+        "tags": [
+          "experiments"
+        ],
+        "summary": "Get Scenario Detail",
+        "description": "Retrieve full scenario configuration by scenario_id.",
+        "operationId": "get_scenario_detail_api_v2_scenarios__scenario_id__get",
+        "parameters": [
+          {
+            "name": "scenario_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Scenario Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/scenarios/{scenario_id}/experiment-definition": {
+      "get": {
+        "tags": [
+          "experiments"
+        ],
+        "summary": "Get Scenario Experiment Definition",
+        "description": "Transform a scenario into an experiment definition for a given cohort.",
+        "operationId": "get_scenario_experiment_definition_api_v2_scenarios__scenario_id__experiment_definition_get",
+        "parameters": [
+          {
+            "name": "scenario_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Scenario Id"
+            }
+          },
+          {
+            "name": "cohort_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cohort Id"
+            }
+          },
+          {
+            "name": "question_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Question Id"
+            }
+          },
+          {
+            "name": "seed",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 7,
+              "title": "Seed"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v2/examples/fare-experiment": {
       "get": {
         "tags": [
@@ -8390,6 +8572,125 @@
         ],
         "title": "PersonaView"
       },
+      "PolicyConfig": {
+        "properties": {
+          "category": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 2,
+            "title": "Category",
+            "description": "E.g., 'transportation', 'energy', 'housing'"
+          },
+          "type": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 2,
+            "title": "Type",
+            "description": "E.g., 'fare_increase', 'subsidy', 'tax_relief'"
+          },
+          "parameters": {
+            "$ref": "#/components/schemas/PolicyParameters"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "category",
+          "type",
+          "parameters"
+        ],
+        "title": "PolicyConfig",
+        "description": "High-level policy category and configuration."
+      },
+      "PolicyParameters": {
+        "properties": {
+          "baseline_fare": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Fare",
+            "description": "Pre-intervention baseline fare in currency units"
+          },
+          "new_fare": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "New Fare",
+            "description": "Post-intervention fare in currency units"
+          },
+          "increase_percentage": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Increase Percentage",
+            "description": "Percentage change in tariff (e.g. 20.0 for +20%)"
+          },
+          "currency": {
+            "type": "string",
+            "maxLength": 10,
+            "title": "Currency",
+            "default": "TL"
+          },
+          "fare_category": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fare Category",
+            "default": "full_adult_standard"
+          },
+          "effective_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 32
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective Date"
+          },
+          "subsidized_exemptions_note": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subsidized Exemptions Note"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "PolicyParameters",
+        "description": "Parameters specific to a public policy intervention."
+      },
       "PopulationFilter": {
         "properties": {
           "province_codes": {
@@ -8565,6 +8866,113 @@
         "type": "object",
         "title": "PopulationFilter",
         "description": "AND across fields, OR within a field. ``unavailable`` matches records without a source value."
+      },
+      "PopulationFilterConfig": {
+        "properties": {
+          "minimum_age": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 120.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minimum Age",
+            "default": 0
+          },
+          "maximum_age": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 120.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Maximum Age"
+          },
+          "province_codes": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Province Codes",
+            "description": "List of 2-digit province codes"
+          },
+          "sexes": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sexes",
+            "description": "E.g. ['male', 'female']"
+          },
+          "marital_statuses": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Marital Statuses"
+          },
+          "education_levels": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Education Levels"
+          },
+          "adult_only": {
+            "type": "boolean",
+            "title": "Adult Only",
+            "description": "Strict filter requiring age >= 18",
+            "default": true
+          },
+          "required_attributes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Required Attributes",
+            "description": "Attributes that must not be null/missing in the synthetic resident record to evaluate eligibility"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "PopulationFilterConfig",
+        "description": "Criteria defining which synthetic residents are eligible to participate in the scenario."
       },
       "Preflight": {
         "properties": {
@@ -9176,6 +9584,88 @@
           "choices"
         ],
         "title": "Question"
+      },
+      "QuestionConfig": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{1,63}$",
+            "title": "Id",
+            "description": "Unique alphanumeric identifier for the question"
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 3,
+            "title": "Text",
+            "description": "The prompt/question text"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "single_choice",
+              "multiple_choice"
+            ],
+            "title": "Type",
+            "default": "single_choice"
+          },
+          "options": {
+            "items": {
+              "$ref": "#/components/schemas/QuestionOption"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "minItems": 2,
+            "title": "Options",
+            "description": "Permitted answer options"
+          },
+          "allow_other": {
+            "type": "boolean",
+            "title": "Allow Other",
+            "description": "Whether free-text input is allowed for an 'other' option",
+            "default": false
+          },
+          "ask_rationale": {
+            "type": "boolean",
+            "title": "Ask Rationale",
+            "description": "Whether the agent is asked to supply a 1-2 sentence reason",
+            "default": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "text",
+          "options"
+        ],
+        "title": "QuestionConfig",
+        "description": "Specification of an individual question presented to an AI persona."
+      },
+      "QuestionOption": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{1,63}$",
+            "title": "Id",
+            "description": "Unique alphanumeric identifier for the option"
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Label",
+            "description": "Human-readable text presented to the respondent/agent"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "label"
+        ],
+        "title": "QuestionOption",
+        "description": "A single allowed option in a survey or choice question."
       },
       "Questionnaire": {
         "properties": {
@@ -9935,6 +10425,70 @@
         ],
         "title": "Scale"
       },
+      "ScenarioConfig": {
+        "properties": {
+          "scenario_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{1,63}$",
+            "title": "Scenario Id",
+            "description": "Unique identifier for the scenario (e.g. 'transport_fare_001')"
+          },
+          "version": {
+            "type": "string",
+            "pattern": "^\\d+\\.\\d+\\.\\d+$",
+            "title": "Version",
+            "description": "Semantic version string",
+            "default": "1.0.0"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 3,
+            "title": "Name",
+            "description": "Short human-readable title"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 5000,
+            "minLength": 10,
+            "title": "Description",
+            "description": "Detailed narrative of the policy change"
+          },
+          "location": {
+            "$ref": "#/components/schemas/ScenarioLocation"
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/ScenarioMetadata"
+          },
+          "policy": {
+            "$ref": "#/components/schemas/PolicyConfig"
+          },
+          "target_population": {
+            "$ref": "#/components/schemas/PopulationFilterConfig"
+          },
+          "questions": {
+            "items": {
+              "$ref": "#/components/schemas/QuestionConfig"
+            },
+            "type": "array",
+            "maxItems": 30,
+            "minItems": 1,
+            "title": "Questions"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "scenario_id",
+          "name",
+          "description",
+          "location",
+          "policy",
+          "questions"
+        ],
+        "title": "ScenarioConfig",
+        "description": "Root configuration model representing a complete policy scenario."
+      },
       "ScenarioKind": {
         "properties": {
           "kind": {
@@ -9965,6 +10519,94 @@
           "description"
         ],
         "title": "ScenarioKind"
+      },
+      "ScenarioLocation": {
+        "properties": {
+          "province_code": {
+            "type": "string",
+            "pattern": "^\\d{2}$",
+            "title": "Province Code",
+            "description": "Two-digit TÜİK province code (e.g. '06' for Ankara)"
+          },
+          "province_name": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Province Name"
+          },
+          "nuts2_code": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Z0-9]{4,5}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nuts2 Code"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "province_code",
+          "province_name"
+        ],
+        "title": "ScenarioLocation",
+        "description": "Geographic scope of the scenario."
+      },
+      "ScenarioMetadata": {
+        "properties": {
+          "hypothetical": {
+            "type": "boolean",
+            "title": "Hypothetical",
+            "description": "Whether the policy intervention is a hypothetical simulation rather than enacted law.",
+            "default": true
+          },
+          "source_note": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Note",
+            "description": "Citation or description of empirical baselines, tariffs, or survey instruments used."
+          },
+          "author": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Author"
+          },
+          "reference_year": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 2050.0,
+                "minimum": 2000.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Year"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ScenarioMetadata",
+        "description": "Metadata describing authorship, reference periods, and empirical grounding."
       },
       "ScenarioOut": {
         "properties": {
