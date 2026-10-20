@@ -1791,6 +1791,36 @@ export interface components {
             /** Differing Values */
             differing_values: number | null;
         };
+        /** FieldSelection */
+        FieldSelection: {
+            /**
+             * Schema Version
+             * @default persona-field-selection-1
+             * @constant
+             */
+            schema_version: "persona-field-selection-1";
+            /** Allowlist */
+            allowlist: string[];
+            /** Required */
+            required?: string[];
+            /** Optional */
+            optional?: string[];
+            /**
+             * Max Attributes
+             * @default 6
+             */
+            max_attributes: number;
+            /**
+             * Missingness
+             * @default omit
+             * @enum {string}
+             */
+            missingness: "omit" | "error";
+            /** Sidecar Root */
+            sidecar_root?: string | null;
+            /** Sidecar Id */
+            sidecar_id?: string | null;
+        };
         /** FileEvidenceModel */
         FileEvidenceModel: {
             /** Relpath */
@@ -2246,6 +2276,7 @@ export interface components {
              * @description None = default policy (see personas.DEFAULT_VISIBLE).
              */
             visible_fields?: string[] | null;
+            field_selection?: components["schemas"]["FieldSelection"] | null;
         };
         /** PersonaSnapshot */
         PersonaSnapshot: {
