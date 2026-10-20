@@ -147,8 +147,11 @@ def matraix_persona(persona: dict) -> dict:
     catalog_marital = {"married": "Married", "divorced": "Divorced", "widowed": "Widowed"}
     if "marital_status" in visible and status in catalog_marital:
         dims["demo_marital_status"] = catalog_marital[status]
-    return {"persona_id": persona["synthetic_id"], "version": "1.0", "source": "synthetic", "dimensions": dims,
+    result = {"persona_id": persona["synthetic_id"], "version": "1.0", "source": "synthetic", "dimensions": dims,
             "metadata": {"societytwin_persona_id": persona["persona_id"], "template_version": persona["template_version"],
                          "population_id": persona["population_id"], "prompt_visible_fields": sorted(dims),
                          "hidden_fields": persona["hidden"], "evidence_limitations": persona["limitations"],
                          "provenance": persona["provenance"]}}
+    if "field_selection" in persona:
+        result["metadata"]["field_selection"] = persona["field_selection"]
+    return result

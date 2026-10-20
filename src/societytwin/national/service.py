@@ -20,11 +20,13 @@ from societytwin.national.cohorts import (CohortDefinitionRequest, CohortSampleR
                                           draw)
 from societytwin.national.constraints import ADULT_AGE, RULES
 from societytwin.national.controls import ControlsError, ControlStore, read_store, write_store
+from societytwin.national.dependencies import DEFAULT_REGISTRY_PATH, RegistryError, load_registry
 from societytwin.national.environment import coverage_summary, province_environment
 from societytwin.national.experiments import (DEFINITION_VERSION, PROMPT_TEMPLATE_VERSION, ExperimentDefinition,
                                               render_prompts)
 from societytwin.national.generator import GenerationConfig, GenerationError, generate
 from societytwin.national.model import dependency_graph
+from societytwin.national.persona_selection import experiment_persona_builder
 from societytwin.national.personas import DEFAULT_VISIBLE, PERSON_FIELDS, TEMPLATE_VERSION, build_persona
 from societytwin.national.registry import NationalRegistry
 from societytwin.national.results import GROUPABLE, aggregate
@@ -170,8 +172,9 @@ class NationalService:
     def generate(self, config: GenerationConfig) -> dict:
         store = self.store()
         try:
-            pop = generate(store, config)
-        except GenerationError as exc:
+            registry = load_registry(self.settings.dependency_registry_path or DEFAULT_REGISTRY_PATH)
+            pop = generate(store, config, registry=registry)
+        except (GenerationError, RegistryError) as exc:
             raise invalid("generation_failed", str(exc)) from exc
         report = validate(pop.columns, pop.manifest, store)
         manifest, created = self.populations.write(pop, report)
@@ -416,9 +419,10 @@ class NationalService:
         first_prompt = None
         minors = 0
         unavailable_counts: dict[str, int] = {}
+        build_selected = experiment_persona_builder(loaded, d.persona)
         for m in sample["members"]:
             rec = loaded.record(m["synthetic_id"])
-            p = build_persona(rec, loaded.manifest, d.persona.visible_fields)
+            p = build_selected(m["synthetic_id"])
             if not p["eligibility"]["adult"]:
                 minors += 1
             for a in p["attributes"]:
@@ -509,7 +513,9 @@ class NationalService:
                         "seed": d.model.seed},
             "personas": personas, "prompt_hashes": prompt_hashes, "example_prompt": first_prompt,
             "persona_template_version": TEMPLATE_VERSION, "prompt_template_version": PROMPT_TEMPLATE_VERSION,
-            "visible_fields_policy": d.persona.visible_fields or list(DEFAULT_VISIBLE),
+            "visible_fields_policy": (d.persona.field_selection.required + d.persona.field_selection.optional
+                                      if d.persona.field_selection is not None
+                                      else d.persona.visible_fields or list(DEFAULT_VISIBLE)),
             "blockers": blockers, "warnings": warnings, "executable": not blockers,
         }
         plan["plan_hash"] = canonical_hash(plan)
@@ -584,9 +590,10 @@ class NationalService:
         run_dir = self.settings.national_runs_dir / run["run_id"]
         run_dir.mkdir(parents=True, exist_ok=False)
         requests, members = [], {}
+        build_selected = experiment_persona_builder(loaded, d.persona)
         for m in sample["members"]:
             rec = loaded.record(m["synthetic_id"])
-            p = build_persona(rec, loaded.manifest, d.persona.visible_fields)
+            p = build_selected(m["synthetic_id"])
             code = d.environment.province_code or rec["province_code"]
             context, _ = self._context(store, code, loaded.manifest["reference_year"], d.environment.context_indicators)
             system, user = render_prompts(d, p, context, geo.province(code).name)

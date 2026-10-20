@@ -79,6 +79,8 @@ class Settings:
     tuik_mapping_path: Path | None = None
     max_agents_per_run: int = 200
     model_price_table: Path | None = None
+    # Optional internal override; absent uses the checkout's versioned registry.
+    dependency_registry_path: Path | None = None
 
     def __post_init__(self):
         data = self.repo_root / "data"
@@ -150,4 +152,5 @@ def load_settings() -> Settings:
         tuik_mapping_path=_env_path("SOCIETYTWIN_TUIK_MAPPING"),
         max_agents_per_run=int(os.environ.get("SOCIETYTWIN_MAX_AGENTS", "200")),
         model_price_table=_env_path("SOCIETYTWIN_MODEL_PRICES"),
+        dependency_registry_path=_env_path("SOCIETYTWIN_DEPENDENCY_REGISTRY"),
     )

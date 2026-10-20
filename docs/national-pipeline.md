@@ -1,5 +1,66 @@
 # SocietyTwin national pipeline
 
+## Dependency registry (Phase 1)
+
+`data/dependency_registry.yaml` is validated by typed models in
+`src/societytwin/national/dependencies.py`. `schema_version` describes the file
+contract; `registry_version` identifies reviewed metadata. `fingerprint` hashes
+the validated declarations, independent of YAML mapping order. Actual source
+years, universes and input checksums remain in the existing control-store and
+population provenance; registry table declarations do not assert data availability.
+
+The first ten registered attributes are province_code, age_group, sex, age,
+age_top_coded, marital_status, education_level, urbanicity, nuts2_code and
+adult_eligibility. Three additional compatibility slots retain the existing
+labour_status, household_size_class and household_type behaviour (including null
+when evidence is absent). Adult eligibility remains a cohort/persona calculation;
+it does not add a population column. Derived declarations bind the existing
+open-band flag, province/NUTS lookup and adult threshold; no expression evaluator
+or new demographic derivation runs.
+
+`model.compatibility_attributes()` compiles the declarations to existing
+AttributeSpec/SourceOption objects. `generate()` validates and compiles once per
+build, then uses the original allocation, conditional sampling, random streams,
+IPF and raking. The DAG has a deterministic topological order, while the explicit
+`assignment_order` preserves the existing sequential calibration order. The
+`national-v1` compatibility gate rejects changes to bindings, source priority,
+constraints, policies, execution modules or assignment order that could change
+resident outputs. Enabling new attributes/household links requires a future
+execution profile and appropriate evidence, not just turning on a module flag.
+
+Direct generation loads the checkout's registry by default and accepts an internal
+typed `registry=` override. NationalService loads the same file per generation;
+`SOCIETYTWIN_DEPENDENCY_REGISTRY` optionally overrides its path via Settings.
+Missing or invalid overrides fail explicitly using the existing generation_failed
+API error; there is no silent fallback. This is an internal setting, not a new API
+request field. The default file lives in the repository data directory, matching
+the current checkout-based deployment; standalone wheel packaging is not added.
+
+Validation rejects unknown fields/methods/operators/vocabularies, duplicate YAML
+keys, cycles (including disabled declarations), unknown or disabled parents,
+incompatible scopes, unsupported table dimensions/parent relationships, invalid
+category mappings and constraints, and missing evidence/provenance. Scope names
+include person/household/geography; cross-scope entity links and household
+execution are intentionally unsupported in this phase. Only existing canonical
+identity category mappings are permitted. Inferred strategies require explicit
+assumptions, class D and MARGINAL_INFERENCE; context-only sources cannot drive
+assignments. Required root evidence is checked at runtime and the existing root
+selector still enforces geography/reference-year coverage. Optional attribute
+sources keep the existing null/UNAVAILABLE behaviour.
+
+The generator version, fixed population schema, build IDs, manifest shape,
+dependency_graph response and default persona representation remain unchanged.
+Registry versions/fingerprints are available on the typed registry for audit;
+they are not inserted into legacy population manifests in this compatibility
+phase. Any future semantic profile must version build identity and provenance
+before changing generation.
+
+Compatibility fingerprints in `tests/national/test_dependency_registry.py` were
+captured from the pre-registry generator using artificial data at size 5,000,
+seeds 42/43. They compare every column (including exact weights), all three cohort
+sampling methods and full default personas. Disposable real Ankara baselines at
+size 10,000 are kept only in ignored `data/results/registry-phase1/`, never in Git.
+
 Türkiye-wide synthetic population calibrated to official aggregate statistics, cohorts, personas and controlled
 persona-conditioned AI experiments. Code: [`src/societytwin/national/`](../src/societytwin/national/), API `/api/v2`,
 UI in [`frontend/`](../frontend/).
@@ -489,3 +550,53 @@ residents, used for controlled persona-conditioned AI experiments and population
 not simulate every person in Türkiye, does not reconstruct citizens, and does not predict what Turkish citizens will
 do. Demographic fit (source-fit validation) does not establish behavioural realism, and MatrAIx does not validate
 Turkish society; behavioural validation remains a separate research question.
+
+## 16. Optional Ankara broad-age marital transfer
+
+The default remains the compatibility model. `marital_strategy.enabled` is **false** in
+`data/dependency_registry.yaml`; no seed file is read on that default path. This extension changes only marital
+draws and the resulting calibration weights when explicitly enabled. All other attribute draws, IDs, exact ages,
+sex allocation, random-stream names, core columns and API schemas remain unchanged.
+
+`national_age_marital_seed_v1` is restricted to Ankara (`06`), reference year 2025, calibration enabled, complete
+2025 root/marital targets, and a sample large enough to represent every root age/sex cell. It reads the separately
+checksummed, ignored `data/raw/national_marital_seed_2025.yaml` transcription of TÜİK's *Youth in Statistics 2025*,
+table 1.9, printed p14/PDF p36. It does **not** insert national percentages into the observed count control store.
+The data manifest records provenance; `build_controls()` and its existing source priorities remain unchanged.
+
+The source observes national percentages for **15–24 / 25+**, sex and four legal marital categories. A printed
+0.0% does not establish a structural zero. `assumed_nearest_tenth_sensitivity_v1` explicitly **assumes** nearest
+0.1-percentage-point rounding; that table-specific rule was not confirmed. Under this interpretation, zero lies
+in [0, 0.05) percentage points, and each nonzero value has a ±0.05-point interval. Three named, positive interior
+scenarios use 0.0125 (`lower_quartile`), 0.025 (`midpoint`) or 0.0375 (`upper_quartile`) percent for young widowhood,
+subtracting the same mass from never-married to preserve normalization and every assumed rounding interval.
+They are sensitivity choices, **not inferred probabilities**, a prior, or an exhaustive uncertainty envelope.
+No unknown/missing cell is filled by this policy. Other source shapes or zero patterns are rejected.
+
+For each sex, existing `ipf_2d` fits the nonuniform two-row seed to observed Ankara broad-age population counts
+and sex/marital column counts. No within-band gradient is introduced: the 15–19 and 20–24 root bands share one
+conditional row, and every 25+ band shares the other. Source applicability remains 15+; younger values are
+`not_applicable`. The transfer is evidence class D / `MARGINAL_INFERENCE`. The original source percentages,
+assumed intervals, reconstructed scenarios and fitted counts are separately recorded in provenance.
+
+Existing record raking preserves local age/sex and marital/sex targets. This opt-in path fails on conflicting
+source totals, missing/duplicate/unobserved cells, failed seed IPF, unrepresented root cells, unreachable marital
+targets, failed marital raking or unacceptable weight ratios. It cannot silently drop or redistribute the marital
+margin. Other legacy margins retain their existing behavior. Record calibration can alter the broad-age
+percentages, so both drawn and weighted distributions require inspection.
+
+To opt in, make an isolated registry copy, enable `marital_strategy`, and select one named `zero_variant`.
+Keep `acknowledge_unverified_rounding: true` and the pinned source checksum. Set the existing
+`SOCIETYTWIN_DEPENDENCY_REGISTRY` environment variable to that copy for the service, then use the unchanged
+population API with `province_codes: ["06"]`, `reference_year: 2025` and the desired size/seed. A domain caller can
+instead pass `registry=load_registry(copy_path)` to `generate`. Use a separate disposable population directory
+when evaluating a scenario. Real evidence remains ignored; CI unit/API tests use clearly artificial tables.
+The local transcription is not in Git because its reuse licence is unresolved. Obtain it from the official publication
+and verify it as documented in the [current system handover](CURRENT_SYSTEM_HANDOVER.md#data-setup-and-portability)
+before opting in.
+
+Opt-in manifests record model/policy/source/registry versions and hashes and include them in content/build
+identity, even when scenario draws happen to coincide. Default manifests and identities are unchanged. The
+existing Parquet reader, persona exporter and cohort APIs are reused. No frontend or request-schema extension
+is needed. Review the ignored Phase 2B comparison report before use; broad age fit is not independent validation,
+and the 25+ source cannot establish an elderly widowhood gradient or behavioural realism.

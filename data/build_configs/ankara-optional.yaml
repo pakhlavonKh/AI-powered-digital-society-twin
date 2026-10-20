@@ -1,0 +1,17 @@
+schema_version: ankara-build-config-1
+province_code: '06'
+reference_year: 2025
+resident_sample_size: 10000
+seed: 42
+resident_enrichments: [degurba_class]
+marital:
+  strategy: national_age_marital_seed_v1
+  sensitivity: midpoint
+  acknowledge_unverified_rounding: true
+households:
+  enabled: true
+  sample_size: 10000
+  strategy: national_household_type_size_seed_v1
+inputs:
+  controls_directory: data/processed/national
+output_root: data/results/unified-populations

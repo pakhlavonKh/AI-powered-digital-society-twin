@@ -1,5 +1,10 @@
 # Data
 
+The versioned [`dependency_registry.yaml`](dependency_registry.yaml) describes the
+existing national generator's attribute dependencies and evidence contracts. It is
+metadata, not a demographic dataset. Phase 1 retains existing source priorities,
+sampling and calibration; see [registry compatibility](../docs/national-pipeline.md#dependency-registry-phase-1).
+
 **No raw dataset, generated population, or experiment result is committed to this repository.**
 
 SocietyTwin uses **official aggregate statistics for Türkiye**, primarily from **TÜİK** (Turkish Statistical Institute).
@@ -84,3 +89,16 @@ nested folder, and do not edit them. In the UI, **Data Sources → Build control
 - **Keep raw data unchanged.** All cleaning and harmonisation is done in code, so processed data can be regenerated.
 - **Test fixtures** must be small and clearly artificial, and live in `tests/fixtures/`, not in `data/`.
 - Git history keeps deleted files: anything committed must be treated as published.
+
+The optional `national_age_marital_seed_v1` uses the ignored
+`data/raw/national_marital_seed_2025.yaml` national percentage transcription, separately from count controls.
+Its checksum and provenance are recorded in `manifest.yaml` and the disabled registry strategy. The publication's
+exact rounding rule is unverified; named rounding-sensitivity scenarios are explicitly modelled. No real source
+observations or generated populations are committed. See [pipeline §16](../docs/national-pipeline.md#16-optional-ankara-broad-age-marital-transfer).
+
+The Phase 2D-2 household generator similarly needs the ignored
+`data/raw/ankara_household_size_2025.csv` Ankara 2025 household-count transcription. Rebuild either input only from
+its cited official TÜİK source, and verify the pinned checksum before use. TÜİK reuse terms are still an open
+decision; do not commit or redistribute these inputs until permission is established. The exact source-selection,
+normalization, attribution and verification procedures are in
+[the current system handover](../docs/CURRENT_SYSTEM_HANDOVER.md#data-setup-and-portability).

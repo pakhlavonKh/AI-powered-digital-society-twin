@@ -1,0 +1,430 @@
+# Compatibility metadata only. Existing control tables remain the evidence authority.
+# Keep assignment_order unchanged: sequential calibration depends on it.
+schema_version: dependency-registry-1
+registry_version: ankara-core-1
+compatibility_profile: national-v1
+reference_year_policy: latest_not_after_build
+# Optional, explicitly modelled national transfer. Enable only in an isolated
+# registry copy; the default statistical path and all legacy assignments remain.
+marital_strategy:
+  enabled: false
+  model_version: national_age_marital_seed_v1
+  policy_version: assumed_nearest_tenth_sensitivity_v1
+  acknowledge_unverified_rounding: true
+  zero_variant: midpoint
+  source_file: data/raw/national_marital_seed_2025.yaml
+  source_sha256: 55dbc9752f4e19617cd9803dced10811a1efdb7e0cdcc906adac878141fb796d
+  province_code: '06'
+  reference_year: 2025
+modules:
+  core:
+    enabled: true
+    description: First ten registry attributes; preserve existing behaviour.
+  legacy_optional:
+    enabled: true
+    description: Retain the existing labour and household slots; unavailable sources
+      still produce null.
+  linked_households:
+    enabled: false
+    description: No household linkage execution in Phase 1.
+  socioeconomic:
+    enabled: false
+    description: No new socioeconomic assignments.
+  scenario_enrichment:
+    enabled: false
+    description: No scenario enrichment in Phase 1.
+sources:
+  population_age_sex:
+    table_id: population_age_sex
+    dimensions:
+    - province_code
+    - age_group
+    - sex
+    scope: person
+    evidence: observed_distribution
+    provenance:
+      reference: national-generator-1.1 / existing control-store contracts
+      version: legacy-1
+  marital_status_age_sex:
+    table_id: marital_status_age_sex
+    dimensions:
+    - province_code
+    - age_group
+    - sex
+    - marital_status
+    scope: person
+    evidence: observed_distribution
+    provenance:
+      reference: national-generator-1.1 / existing control-store contracts
+      version: legacy-1
+  marital_status_sex:
+    table_id: marital_status_sex
+    dimensions:
+    - province_code
+    - sex
+    - marital_status
+    scope: person
+    evidence: observed_distribution
+    provenance:
+      reference: national-generator-1.1 / existing control-store contracts
+      version: legacy-1
+  education_age_sex:
+    table_id: education_age_sex
+    dimensions:
+    - province_code
+    - age_group
+    - sex
+    - education_level
+    scope: person
+    evidence: observed_distribution
+    provenance:
+      reference: national-generator-1.1 / existing control-store contracts
+      version: legacy-1
+  education_sex:
+    table_id: education_sex
+    dimensions:
+    - province_code
+    - sex
+    - education_level
+    scope: person
+    evidence: observed_distribution
+    provenance:
+      reference: national-generator-1.1 / existing control-store contracts
+      version: legacy-1
+  labour_status_age_sex:
+    table_id: labour_status_age_sex
+    dimensions:
+    - province_code
+    - age_group
+    - sex
+    - labour_status
+    scope: person
+    evidence: observed_distribution
+    provenance:
+      reference: national-generator-1.1 / existing control-store contracts
+      version: legacy-1
+  labour_status_sex:
+    table_id: labour_status_sex
+    dimensions:
+    - province_code
+    - sex
+    - labour_status
+    scope: person
+    evidence: observed_distribution
+    provenance:
+      reference: national-generator-1.1 / existing control-store contracts
+      version: legacy-1
+  household_size_persons:
+    table_id: household_size_persons
+    dimensions:
+    - province_code
+    - household_size_class
+    scope: person
+    evidence: observed_distribution
+    provenance:
+      reference: national-generator-1.1 / existing control-store contracts
+      version: legacy-1
+  household_type_persons:
+    table_id: household_type_persons
+    dimensions:
+    - province_code
+    - household_type
+    scope: person
+    evidence: observed_distribution
+    provenance:
+      reference: national-generator-1.1 / existing control-store contracts
+      version: legacy-1
+  urbanicity_sex:
+    table_id: urbanicity_sex
+    dimensions:
+    - province_code
+    - sex
+    - urbanicity
+    scope: person
+    evidence: observed_distribution
+    provenance:
+      reference: national-generator-1.1 / existing control-store contracts
+      version: legacy-1
+  urbanicity:
+    table_id: urbanicity
+    dimensions:
+    - province_code
+    - urbanicity
+    scope: person
+    evidence: observed_distribution
+    provenance:
+      reference: national-generator-1.1 / existing control-store contracts
+      version: legacy-1
+attributes:
+  province_code:
+    scope: person
+    dtype: string
+    parents: []
+    module: core
+    assignments:
+    - method: joint_allocation
+      evidence_class: B
+      runtime_evidence: DIRECT_SOURCE
+      source: population_age_sex
+    description: Existing joint root allocation.
+    provenance:
+      reference: national-generator-1.1 / existing control-store contracts
+      version: legacy-1
+    required: true
+    missing_source: error
+  age_group:
+    scope: person
+    dtype: categorical
+    parents:
+    - province_code
+    module: core
+    assignments:
+    - method: joint_allocation
+      evidence_class: B
+      runtime_evidence: DIRECT_SOURCE
+      source: population_age_sex
+    description: Existing joint root allocation.
+    provenance:
+      reference: national-generator-1.1 / existing control-store contracts
+      version: legacy-1
+    required: true
+    missing_source: error
+    vocabulary: age_group
+  sex:
+    scope: person
+    dtype: categorical
+    parents:
+    - province_code
+    module: core
+    assignments:
+    - method: joint_allocation
+      evidence_class: B
+      runtime_evidence: DIRECT_SOURCE
+      source: population_age_sex
+    description: Existing joint root allocation.
+    provenance:
+      reference: national-generator-1.1 / existing control-store contracts
+      version: legacy-1
+    required: true
+    missing_source: error
+    vocabulary: sex
+  age:
+    scope: person
+    dtype: integer
+    parents:
+    - age_group
+    module: core
+    assignments:
+    - method: uniform_within_band
+      evidence_class: D
+      runtime_evidence: ASSUMED
+      assumption: 'legacy-uniform-age-1: uniform within five-year band; 90+ top-coded
+        at 90'
+    description: Existing uniform age draw; no single-year source.
+    provenance:
+      reference: national-generator-1.1 / existing control-store contracts
+      version: legacy-1
+  age_top_coded:
+    scope: person
+    dtype: boolean
+    parents:
+    - age_group
+    module: core
+    assignments:
+    - method: derived
+      evidence_class: C
+      runtime_evidence: DERIVED
+    description: Existing open-band flag.
+    provenance:
+      reference: national-generator-1.1 / existing control-store contracts
+      version: legacy-1
+    derivation:
+      operator: band_is_open
+  marital_status:
+    scope: person
+    dtype: categorical
+    parents:
+    - province_code
+    - age_group
+    - sex
+    module: core
+    assignments:
+    - method: conditional_age_sex
+      evidence_class: B
+      runtime_evidence: CONDITIONAL_SOURCE
+      source: marital_status_age_sex
+    - method: ipf_sex
+      evidence_class: D
+      runtime_evidence: MARGINAL_INFERENCE
+      source: marital_status_sex
+      assumption: 'legacy-flat-seed-1: unobserved parent relationships inferred as
+        in national-generator-1.1'
+    description: Legal marital status (civil registration).
+    provenance:
+      reference: national-generator-1.1 / existing control-store contracts
+      version: legacy-1
+    vocabulary: marital_status
+    constraints:
+    - source_universe
+  education_level:
+    scope: person
+    dtype: categorical
+    parents:
+    - province_code
+    - age_group
+    - sex
+    module: core
+    assignments:
+    - method: conditional_age_sex
+      evidence_class: B
+      runtime_evidence: CONDITIONAL_SOURCE
+      source: education_age_sex
+    - method: ipf_sex
+      evidence_class: D
+      runtime_evidence: MARGINAL_INFERENCE
+      source: education_sex
+      assumption: 'legacy-flat-seed-1: unobserved parent relationships inferred as
+        in national-generator-1.1'
+    description: Completed educational attainment.
+    provenance:
+      reference: national-generator-1.1 / existing control-store contracts
+      version: legacy-1
+    vocabulary: education_level
+    constraints:
+    - source_universe
+    - education_min_completion_age
+  labour_status:
+    scope: person
+    dtype: categorical
+    parents:
+    - province_code
+    - age_group
+    - sex
+    module: legacy_optional
+    assignments:
+    - method: conditional_age_sex
+      evidence_class: B
+      runtime_evidence: CONDITIONAL_SOURCE
+      source: labour_status_age_sex
+    - method: ipf_sex
+      evidence_class: D
+      runtime_evidence: MARGINAL_INFERENCE
+      source: labour_status_sex
+      assumption: 'legacy-flat-seed-1: unobserved parent relationships inferred as
+        in national-generator-1.1'
+    description: ILO labour status (HLFS; often regional, applied to every province
+      in the region).
+    provenance:
+      reference: national-generator-1.1 / existing control-store contracts
+      version: legacy-1
+    vocabulary: labour_status
+    constraints:
+    - source_universe
+  household_size_class:
+    scope: person
+    dtype: categorical
+    parents:
+    - province_code
+    module: legacy_optional
+    assignments:
+    - method: marginal
+      evidence_class: D
+      runtime_evidence: MARGINAL_INFERENCE
+      source: household_size_persons
+      assumption: 'legacy-flat-seed-1: unobserved parent relationships inferred as
+        in national-generator-1.1'
+    description: Size of the person's household.
+    provenance:
+      reference: national-generator-1.1 / existing control-store contracts
+      version: legacy-1
+    vocabulary: household_size_class
+    constraints:
+    - source_universe
+  household_type:
+    scope: person
+    dtype: categorical
+    parents:
+    - province_code
+    module: legacy_optional
+    assignments:
+    - method: marginal
+      evidence_class: D
+      runtime_evidence: MARGINAL_INFERENCE
+      source: household_type_persons
+      assumption: 'legacy-flat-seed-1: unobserved parent relationships inferred as
+        in national-generator-1.1'
+    description: Household type.
+    provenance:
+      reference: national-generator-1.1 / existing control-store contracts
+      version: legacy-1
+    vocabulary: household_type
+    constraints:
+    - source_universe
+  urbanicity:
+    scope: person
+    dtype: categorical
+    parents:
+    - province_code
+    - age_group
+    - sex
+    module: core
+    assignments:
+    - method: ipf_sex
+      evidence_class: D
+      runtime_evidence: MARGINAL_INFERENCE
+      source: urbanicity_sex
+      assumption: 'legacy-flat-seed-1: unobserved parent relationships inferred as
+        in national-generator-1.1'
+    - method: marginal
+      evidence_class: D
+      runtime_evidence: MARGINAL_INFERENCE
+      source: urbanicity
+      assumption: 'legacy-flat-seed-1: unobserved parent relationships inferred as
+        in national-generator-1.1'
+    description: Settlement type of the registered address.
+    provenance:
+      reference: national-generator-1.1 / existing control-store contracts
+      version: legacy-1
+    vocabulary: urbanicity
+    constraints:
+    - source_universe
+  nuts2_code:
+    scope: person
+    dtype: string
+    parents:
+    - province_code
+    module: core
+    assignments:
+    - method: derived
+      evidence_class: C
+      runtime_evidence: DERIVED
+    description: Existing province-to-NUTS2 lookup.
+    provenance:
+      reference: national-generator-1.1 / existing control-store contracts
+      version: legacy-1
+    derivation:
+      operator: province_nuts2
+  adult_eligibility:
+    scope: person
+    dtype: boolean
+    parents:
+    - age
+    module: core
+    assignments:
+    - method: derived
+      evidence_class: C
+      runtime_evidence: DERIVED
+    description: Existing cohort/persona eligibility; no added output column.
+    provenance:
+      reference: national-generator-1.1 / existing control-store contracts
+      version: legacy-1
+    derivation:
+      operator: greater_equal
+      constant: 18
+assignment_order:
+- marital_status
+- education_level
+- labour_status
+- household_size_class
+- household_type
+- urbanicity

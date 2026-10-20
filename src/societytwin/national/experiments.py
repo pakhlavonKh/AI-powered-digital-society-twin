@@ -21,6 +21,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from societytwin.common import canonical_hash
 from societytwin.national.cohorts import STRATIFIABLE
 from societytwin.national.rng import MAX_SEED
+from societytwin.national.persona_selection import FieldSelection
 
 DEFINITION_VERSION = "experiment-definition-1"
 PROMPT_TEMPLATE_VERSION = "tr-task-prompt-1"
@@ -130,6 +131,13 @@ class ExecutionSpec(BaseModel):
 class PersonaPolicy(BaseModel):
     model_config = ConfigDict(extra="forbid")
     visible_fields: list[str] | None = Field(default=None, description="None = default policy (see personas.DEFAULT_VISIBLE).")
+    field_selection: FieldSelection | None = Field(default=None, exclude_if=lambda v: v is None)
+
+    @model_validator(mode="after")
+    def _selection(self):
+        if self.field_selection is not None and self.visible_fields is not None:
+            raise ValueError("Use either visible_fields or field_selection")
+        return self
 
 
 class ExperimentDefinition(BaseModel):

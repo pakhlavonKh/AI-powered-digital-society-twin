@@ -28,8 +28,10 @@ from societytwin.national import GENERATOR_VERSION
 from societytwin.national import geography as geo
 from societytwin.national.constraints import RULES, structural_zero
 from societytwin.national.controls import TABLE_KINDS, ControlStore, Selection
+from societytwin.national.dependencies import DependencyRegistry, RegistryError, load_registry
 from societytwin.national.fitting import Margin, ipf_2d, largest_remainder, rake
-from societytwin.national.model import ATTRIBUTES, METHOD_TEXT, NOT_MODELLED, dependency_graph
+from societytwin.national.model import METHOD_TEXT, NOT_MODELLED, compatibility_attributes, dependency_graph
+from societytwin.national.marital import transferred_conditionals
 from societytwin.national.rng import STREAM_VERSION, Stream, cumulative
 from societytwin.national.vocab import AGE_GROUPS, NOT_APPLICABLE, TOP_CODE_AGE, VOCABULARIES, Evidence, band_bounds
 
@@ -222,9 +224,19 @@ def _cell_allocation(root_counts: dict, n: int) -> tuple[dict, list[dict], dict]
     return alloc, collapsed, targets
 
 
-def generate(store: ControlStore, config: GenerationConfig) -> GeneratedPopulation:
+def generate(store: ControlStore, config: GenerationConfig, *, registry: DependencyRegistry | None = None) -> GeneratedPopulation:
     if not 1 <= config.synthetic_size <= MAX_SIZE:
         raise GenerationError(f"synthetic_size must be within 1..{MAX_SIZE}")
+    try:
+        registry = registry if registry is not None else load_registry()
+        attributes = compatibility_attributes(registry)
+        registry.validate_controls(store)
+        strategy = registry.marital_strategy
+        strategy = strategy if strategy and strategy.enabled else None
+        if strategy and (config.provinces != ('06',) or config.reference_year != 2025 or not config.calibrate):
+            raise RegistryError('national_age_marital_seed_v1 requires provinces=(06,), reference_year=2025 and calibration enabled')
+    except RegistryError as exc:
+        raise GenerationError(str(exc)) from exc
     started = time.perf_counter()
     roots, province_counts, excluded = _allocate_provinces(store, config)
     columns: dict[str, list] = {c: [] for c in COLUMNS}
@@ -242,7 +254,14 @@ def generate(store: ControlStore, config: GenerationConfig) -> GeneratedPopulati
         root = roots[code]
         root_counts = root.counts()
         alloc, collapsed, root_targets = _cell_allocation(root_counts, n)
-        attr = {spec.attribute: _conditionals(spec, store, p, config.reference_year, root_counts) for spec in ATTRIBUTES}
+        if strategy and collapsed:
+            raise GenerationError('Opt-in marital model requires every age/sex root cell to have records; increase population size')
+        try:
+            attr = {spec.attribute: (transferred_conditionals(store, p, root, config.reference_year, strategy)
+                                    if strategy and spec.attribute == 'marital_status' else
+                                    _conditionals(spec, store, p, config.reference_year, root_counts)) for spec in attributes}
+        except RegistryError as exc:
+            raise GenerationError(str(exc)) from exc
         profile_id = f"prov-{code}"
         profiles[profile_id] = _profile(profile_id, p, root, attr, config)
         age_stream = Stream(f"pop:{code}:age", config.seed)
@@ -281,6 +300,29 @@ def generate(store: ControlStore, config: GenerationConfig) -> GeneratedPopulati
                                   "cells": len([k for k in alloc if alloc[k] > 0]), "collapsed_cells": collapsed})
     timings = {"generation_seconds": round(time.perf_counter() - started, 3)}
     manifest = _manifest(store, config, columns, profiles, allocation_report, calibration_report, excluded)
+    if strategy:
+        identity = {'strategy': strategy.model_dump(mode='json'), 'registry_version': registry.registry_version,
+                    'registry_sha256': registry.fingerprint}
+        manifest['statistical_strategy'] = identity
+        manifest['config'] = dict(manifest['config'], marital_strategy=identity)
+        manifest['source_versions']['marital_seed'] = {'sha256': strategy.source_sha256,
+                                                       'file': strategy.source_file, 'geography': 'TR', 'year': 2025}
+        manifest['generator_version'] = manifest['population_version'] = f'{GENERATOR_VERSION}+{strategy.model_version}'
+        manifest['content_sha256'] = canonical_hash({'record_content_sha256': manifest['content_sha256'],
+                                                    'statistical_strategy': identity})
+        manifest['population_id'] = (f'pop-06-2025-n{config.synthetic_size}-s{config.seed}-'
+                                     f'{strategy.model_version}-{manifest["content_sha256"][:16]}')
+        graph = manifest['dependency_model']
+        for node in graph['nodes']:
+            if node['id'] == 'marital_status':
+                node['options'] = [{'table_id': 'marital_status_sex', 'method': strategy.model_version}]
+                node['evidence'] = 'MARGINAL_INFERENCE'
+        for edge in graph['edges']:
+            if edge['to'] == 'marital_status':
+                edge['basis'] = ('Transferred national 15-24/25+ association; no observed Ankara age joint'
+                                 if edge['from'] == 'age_group' else 'Observed Ankara 2025 calibration margin')
+        graph['methods'] = dict(graph['methods'], **{strategy.model_version:
+            'Rounding-sensitivity national broad-age seed, fitted by IPF to observed Ankara margins.'})
     return GeneratedPopulation(columns, manifest, profiles, timings)
 
 
@@ -348,6 +390,8 @@ def _weights(columns: dict, start: int, end: int, root_targets: dict, attr: dict
                 best, best_rr = trial, rr
                 provenance["calibration"] = {"imposed": True}
                 continue
+            if info_of[margin.name].get('strict_targets'):
+                raise GenerationError(f'{margin.name}: opt-in calibration failed or weight bounds exceeded; target cannot be dropped')
             n = end - start
             if not (rr.converged and finite):
                 why = f"raking with this margin did not converge with {n} records in the province"
@@ -414,6 +458,8 @@ def _attribute_margin(name: str, info: dict, columns: dict, idx: range, root_tar
     for c in membership:
         if c is not None:
             present[c] = True
+    if info.get('strict_targets') and any(t > 0 and not ok for t, ok in zip(targets, present)):
+        raise GenerationError(f'{name}: positive Ankara target has no records; opt-in model forbids target redistribution')
     groups: dict[tuple, list[int]] = {}
     for i, k in enumerate(keys):
         group = tuple(k[j] for j, d in enumerate(dims) if d != "category")

@@ -21,6 +21,30 @@
 #     file, checksum, transformations, limitations, held_out
 
 datasets:
+  - id: tuik:national-marital-seed-2025-v1
+    source: TÜİK, ADNKS; Youth in Statistics 2025
+    title: Cinsiyet ve yasal medeni duruma göre nüfus oranı
+    title_en: Proportion of population by sex and legal marital status
+    url: https://veriportali.tuik.gov.tr/api/tr/data/downloads?p=0gGchFRwBIw40QR0aA%2BGEUW1wbe84QtjRoSVkeWGgZm%2FmeD3WiZWMjmChRMI2mAuz9jmkjU%2BbrJErvQJtW0sCLJwdm55NWL4vpGbPHmS274%3D&t=y
+    identifier: Publication 4821, table 1.9, printed p14, PDF p36
+    publication_date: '2026-05'
+    retrieval_date: '2026-10-19'
+    reference_year: [2025]
+    geography: Türkiye (national)
+    province_coverage: []
+    variables: [broad_age_band, sex, marital_status, published_percent]
+    units: [percent]
+    licence: OPEN DECISION
+    file: data/raw/national_marital_seed_2025.yaml
+    checksum: sha256:55dbc9752f4e19617cd9803dced10811a1efdb7e0cdcc906adac878141fb796d
+    transformations:
+      - Manual transcription of 16 inspected published percentages; not an official CSV export or PDF checksum
+      - Used only by the disabled-by-default national_age_marital_seed_v1 strategy; not loaded by build_controls
+    limitations:
+      - National 15-24/25+ conditional percentages, not Ankara counts or five-year joint observations
+      - Exact rounding rule and unrounded young-widowed values unavailable; nearest-tenth intervals are an acknowledged sensitivity assumption
+      - Original PDF binary not locally archived; web PDF text inspected
+    held_out: false
   - id: legacy:tuik_t16_age_sex
     source: TÜİK (Turkish Statistical Institute), Address Based Population Registration System (ADNKS)
     title: null

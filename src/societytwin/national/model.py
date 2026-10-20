@@ -21,6 +21,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from societytwin.national.dependencies import DependencyRegistry, compile_compatibility, load_registry
+
 
 @dataclass(frozen=True)
 class SourceOption:
@@ -36,22 +38,15 @@ class AttributeSpec:
     description: str = ""
 
 
-ATTRIBUTES: tuple[AttributeSpec, ...] = (
-    AttributeSpec("marital_status", (SourceOption("marital_status_age_sex", "conditional_age_sex"),
-                                     SourceOption("marital_status_sex", "ipf_sex")),
-                  description="Legal marital status (civil registration)."),
-    AttributeSpec("education_level", (SourceOption("education_age_sex", "conditional_age_sex"),
-                                      SourceOption("education_sex", "ipf_sex")), structural_zeros=True,
-                  description="Completed educational attainment."),
-    AttributeSpec("labour_status", (SourceOption("labour_status_age_sex", "conditional_age_sex"),
-                                    SourceOption("labour_status_sex", "ipf_sex")),
-                  description="ILO labour status (HLFS; often regional, applied to every province in the region)."),
-    AttributeSpec("household_size_class", (SourceOption("household_size_persons", "marginal"),),
-                  description="Size of the person's household."),
-    AttributeSpec("household_type", (SourceOption("household_type_persons", "marginal"),), description="Household type."),
-    AttributeSpec("urbanicity", (SourceOption("urbanicity_sex", "ipf_sex"), SourceOption("urbanicity", "marginal")),
-                  description="Settlement type of the registered address."),
-)
+def compatibility_attributes(registry: DependencyRegistry | None = None) -> tuple[AttributeSpec, ...]:
+    """Translate validated configuration to the existing sampler's contract."""
+    return tuple(AttributeSpec(a.attribute, tuple(SourceOption(*o) for o in a.options), a.structural_zeros, a.description)
+                 for a in compile_compatibility(registry if registry is not None else load_registry()))
+
+
+# Preserve importers and the legacy dependency_graph response. Generation loads
+# the registry afresh so invalid edits cannot silently use stale declarations.
+ATTRIBUTES: tuple[AttributeSpec, ...] = compatibility_attributes()
 ATTRIBUTE_NAMES = tuple(a.attribute for a in ATTRIBUTES)
 
 # Fields the project schema names but that no loaded official table supports at person level.

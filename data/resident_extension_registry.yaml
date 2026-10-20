@@ -1,0 +1,43 @@
+# Optional sidecar extension of the unchanged national-v1 dependency registry.
+schema_version: resident-extension-registry-1
+registry_version: ankara-resident-extension-1
+model_version: registry_conditional_categorical_v1
+parent_registry_version: ankara-core-1
+modules:
+  optional_resident:
+    enabled: false
+    description: Experimental sidecar assignment; never changes residents, weights or personas.
+attributes:
+  degurba_class:
+    scope: person
+    module: optional_resident
+    method: conditional_categorical_v1
+    parents: [province_code, sex]
+    evidence_class: D
+    assumption: independent_of_other_core_attributes_within_province_sex_v1
+    missing_source: error
+    min_age: 0
+    max_age: null
+    categories:
+      - {code: dense_urban, kind: known}
+      - {code: intermediate_urban, kind: known}
+      - {code: rural, kind: known}
+    provenance:
+      reference: DF_ADNKS_T37_V1.1; observed Ankara sex × DEGURBA counts, 2025
+      version: ankara-degurba-sex-2025-v1
+      note: Individual age/education/household relationships and actual location are not observed. Not administrative urbanicity.
+    source:
+      path: data/raw/ankara_degurba_sex_2025.csv
+      sha256: 10e3181955fb52ddbf797f8b497b535bde308951647f9d31e1f30a45e260e8f0
+      dimensions: [province_code, sex, category]
+      scope: person
+      unit: person
+      universe: ADNKS_residents
+      province_code: '06'
+      reference_year: 2025
+      evidence: observed_distribution
+      title: Population by sex and degree of urbanisation, Ankara 2025
+      url: https://veriportali.tuik.gov.tr/en/databrowser/tuik/TR%2CDF_ADNKS_T37%2C1.1
+      acquisition: Normalized six observed package cells; data/raw/tuik_package/population_urban_rural.csv SHA256 7f223faf84c77bf91842f0903618528218967dffe4db3ac928ec073f86e5f6c1.
+      coverage: All ADNKS-covered residents, same reference geography/year as root. No within-sex age joint or individual location.
+      reuse: OPEN DECISION; preserve official attribution and confirm applicable terms before redistribution.
