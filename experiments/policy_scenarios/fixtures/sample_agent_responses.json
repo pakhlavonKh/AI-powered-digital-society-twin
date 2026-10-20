@@ -1,0 +1,46 @@
+{
+  "valid_standard_json": {
+    "scenario_id": "transport_fare_001",
+    "resident_id": "ANK_TEST_001",
+    "answers": {
+      "q1_usage_change": "reduce_optional_trips",
+      "q2_policy_support": "somewhat_oppose"
+    },
+    "rationale": "As a working individual on a monthly budget, a 20% fare increase forces me to cut down non-essential transit trips."
+  },
+  "valid_fenced_markdown": "```json\n{\n  \"scenario_id\": \"transport_fare_001\",\n  \"resident_id\": \"ANK_TEST_002\",\n  \"answers\": {\n    \"q1_usage_change\": \"maintain_usage\",\n    \"q2_policy_support\": \"neutral\"\n  },\n  \"rationale\": \"I am 67 years old and utilize the statutory free senior concession, so the tariff increase does not affect my daily routine.\"\n}\n```",
+  "invalid_illegal_choice": {
+    "scenario_id": "transport_fare_001",
+    "resident_id": "ANK_TEST_001",
+    "answers": {
+      "q1_usage_change": "maybe",
+      "q2_policy_support": "somewhat_oppose"
+    },
+    "rationale": "I am not sure."
+  },
+  "invalid_missing_question": {
+    "scenario_id": "transport_fare_001",
+    "resident_id": "ANK_TEST_001",
+    "answers": {
+      "q1_usage_change": "reduce_optional_trips"
+    },
+    "rationale": "Forgot to answer question 2."
+  },
+  "invalid_scenario_id_mismatch": {
+    "scenario_id": "wrong_scenario_999",
+    "resident_id": "ANK_TEST_001",
+    "answers": {
+      "q1_usage_change": "reduce_optional_trips",
+      "q2_policy_support": "somewhat_oppose"
+    }
+  },
+  "valid_refused": {
+    "scenario_id": "transport_fare_001",
+    "resident_id": "ANK_TEST_001",
+    "answers": {
+      "q1_usage_change": "refused",
+      "q2_policy_support": "refused"
+    },
+    "rationale": "I decline to express my political opinions."
+  }
+}

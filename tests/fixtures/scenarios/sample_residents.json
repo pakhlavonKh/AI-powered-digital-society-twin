@@ -1,0 +1,74 @@
+[
+  {
+    "resident_id": "ANK_TEST_001",
+    "synthetic_id": "ANK_TEST_001",
+    "age": 28,
+    "sex": "female",
+    "province_code": "06",
+    "province_name": "Ankara",
+    "marital_status": "married",
+    "education_level": "tertiary_university",
+    "labour_status": "employed",
+    "public_transport_usage": null
+  },
+  {
+    "resident_id": "ANK_TEST_002",
+    "synthetic_id": "ANK_TEST_002",
+    "age": 67,
+    "sex": "male",
+    "province_code": "06",
+    "province_name": "Ankara",
+    "marital_status": "widowed",
+    "education_level": "upper_secondary_high_school",
+    "labour_status": "retired",
+    "public_transport_usage": null
+  },
+  {
+    "resident_id": "ANK_TEST_003_MINOR",
+    "synthetic_id": "ANK_TEST_003_MINOR",
+    "age": 16,
+    "sex": "male",
+    "province_code": "06",
+    "province_name": "Ankara",
+    "marital_status": "never_married",
+    "education_level": "basic_secondary_middle_school",
+    "labour_status": "unavailable",
+    "public_transport_usage": null
+  },
+  {
+    "resident_id": "IST_TEST_004_PROVINCE",
+    "synthetic_id": "IST_TEST_004_PROVINCE",
+    "age": 35,
+    "sex": "female",
+    "province_code": "34",
+    "province_name": "İstanbul",
+    "marital_status": "married",
+    "education_level": "tertiary_university",
+    "labour_status": "employed",
+    "public_transport_usage": null
+  },
+  {
+    "resident_id": "ANK_TEST_005_MISSING_AGE",
+    "synthetic_id": "ANK_TEST_005_MISSING_AGE",
+    "age": null,
+    "sex": "female",
+    "province_code": "06",
+    "province_name": "Ankara",
+    "marital_status": "married",
+    "education_level": "tertiary_university",
+    "labour_status": "employed",
+    "public_transport_usage": null
+  },
+  {
+    "resident_id": "ANK_TEST_006_MISSING_PROVINCE",
+    "synthetic_id": "ANK_TEST_006_MISSING_PROVINCE",
+    "age": 42,
+    "sex": "male",
+    "province_code": null,
+    "province_name": null,
+    "marital_status": "divorced",
+    "education_level": "primary",
+    "labour_status": "employed",
+    "public_transport_usage": null
+  }
+]
