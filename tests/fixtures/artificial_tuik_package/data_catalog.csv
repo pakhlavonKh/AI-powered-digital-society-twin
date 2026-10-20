@@ -1,0 +1,7 @@
+dataset_id,theme,title_en,title_tr,source_url,publication_date,retrieval_date
+population_by_age_sex,Population & Vital,ARTIFICIAL population by age and sex,YAPAY yaş ve cinsiyete göre nüfus,,,
+marital_status_by_sex,Households & Family,ARTIFICIAL marital status by sex,,,,
+education_by_sex,Education,ARTIFICIAL educational attainment by sex,,,,
+air_traffic,"Mobility, Tech & Lifestyle",ARTIFICIAL air passengers,,,,
+gdp_per_capita,Labor & Income,ARTIFICIAL GDP per capita,,,,
+quality_checks,Other,ARTIFICIAL malformed rows for ingestion tests,,,,

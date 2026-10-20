@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "societytwin"
+version = "0.1.0"
+description = "SocietyTwin: Türkiye-wide synthetic population calibrated to official aggregate statistics, cohorts, personas and controlled AI experiments."
+requires-python = ">=3.12,<3.13"
+# Lower bounds only; the tested environment is pinned in requirements-api.lock.
+dependencies = [
+  "fastapi>=0.135",
+  "uvicorn>=0.37",
+  "pydantic>=2.12",
+  "PyYAML>=6.0",
+  "pyarrow>=16",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.4", "httpx>=0.28"]
+
+[tool.setuptools.packages.find]
+# Only the societytwin package is installed. The research-phase placeholder
+# package at src/__init__.py and the experiment's own `src` package are never
+# importable through this distribution, which avoids the two `src` trees colliding.
+where = ["src"]
+include = ["societytwin*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-ra --strict-markers"
+markers = [
+  "local_fixture: regression checks against the supplied Ankara/run3 files; skipped when they are absent",
+  "tuik_package: regression checks against the git-ignored TÜİK province package in data/raw/tuik_package; skipped when absent",
+  "matraix: integration checks that need an external MatrAIx checkout and runtime interpreter; skipped unless configured",
+]

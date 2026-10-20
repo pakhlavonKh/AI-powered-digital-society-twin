@@ -1,0 +1,25 @@
+{
+  "instrument": {
+    "id": "artificial_v1",
+    "title": "Artificial Survey"
+  },
+  "answers": [
+    {
+      "questionId": "q_pick",
+      "value": "opt_a"
+    },
+    {
+      "questionId": "q_scale",
+      "value": 2
+    },
+    {
+      "questionId": "q_beta",
+      "value": "false"
+    },
+    {
+      "questionId": "q_unlisted",
+      "value": "mystery_code"
+    }
+  ],
+  "trajectory": []
+}

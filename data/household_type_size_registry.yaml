@@ -1,0 +1,48 @@
+schema_version: household-type-size-registry-1
+registry_version: ankara-household-type-size-1
+model_version: national_household_type_size_seed_v1
+schema_output_version: household-type-size-schema-1
+enabled: false
+scope: household
+base_registry_version: ankara-household-size-1
+transfer_policy: national_2025_association_fitted_to_ankara_2025_v1
+tail_policy: exchangeable_within_observed_7plus_v1
+types: [one_person, nuclear_family, extended_family, non_family_multi_person]
+source_size_classes: ['1', '2', '3', '4', '5', '6', '7+']
+national:
+  path: data/raw/national_household_type_size_2025.csv
+  sha256: 649901d6122c1d5bba92e5209946c3d33c65cd9e1bb46baf3b1dcd16c6f6472b
+  geography: TR
+  reference_year: 2025
+  unit: household
+  universe: ADNKS_private_households
+  evidence: observed_joint_counts
+  title: Women in Statistics 2025, table 1.4, printed p4 / PDF p28
+  url: https://veriportali.tuik.gov.tr/api/tr/data/downloads?p=PYoHXZAHUywVZ%2FK5Hv7Yr3uZg5gXHthJtVxxrQgXRs%2FX%2B4AmLyJQ9O6tuLBod0Yfzkjk583wXSi57Jx526x%2F7NJHppNWi4QVdic99paSii0%3D&t=y
+  acquisition: Manual transcription of inspected official PDF; archived web extract in data/results/phase2a/women-2025-household-joint-web-extract.txt. Original PDF binary pending.
+ankara_types:
+  path: data/raw/ankara_household_type_2025_source.csv
+  sha256: d2d4e0b67e3670d7a26293c004b346b6c759024b2876aebbf651cb8baa66fd93
+  geography: '06'
+  reference_year: 2025
+  unit: household
+  universe: ADNKS_private_households
+  evidence: observed_marginal_counts
+  title: Ankara household types, selected 2025 observations
+  url: https://nip.tuik.gov.tr/?value=HanehalkiTipi
+  acquisition: Archived actual HTML and extracted CSV, Phase 2A; earlier years retained in source file, never pooled.
+structural_support: one_person_iff_size1_extended_min3_others_min2_v1
+reuse: OPEN DECISION; preserve attribution and confirm applicable public-statistics reuse terms before redistribution.
+attributes:
+  household_type:
+    scope: household
+    dtype: categorical
+    method: fitted_national_type_size
+    parents: [province_code, household_type_size_band]
+    evidence_class: D
+  household_type_size_band:
+    scope: household
+    dtype: categorical
+    method: coarsen_size_1to6_7plus
+    parents: [household_size_class]
+    evidence_class: C

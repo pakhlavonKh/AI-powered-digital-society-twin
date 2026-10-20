@@ -1,0 +1,30 @@
+{
+  "mode": "fake",
+  "provider_calls": 0,
+  "calls": [
+    {
+      "system": "You are persona-TST2099_000001. Artificial system prompt.",
+      "user": "Artificial task prompt.",
+      "response": {
+        "answers": [
+          {
+            "questionId": "q_pick",
+            "value": "opt_a"
+          },
+          {
+            "questionId": "q_scale",
+            "value": 2
+          },
+          {
+            "questionId": "q_beta",
+            "value": "false"
+          },
+          {
+            "questionId": "q_unlisted",
+            "value": "mystery_code"
+          }
+        ]
+      }
+    }
+  ]
+}

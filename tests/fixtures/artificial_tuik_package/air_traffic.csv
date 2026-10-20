@@ -1,0 +1,3 @@
+dataset_id,province_code,province_name,nuts3_code,year,indicator,value,unit
+air_traffic,06,Ankara,TR510,2024,Yolcu sayısı (bin),12345.6,bin kişi
+air_traffic,06,Ankara,TR510,2025,Yolcu sayısı (bin),-,bin kişi

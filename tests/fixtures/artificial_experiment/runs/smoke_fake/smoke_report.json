@@ -1,0 +1,10 @@
+{
+  "ok": true,
+  "model_mode": "fake",
+  "logical_calls": 1,
+  "provider_calls": 0,
+  "answered_questions": 4,
+  "limitations": [
+    "Artificial fake transport."
+  ]
+}

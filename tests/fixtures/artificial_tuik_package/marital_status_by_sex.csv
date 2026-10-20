@@ -1,0 +1,25 @@
+dataset_id,province_code,province_name,nuts3_code,year,indicator,value,unit
+marital_status_by_sex,01,Adana,TR621,2025,Medeni durum | Erkek | Hiç evlenmedi,3248,kişi
+marital_status_by_sex,01,Adana,TR621,2025,Medeni durum | Erkek | Evli,5382,kişi
+marital_status_by_sex,01,Adana,TR621,2025,Medeni durum | Erkek | Boşandı,464,kişi
+marital_status_by_sex,01,Adana,TR621,2025,Medeni durum | Erkek | Eşi öldü,186,kişi
+marital_status_by_sex,01,Adana,TR621,2025,Medeni durum | Kadın | Hiç evlenmedi,2804,kişi
+marital_status_by_sex,01,Adana,TR621,2025,Medeni durum | Kadın | Evli,5141,kişi
+marital_status_by_sex,01,Adana,TR621,2025,Medeni durum | Kadın | Boşandı,560,kişi
+marital_status_by_sex,01,Adana,TR621,2025,Medeni durum | Kadın | Eşi öldü,843,kişi
+marital_status_by_sex,06,Ankara,TR510,2025,Medeni durum | Erkek | Hiç evlenmedi,6496,kişi
+marital_status_by_sex,06,Ankara,TR510,2025,Medeni durum | Erkek | Evli,10764,kişi
+marital_status_by_sex,06,Ankara,TR510,2025,Medeni durum | Erkek | Boşandı,928,kişi
+marital_status_by_sex,06,Ankara,TR510,2025,Medeni durum | Erkek | Eşi öldü,372,kişi
+marital_status_by_sex,06,Ankara,TR510,2025,Medeni durum | Kadın | Hiç evlenmedi,5609,kişi
+marital_status_by_sex,06,Ankara,TR510,2025,Medeni durum | Kadın | Evli,10283,kişi
+marital_status_by_sex,06,Ankara,TR510,2025,Medeni durum | Kadın | Boşandı,1121,kişi
+marital_status_by_sex,06,Ankara,TR510,2025,Medeni durum | Kadın | Eşi öldü,1684,kişi
+marital_status_by_sex,69,Bayburt,TRA13,2025,Medeni durum | Erkek | Hiç evlenmedi,97,kişi
+marital_status_by_sex,69,Bayburt,TRA13,2025,Medeni durum | Erkek | Evli,161,kişi
+marital_status_by_sex,69,Bayburt,TRA13,2025,Medeni durum | Erkek | Boşandı,13,kişi
+marital_status_by_sex,69,Bayburt,TRA13,2025,Medeni durum | Erkek | Eşi öldü,7,kişi
+marital_status_by_sex,69,Bayburt,TRA13,2025,Medeni durum | Kadın | Hiç evlenmedi,84,kişi
+marital_status_by_sex,69,Bayburt,TRA13,2025,Medeni durum | Kadın | Evli,154,kişi
+marital_status_by_sex,69,Bayburt,TRA13,2025,Medeni durum | Kadın | Boşandı,16,kişi
+marital_status_by_sex,69,Bayburt,TRA13,2025,Medeni durum | Kadın | Eşi öldü,27,kişi

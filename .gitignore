@@ -7,6 +7,7 @@
 data/raw/*
 data/processed/*
 data/populations/*
+data/households/*
 data/results/*
 !data/*/.gitkeep
 !data/*/README.md
@@ -111,3 +112,15 @@ Thumbs.db
 *.swo
 *~
 .claude/settings.local.json
+
+# ------------------------------------------------------------------
+# Research workbench (frontend test output)
+# ------------------------------------------------------------------
+frontend/test-results/
+frontend/playwright-report/
+
+# Unified population workflow source and tests (not packaging build output).
+!src/societytwin/build/
+!src/societytwin/build/**
+!tests/build/
+!tests/build/**

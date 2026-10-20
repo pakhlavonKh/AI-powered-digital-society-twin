@@ -1,0 +1,44 @@
+# Separate household-scope extension; national-v1 compatibility registry is unchanged.
+schema_version: household-registry-1
+registry_version: ankara-household-size-1
+parent_schema_version: dependency-registry-1
+parent_registry_version: ankara-core-1
+module:
+  name: unlinked_households
+  scope: household
+  enabled: false
+source:
+  source_version: ankara-nip-household-size-2025-v1
+  title: Ankara households by household size, 2025
+  url: https://nip.tuik.gov.tr/?value=HanehalkiBuyukluguneGoreHs
+  source_file: data/raw/ankara_household_size_2025.csv
+  sha256: 1aed9e3fb1b65ab6ab4a880247b5b4b662cd980b6dfee5cedd3d904dedc2471b
+  province_code: '06'
+  reference_year: 2025
+  reference_date: '2025-12-31'
+  scope: household
+  dimensions: [province_code, household_size_class]
+  unit: household
+  universe: ADNKS_private_households
+  coverage: Turkish citizens and foreign nationals at private-household addresses; collective accommodation excluded.
+  evidence: observed_distribution
+  expected_total: 1987216
+  acquisition: HTML and XLSX acquired in Phase 2A; rechecked against observations in Phase 2D-1 and Phase 2D-2.
+  original_observations:
+    - path: data/results/phase2a/raw/ankara-household-size.xlsx
+      sha256: f062073d8c01c252ed041658c5cfbb4068ec16dae56ee9f3e2448cafe56ce2c6
+    - path: data/results/phase2a/raw/nip-ankara-household-size.html
+      sha256: 73c6c7dca23f8de59b56c97f436a378d2e2f0e34dd6becf839dcd8d05dc18ba5
+  reuse: OPEN DECISION; confirm applicable TÜİK terms and preserve attribution; https://www.tuik.gov.tr/Kurumsal/Yasal_Uyari
+  limitation: 10+ is open-ended; no exact tail sizes, members, types, relationships or institutional counts are assigned.
+size_classes: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10+']
+attributes:
+  household_id: {scope: household, dtype: string, method: stable_id, parents: []}
+  province_code: {scope: household, dtype: string, method: constant, parents: []}
+  reference_year: {scope: household, dtype: integer, method: constant, parents: []}
+  household_size_class: {scope: household, dtype: string, method: stratified_size_allocation, parents: [province_code]}
+  household_size: {scope: household, dtype: integer, method: size_bounds, parents: [household_size_class]}
+  household_size_lower: {scope: household, dtype: integer, method: size_bounds, parents: [household_size_class]}
+  household_size_upper: {scope: household, dtype: integer, method: size_bounds, parents: [household_size_class]}
+  household_size_open_ended: {scope: household, dtype: boolean, method: size_bounds, parents: [household_size_class]}
+  household_weight: {scope: household, dtype: float, method: stratum_weight, parents: [household_size_class]}

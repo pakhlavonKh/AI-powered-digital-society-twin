@@ -1,0 +1,6 @@
+year,province,statistic,value,unit,source_workbook,source_sheet,source_row
+2099,TESTLAND,female_population,741,persons,artificial_workbook_a.xls,t1,5
+2099,TESTLAND,male_population,703,persons,artificial_workbook_a.xls,t1,5
+2099,TESTLAND,total_population,1444,persons,artificial_workbook_a.xls,t1,5
+2098,TESTLAND,total_median_age,33.5,years,artificial_workbook_b.xls,t2,7
+2098,TESTLAND,total_median_age,33.5,years,older/artificial_workbook_b.xls,t2,7

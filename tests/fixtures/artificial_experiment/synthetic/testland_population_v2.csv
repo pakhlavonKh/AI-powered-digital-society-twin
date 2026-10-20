@@ -1,0 +1,41 @@
+person_id,age_group,gender,marital_status,marital_status_conditioning
+TST2099_000001,45-49,female,Evli,gender_only
+TST2099_000002,80-84,female,Eşi öldü,gender_only
+TST2099_000003,0-4,male,not_applicable,gender_only
+TST2099_000004,40-44,female,Evli,gender_only
+TST2099_000005,10-14,female,not_applicable,gender_only
+TST2099_000006,40-44,male,Eşi öldü,gender_only
+TST2099_000007,90+,female,Boşandı,gender_only
+TST2099_000008,35-39,male,Boşandı,gender_only
+TST2099_000009,85-89,male,Boşandı,gender_only
+TST2099_000010,55-59,female,Hiç evlenmedi,gender_only
+TST2099_000011,55-59,male,Hiç evlenmedi,gender_only
+TST2099_000012,75-79,female,Boşandı,gender_only
+TST2099_000013,85-89,male,Hiç evlenmedi,gender_only
+TST2099_000014,85-89,female,Evli,gender_only
+TST2099_000015,55-59,male,Eşi öldü,gender_only
+TST2099_000016,90+,male,Hiç evlenmedi,gender_only
+TST2099_000017,90+,male,Hiç evlenmedi,gender_only
+TST2099_000018,90+,male,Eşi öldü,gender_only
+TST2099_000019,20-24,male,Hiç evlenmedi,gender_only
+TST2099_000020,50-54,male,Eşi öldü,gender_only
+TST2099_000021,90+,female,Eşi öldü,gender_only
+TST2099_000022,60-64,male,Evli,gender_only
+TST2099_000023,5-9,male,not_applicable,gender_only
+TST2099_000024,60-64,male,Hiç evlenmedi,gender_only
+TST2099_000025,85-89,female,Evli,gender_only
+TST2099_000026,40-44,male,Evli,gender_only
+TST2099_000027,15-19,male,Hiç evlenmedi,gender_only
+TST2099_000028,60-64,male,Boşandı,gender_only
+TST2099_000029,90+,male,Hiç evlenmedi,gender_only
+TST2099_000030,30-34,female,Boşandı,gender_only
+TST2099_000031,15-19,female,Eşi öldü,gender_only
+TST2099_000032,90+,female,Evli,gender_only
+TST2099_000033,25-29,male,Hiç evlenmedi,gender_only
+TST2099_000034,55-59,male,Boşandı,gender_only
+TST2099_000035,40-44,female,Boşandı,gender_only
+TST2099_000036,90+,male,Evli,gender_only
+TST2099_000037,10-14,male,not_applicable,gender_only
+TST2099_000038,40-44,female,Hiç evlenmedi,gender_only
+TST2099_000039,35-39,female,Hiç evlenmedi,gender_only
+TST2099_000040,15-19,female,Boşandı,gender_only

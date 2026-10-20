@@ -1,0 +1,18 @@
+# Mapping for the ARTIFICIAL test package (same format as data/tuik_package_mapping.yaml).
+version: 1
+controls:
+  - table: population_age_sex
+    dataset: population_by_age_sex
+    indicator_pattern: '^Nüfus \| (?P<sex>Erkek|Kadın) \| (?P<age_group>\d+-\d+|90\+)$'
+    universe_min_age: 0
+    universe_note: All residents (artificial)
+  - table: marital_status_sex
+    dataset: marital_status_by_sex
+    indicator_pattern: '^Medeni durum \| (?P<sex>Erkek|Kadın) \| (?P<category>.+)$'
+    universe_min_age: 15
+    universe_note: Residents aged 15+ (artificial)
+  - table: education_sex
+    dataset: education_by_sex
+    indicator_pattern: '^Eğitim \| (?P<sex>Erkek|Kadın) \| (?P<category>.+)$'
+    universe_min_age: 15
+    universe_note: Residents aged 15+ (artificial)

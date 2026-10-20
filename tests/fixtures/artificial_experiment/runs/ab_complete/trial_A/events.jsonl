@@ -1,0 +1,5 @@
+{"type": "instruction", "markdown": "artificial"}
+{"type": "prompts", "prompts": ["x"]}
+{"type": "phase", "phase": "answering"}
+{"type": "usage", "usage": {"n_input_tokens": 100, "n_output_tokens": 20, "cost_usd": 0.0001, "request_id": "artificial-a", "model": "artificial-model", "provider": "fakeprov", "cost_source": "estimated"}}
+{"type": "done", "result": {}}

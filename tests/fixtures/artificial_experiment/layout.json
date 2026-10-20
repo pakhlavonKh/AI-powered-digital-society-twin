@@ -1,0 +1,8 @@
+{
+  "base_population": "synthetic/testland_population_base.csv",
+  "v2_population": "synthetic/testland_population_v2.csv",
+  "age_gender": "processed/testland_age_gender.csv",
+  "marital_gender": "processed/testland_marital_gender.csv",
+  "controls": "processed/testland_controls.csv",
+  "fixture_kind": "artificial_test_fixture"
+}
