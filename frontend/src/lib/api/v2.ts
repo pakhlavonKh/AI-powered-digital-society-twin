@@ -304,3 +304,31 @@ export type ScenarioListItem = {
 };
 export type ScenarioList = { items: ScenarioListItem[] };
 
+export type CreateScenarioPayload = {
+  scenario_id: string;
+  version?: string;
+  name: string;
+  description: string;
+  location: { province_code: string; province_name: string };
+  metadata?: { hypothetical?: boolean; source_note?: string | null };
+  policy: {
+    category: string;
+    type: string;
+    parameters: {
+      baseline_fare?: number;
+      new_fare?: number;
+      increase_percentage?: number;
+      currency?: string;
+      fare_category?: string;
+    };
+  };
+  questions: {
+    id: string;
+    text: string;
+    type?: "single_choice" | "multiple_choice";
+    options: { id: string; label: string }[];
+    allow_other?: boolean;
+    ask_rationale?: boolean;
+  }[];
+};
+

@@ -10,8 +10,12 @@ import os
 from pathlib import Path
 from typing import Any
 
-from src.scenarios.loader import load_scenario
-from src.scenarios.schema import ScenarioConfig
+try:
+    from .loader import load_scenario
+    from .schema import ScenarioConfig
+except ImportError:
+    from scenarios.loader import load_scenario
+    from scenarios.schema import ScenarioConfig
 
 DEFAULT_SCENARIOS_DIRS = [
     Path("experiments/policy_scenarios/scenarios"),
@@ -75,7 +79,7 @@ def get_scenario(scenario_id: str, custom_dirs: list[Path] | None = None) -> Sce
 
 def scenario_to_experiment_definition(
     scenario: ScenarioConfig,
-    cohort_id: str,
+    cohort_id: str | None = None,
     question_id: str | None = None,
     seed: int = 7,
 ) -> dict[str, Any]:
@@ -83,7 +87,7 @@ def scenario_to_experiment_definition(
 
     Args:
         scenario: Validated ScenarioConfig.
-        cohort_id: Target cohort identifier.
+        cohort_id: Target cohort identifier (optional when drafting).
         question_id: Specific question to ask; if None, defaults to the first question.
         seed: Random seed for cohort sampling.
 
@@ -148,7 +152,7 @@ def scenario_to_experiment_definition(
             "context_indicators": ["total_population", "population_density"],
         },
         "cohort": {
-            "cohort_id": cohort_id,
+            "cohort_id": cohort_id or "",
             "sample_size": 20,
             "sampling_method": "weighted",
             "seed": seed,
@@ -164,3 +168,40 @@ def scenario_to_experiment_definition(
             "max_calls": 20,
         },
     }
+
+
+def save_custom_scenario(
+    data: dict[str, Any] | ScenarioConfig,
+    target_dir: Path | None = None,
+) -> ScenarioConfig:
+    """Validate and persist a custom policy scenario as a YAML file in the scenarios catalog.
+
+    Args:
+        data: ScenarioConfig instance or raw dict conforming to ScenarioConfig.
+        target_dir: Optional custom storage directory. Defaults to experiments/policy_scenarios/scenarios.
+
+    Returns:
+        The validated and persisted ScenarioConfig.
+    """
+    import yaml
+
+    if hasattr(data, "model_dump"):
+        dump_dict = data.model_dump(mode="json", exclude_none=True)
+        config = ScenarioConfig.model_validate(dump_dict)
+    elif isinstance(data, dict):
+        config = ScenarioConfig.model_validate(data)
+    else:
+        raise ValueError(f"Expected dict or ScenarioConfig, got {type(data)}")
+
+    save_dir = target_dir or DEFAULT_SCENARIOS_DIRS[0]
+    resolved_dir = save_dir if save_dir.is_absolute() else Path.cwd() / save_dir
+    resolved_dir.mkdir(parents=True, exist_ok=True)
+
+    target_file = resolved_dir / f"{config.scenario_id}.yaml"
+    dump_dict = config.model_dump(mode="json", exclude_none=True)
+
+    with open(target_file, "w", encoding="utf-8") as f:
+        yaml.safe_dump(dump_dict, f, sort_keys=False, allow_unicode=True)
+
+    return config
+

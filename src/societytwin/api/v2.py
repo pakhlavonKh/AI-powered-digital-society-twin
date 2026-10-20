@@ -8,10 +8,11 @@ from __future__ import annotations
 
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Body, Depends, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 
-from societytwin.errors import WorkbenchError, not_found
+from scenarios.schema import ScenarioConfig
+from societytwin.errors import WorkbenchError, invalid, not_found
 from societytwin.national.cohorts import CohortDefinitionRequest, CohortSampleRequest
 from societytwin.national.experiments import ExperimentDefinition, example_fare_definition
 from societytwin.national.generator import MAX_SIZE, GenerationConfig
@@ -199,16 +200,26 @@ def build_router() -> APIRouter:
            description="Transform a scenario into an experiment definition for a given cohort.")
     def get_scenario_experiment_definition(
         scenario_id: str,
-        cohort_id: str,
+        cohort_id: Annotated[str | None, Query()] = None,
         question_id: Annotated[str | None, Query()] = None,
         seed: Annotated[int, Query()] = 7,
     ):
         from scenarios.adapter import get_scenario, scenario_to_experiment_definition
         try:
             scenario = get_scenario(scenario_id)
-            return scenario_to_experiment_definition(scenario, cohort_id, question_id, seed)
+            return scenario_to_experiment_definition(scenario, cohort_id or "", question_id, seed)
         except KeyError as exc:
             raise not_found("scenario_not_found", str(exc))
+
+    @r.post("/scenarios", status_code=201, tags=["experiments"],
+           description="Create and register a custom policy scenario definition.")
+    def create_scenario(body: ScenarioConfig):
+        from scenarios.adapter import save_custom_scenario
+        try:
+            saved = save_custom_scenario(body)
+            return saved.model_dump(mode="json")
+        except (ValueError, KeyError) as exc:
+            raise invalid("scenario_invalid", str(exc))
 
     @r.get("/examples/fare-experiment", tags=["experiments"],
            description="The demonstration design with explicitly HYPOTHETICAL fare parameters.")

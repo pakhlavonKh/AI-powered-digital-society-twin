@@ -29,6 +29,347 @@ function blank(cohortId: string): ExperimentDefinition {
   };
 }
 
+type CustomScenarioModalProps = {
+  open: boolean;
+  onClose: () => void;
+  onCreated: (scenarioId: string) => Promise<void>;
+};
+
+function CustomScenarioModal({ open, onClose, onCreated }: CustomScenarioModalProps) {
+  const [scenarioId, setScenarioId] = useState("");
+  const [name, setName] = useState("");
+  const [category, setCategory] = useState("housing");
+  const [policyType, setPolicyType] = useState("rent_control");
+  const [provinceCode, setProvinceCode] = useState("06");
+  const [provinceName, setProvinceName] = useState("Ankara");
+  const [description, setDescription] = useState("");
+  const [baselineFare, setBaselineFare] = useState("12000");
+  const [newFare, setNewFare] = useState("15000");
+  const [increasePercentage, setIncreasePercentage] = useState("25");
+  const [currency, setCurrency] = useState("TL/month");
+  const [questionId, setQuestionId] = useState("q1_affordability");
+  const [questionText, setQuestionText] = useState("Can your household afford this adjusted monthly rate?");
+  const [options, setOptions] = useState([
+    { id: "yes_comfortably", label: "Yes, comfortably" },
+    { id: "neutral_stretched", label: "Manageable, but financially stretched" },
+    { id: "no_unaffordable", label: "No, unaffordable for our household" },
+  ]);
+  const [busy, setBusy] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  if (!open) return null;
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    setErrorMsg(null);
+    try {
+      const cleanId = (scenarioId || name.toLowerCase().replace(/[^a-z0-9]+/g, "_")).replace(/^_+|_+$/g, "");
+      if (!cleanId.match(/^[a-z][a-z0-9_]{1,63}$/)) {
+        throw new Error("Scenario ID must start with a lowercase letter and contain only lowercase letters, digits, or underscores (2-64 chars).");
+      }
+      if (!name.trim()) throw new Error("Scenario title is required.");
+      if (description.trim().length < 10) throw new Error("Description must be at least 10 characters.");
+      if (!questionText.trim()) throw new Error("Question text is required.");
+      if (options.length < 2) throw new Error("At least 2 question options are required.");
+
+      const bVal = parseFloat(baselineFare) || 0;
+      const nVal = parseFloat(newFare) || 0;
+      const pct = parseFloat(increasePercentage) || 0;
+
+      const payload = {
+        scenario_id: cleanId,
+        version: "1.0.0",
+        name: name.trim(),
+        description: description.trim(),
+        location: { province_code: provinceCode, province_name: provinceName },
+        metadata: { hypothetical: true, source_note: "Custom policy simulation" },
+        policy: {
+          category,
+          type: policyType,
+          parameters: {
+            baseline_fare: bVal > 0 ? bVal : undefined,
+            new_fare: nVal > 0 ? nVal : undefined,
+            increase_percentage: pct !== 0 ? pct : undefined,
+            currency: currency || "TL",
+          },
+        },
+        questions: [
+          {
+            id: questionId.trim() || "q1",
+            text: questionText.trim(),
+            type: "single_choice",
+            options: options.map((o) => ({ id: o.id.trim(), label: o.label.trim() })),
+            allow_other: false,
+            ask_rationale: true,
+          },
+        ],
+      };
+
+      await v2<unknown>("/scenarios", { method: "POST", body: payload });
+      await onCreated(cleanId);
+      onClose();
+    } catch (err: unknown) {
+      setErrorMsg(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="custom-sc-title"
+      style={{
+        position: "fixed",
+        inset: 0,
+        backgroundColor: "rgba(0, 0, 0, 0.8)",
+        backdropFilter: "blur(4px)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 1000,
+        padding: "16px",
+      }}
+    >
+      <div
+        className="card stack"
+        style={{
+          width: "100%",
+          maxWidth: "680px",
+          maxHeight: "90vh",
+          overflowY: "auto",
+          padding: "24px",
+          backgroundColor: "var(--surface-1)",
+          boxShadow: "0 16px 48px rgba(0,0,0,0.6)",
+        }}
+      >
+        <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
+          <h2 id="custom-sc-title" style={{ margin: 0 }}>Create Custom Policy Scenario</h2>
+          <button type="button" className="button small" onClick={onClose} aria-label="Close dialog">✕</button>
+        </div>
+
+        <p className="small muted">
+          Define a custom policy intervention and survey questionnaire. Saving it writes a validated policy scenario directly to the twin’s scenario library.
+        </p>
+
+        {errorMsg ? <div className="notice crit"><strong>Error:</strong> {errorMsg}</div> : null}
+
+        <form onSubmit={handleSubmit} className="stack">
+          <div className="form-grid">
+            <div className="field">
+              <label htmlFor="cs-id">Scenario ID (lowercase_identifier)</label>
+              <input
+                id="cs-id"
+                type="text"
+                placeholder="e.g. rent_cap_001"
+                value={scenarioId}
+                onChange={(e) => setScenarioId(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))}
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="cs-name">Scenario Title</label>
+              <input
+                id="cs-name"
+                type="text"
+                placeholder="e.g. Ankara Residential Rent Cap"
+                value={name}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  if (!scenarioId) {
+                    setScenarioId(e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, "_").slice(0, 32));
+                  }
+                }}
+                required
+              />
+            </div>
+          </div>
+
+          <div className="form-grid">
+            <div className="field">
+              <label htmlFor="cs-cat">Category</label>
+              <select id="cs-cat" value={category} onChange={(e) => setCategory(e.target.value)}>
+                <option value="housing">Housing & Urban</option>
+                <option value="transportation">Transportation</option>
+                <option value="energy">Energy & Utilities</option>
+                <option value="taxation">Taxation & Fiscal</option>
+                <option value="social_welfare">Social Welfare & Subsidies</option>
+                <option value="education">Education</option>
+                <option value="healthcare">Healthcare</option>
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor="cs-type">Policy Type</label>
+              <input
+                id="cs-type"
+                type="text"
+                placeholder="e.g. rent_control, subsidy, fare_increase"
+                value={policyType}
+                onChange={(e) => setPolicyType(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="form-grid">
+            <div className="field">
+              <label htmlFor="cs-prov-code">Province Code</label>
+              <input
+                id="cs-prov-code"
+                type="text"
+                placeholder="06"
+                maxLength={2}
+                value={provinceCode}
+                onChange={(e) => setProvinceCode(e.target.value)}
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="cs-prov-name">Province Name</label>
+              <input
+                id="cs-prov-name"
+                type="text"
+                placeholder="Ankara"
+                value={provinceName}
+                onChange={(e) => setProvinceName(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="field">
+            <label htmlFor="cs-desc">Description (Narrative of the policy change)</label>
+            <textarea
+              id="cs-desc"
+              rows={3}
+              placeholder="Describe the policy change, its scope, and context for AI respondents..."
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              required
+            />
+          </div>
+
+          <fieldset>
+            <legend>Policy Parameters (Optional)</legend>
+            <div className="form-grid">
+              <div className="field">
+                <label htmlFor="cs-base">Baseline Value</label>
+                <input
+                  id="cs-base"
+                  type="number"
+                  step="any"
+                  placeholder="e.g. 10000"
+                  value={baselineFare}
+                  onChange={(e) => setBaselineFare(e.target.value)}
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="cs-new">Proposed Value</label>
+                <input
+                  id="cs-new"
+                  type="number"
+                  step="any"
+                  placeholder="e.g. 12500"
+                  value={newFare}
+                  onChange={(e) => setNewFare(e.target.value)}
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="cs-pct">Change (%)</label>
+                <input
+                  id="cs-pct"
+                  type="number"
+                  step="any"
+                  placeholder="e.g. 25"
+                  value={increasePercentage}
+                  onChange={(e) => setIncreasePercentage(e.target.value)}
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="cs-curr">Unit / Currency</label>
+                <input
+                  id="cs-curr"
+                  type="text"
+                  placeholder="TL/month"
+                  value={currency}
+                  onChange={(e) => setCurrency(e.target.value)}
+                />
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>Survey Question for Synthetic Citizens</legend>
+            <div className="field">
+              <label htmlFor="cs-qtext">Question / Prompt</label>
+              <textarea
+                id="cs-qtext"
+                rows={2}
+                value={questionText}
+                onChange={(e) => setQuestionText(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="stack" style={{ marginTop: 8 }}>
+              <label className="small" style={{ fontWeight: 600 }}>Choice Options:</label>
+              {options.map((opt, idx) => (
+                <div key={idx} className="row" style={{ alignItems: "center" }}>
+                  <input
+                    type="text"
+                    style={{ flex: "0 0 160px" }}
+                    placeholder="option_id"
+                    value={opt.id}
+                    onChange={(e) =>
+                      setOptions(options.map((o, j) => (j === idx ? { ...o, id: e.target.value } : o)))
+                    }
+                    aria-label={`Option ${idx + 1} ID`}
+                  />
+                  <input
+                    type="text"
+                    style={{ flex: 1 }}
+                    placeholder="Option label text"
+                    value={opt.label}
+                    onChange={(e) =>
+                      setOptions(options.map((o, j) => (j === idx ? { ...o, label: e.target.value } : o)))
+                    }
+                    aria-label={`Option ${idx + 1} Label`}
+                  />
+                  <button
+                    type="button"
+                    className="button small"
+                    disabled={options.length <= 2}
+                    onClick={() => setOptions(options.filter((_, j) => j !== idx))}
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                className="button small"
+                disabled={options.length >= 8}
+                onClick={() =>
+                  setOptions([...options, { id: `option_${options.length + 1}`, label: "" }])
+                }
+              >
+                + Add Option
+              </button>
+            </div>
+          </fieldset>
+
+          <div className="row" style={{ justifyContent: "flex-end", gap: 10, marginTop: 12 }}>
+            <button type="button" className="button" onClick={onClose} disabled={busy}>
+              Cancel
+            </button>
+            <button type="submit" className="button primary" disabled={busy}>
+              {busy ? "Saving to Catalog…" : "Save Scenario & Load"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 function Builder({ populationId }: { populationId: string }) {
   const params = useSearchParams();
   const router = useRouter();
@@ -39,6 +380,7 @@ function Builder({ populationId }: { populationId: string }) {
   const scenarios = useApi("v2:scenarios", (signal) => v2<ScenarioList>("/scenarios", { signal }));
   const [selectedScenarioId, setSelectedScenarioId] = useState<string>("transport_fare_001");
   const [selectedQuestionId, setSelectedQuestionId] = useState<string>("");
+  const [showCustomModal, setShowCustomModal] = useState<boolean>(false);
   const [step, setStep] = useState(0);
   const [d, setD] = useState<ExperimentDefinition>(() => blank(params.get("cohort") ?? ""));
   const [plan, setPlan] = useState<Plan | null>(null);
@@ -59,10 +401,18 @@ function Builder({ populationId }: { populationId: string }) {
 
   const loadPolicyScenario = async (scenarioId: string, qId?: string) => {
     const cohortId = d.cohort.cohort_id || valid.find((c) => !c.minors)?.cohort_id || valid[0]?.cohort_id || "";
-    const query: Record<string, string> = { cohort_id: cohortId };
+    const query: Record<string, string> = {};
+    if (cohortId) query.cohort_id = cohortId;
     if (qId) query.question_id = qId;
     const ex = await v2<ExperimentDefinition>(`/scenarios/${scenarioId}/experiment-definition`, { query });
-    setD({ ...ex, persona: { visible_fields: null } });
+    setD((cur) => ({
+      ...ex,
+      cohort: {
+        ...ex.cohort,
+        cohort_id: cur.cohort.cohort_id || ex.cohort.cohort_id || cohortId,
+      },
+      persona: { visible_fields: null },
+    }));
   };
 
   const loadExample = async () => {
@@ -70,7 +420,7 @@ function Builder({ populationId }: { populationId: string }) {
       await loadPolicyScenario(activeScenario.scenario_id, selectedQuestionId || undefined);
     } else {
       const cohortId = d.cohort.cohort_id || valid.find((c) => !c.minors)?.cohort_id || valid[0]?.cohort_id || "";
-      const ex = await v2<ExperimentDefinition>("/examples/fare-experiment", { query: { cohort_id: cohortId } });
+      const ex = await v2<ExperimentDefinition>("/examples/fare-experiment", { query: { cohort_id: cohortId || "default" } });
       setD({ ...ex, persona: { visible_fields: null } });
     }
   };
@@ -132,15 +482,22 @@ function Builder({ populationId }: { populationId: string }) {
               ))}
             </select>
           ) : null}
-          <button type="button" className="button small primary" onClick={loadExample} disabled={!valid.length}>
+          <button type="button" className="button small primary" onClick={loadExample} disabled={!activeScenario}>
             Load Policy Scenario
+          </button>
+          <button type="button" className="button small" onClick={() => setShowCustomModal(true)}>
+            + Custom Scenario
           </button>
         </div>
       </div>
       {cohorts.data && valid.length === 0 ? <EmptyState title="No cohort for this population.">Save a cohort first on the <Link href={withPop("/cohorts", pop)}>Cohorts</Link> page; experiments always run on a saved cohort.</EmptyState> : null}
 
       {step === 0 ? (
-        <section className="card stack" aria-labelledby="s-h"><h2 id="s-h">Scenario — what is happening?</h2>
+        <section className="card stack" aria-labelledby="s-h">
+          <div className="notice info" style={{ marginBottom: 4 }}>
+            <strong>Fully Customizable:</strong> All scenario titles, descriptions, and policy parameters below can be edited directly for this experiment. Or click <strong>+ Custom Scenario</strong> above to save a new reusable template to the twin's policy library.
+          </div>
+          <h2 id="s-h">Scenario — what is happening?</h2>
           <div className="field"><label htmlFor="exp-title">Experiment title</label><input id="exp-title" type="text" value={d.title} onChange={(e) => setD({ ...d, title: e.target.value })} /></div>
           <div className="field"><label htmlFor="sc-title">Scenario title</label><input id="sc-title" type="text" value={d.scenario.title} onChange={(e) => patch("scenario", { title: e.target.value })} /></div>
           <div className="field"><label htmlFor="sc-desc">Description</label><textarea id="sc-desc" value={d.scenario.description} onChange={(e) => patch("scenario", { description: e.target.value })} /></div>
@@ -281,6 +638,16 @@ function Builder({ populationId }: { populationId: string }) {
         <button type="button" className="button" disabled={step === 0} onClick={() => setStep((s) => s - 1)}>Back</button>
         <button type="button" className="button" disabled={step === STEPS.length - 1} onClick={() => setStep((s) => s + 1)}>Next</button>
       </div>
+
+      <CustomScenarioModal
+        open={showCustomModal}
+        onClose={() => setShowCustomModal(false)}
+        onCreated={async (newId) => {
+          await scenarios.reload();
+          setSelectedScenarioId(newId);
+          await loadPolicyScenario(newId);
+        }}
+      />
     </div>
   );
 }

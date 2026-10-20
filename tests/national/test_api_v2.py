@@ -177,3 +177,55 @@ def test_scenarios_catalog_and_experiment_definition(national_client):
     assert demo["cohort"]["cohort_id"] == "c123"
     assert "options" in demo["task"]
 
+    # 6. Experiment definition without cohort_id (for UI drafting)
+    exp_def_no_cohort = c.get("/api/v2/scenarios/transport_fare_001/experiment-definition").json()
+    assert exp_def_no_cohort["scenario"]["title"] == "Ankara Public Transportation Fare Increase"
+    assert exp_def_no_cohort["cohort"]["cohort_id"] == ""
+
+    # 7. Create custom scenario via POST /api/v2/scenarios
+    custom_payload = {
+        "scenario_id": "test_custom_001",
+        "version": "1.0.0",
+        "name": "Custom Rent Control Experiment",
+        "description": "A simulation of 25% annual rent increase limits in Ankara.",
+        "location": {"province_code": "06", "province_name": "Ankara"},
+        "metadata": {"hypothetical": True, "source_note": "Custom workbench test"},
+        "policy": {
+            "category": "housing",
+            "type": "rent_control",
+            "parameters": {
+                "baseline_fare": 12000.0,
+                "new_fare": 15000.0,
+                "increase_percentage": 25.0,
+                "currency": "TL/month",
+            },
+        },
+        "questions": [
+            {
+                "id": "q1_affordability",
+                "text": "Can your household afford this adjusted rent level?",
+                "options": [
+                    {"id": "yes_comfortably", "label": "Yes comfortably"},
+                    {"id": "no_stretched", "label": "No, financially stretched"},
+                ],
+            }
+        ],
+    }
+    try:
+        create_res = c.post("/api/v2/scenarios", json=custom_payload)
+        assert create_res.status_code == 201, create_res.json()
+        assert create_res.json()["scenario_id"] == "test_custom_001"
+
+        # Verify custom scenario appears in catalog
+        cat_after = c.get("/api/v2/scenarios").json()["items"]
+        assert any(item["scenario_id"] == "test_custom_001" for item in cat_after)
+    finally:
+        from pathlib import Path
+        test_file = Path("experiments/policy_scenarios/scenarios/test_custom_001.yaml")
+        if test_file.exists():
+            test_file.unlink()
+
+    # 8. Invalid scenario rejects with 400 or 422
+    bad_res = c.post("/api/v2/scenarios", json={"scenario_id": "123_invalid_id"})
+    assert bad_res.status_code in (400, 422)
+

@@ -10,6 +10,7 @@ try:
     from .adapter import (
         get_scenario,
         list_available_scenarios,
+        save_custom_scenario,
         scenario_to_experiment_definition,
     )
     from .eligibility import (
@@ -47,6 +48,7 @@ except ImportError:
     from scenarios.adapter import (  # type: ignore
         get_scenario,
         list_available_scenarios,
+        save_custom_scenario,
         scenario_to_experiment_definition,
     )
     from scenarios.eligibility import (  # type: ignore
@@ -101,6 +103,7 @@ __all__ = [
     # Adapter
     "list_available_scenarios",
     "get_scenario",
+    "save_custom_scenario",
     "scenario_to_experiment_definition",
     # Eligibility
     "evaluate_resident",
