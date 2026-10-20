@@ -6734,6 +6734,81 @@
         ],
         "title": "ExperimentListItem"
       },
+      "FieldSelection": {
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "const": "persona-field-selection-1",
+            "title": "Schema Version",
+            "default": "persona-field-selection-1"
+          },
+          "allowlist": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Allowlist"
+          },
+          "required": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Required"
+          },
+          "optional": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Optional"
+          },
+          "max_attributes": {
+            "type": "integer",
+            "maximum": 12.0,
+            "minimum": 1.0,
+            "title": "Max Attributes",
+            "default": 6
+          },
+          "missingness": {
+            "type": "string",
+            "enum": [
+              "omit",
+              "error"
+            ],
+            "title": "Missingness",
+            "default": "omit"
+          },
+          "sidecar_root": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sidecar Root"
+          },
+          "sidecar_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sidecar Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "allowlist"
+        ],
+        "title": "FieldSelection"
+      },
       "FileEvidenceModel": {
         "properties": {
           "relpath": {
@@ -8145,6 +8220,16 @@
             ],
             "title": "Visible Fields",
             "description": "None = default policy (see personas.DEFAULT_VISIBLE)."
+          },
+          "field_selection": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FieldSelection"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
