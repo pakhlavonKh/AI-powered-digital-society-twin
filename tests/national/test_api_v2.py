@@ -139,6 +139,41 @@ def test_mutations_are_loopback_only(national_settings):
         assert c.get("/api/v2/overview").status_code == 200
 
 
-@pytest.mark.parametrize("path", ["/api/v2/populations/pop-missing", "/api/v2/cohorts/nope", "/api/v2/runs/nope", "/api/v2/experiments/nope"])
+@pytest.mark.parametrize("path", ["/api/v2/populations/pop-missing", "/api/v2/cohorts/nope", "/api/v2/runs/nope", "/api/v2/experiments/nope", "/api/v2/scenarios/nope"])
 def test_unknown_ids_are_404(national_client, path):
     assert national_client.get(path).status_code == 404
+
+
+def test_scenarios_catalog_and_experiment_definition(national_client):
+    c = national_client
+
+    # 1. Catalog listing
+    res = c.get("/api/v2/scenarios")
+    assert res.status_code == 200
+    catalog = res.json()["items"]
+    ids = {item["scenario_id"] for item in catalog}
+    assert "transport_fare_001" in ids
+    assert "energy_subsidy_001" in ids
+
+    # 2. Scenario detail
+    detail = c.get("/api/v2/scenarios/transport_fare_001").json()
+    assert detail["scenario_id"] == "transport_fare_001"
+    assert len(detail["questions"]) == 2
+
+    # 3. Experiment definition generation for a cohort
+    exp_def = c.get("/api/v2/scenarios/transport_fare_001/experiment-definition", params={"cohort_id": "c123"}).json()
+    assert exp_def["cohort"]["cohort_id"] == "c123"
+    assert exp_def["scenario"]["title"] == "Ankara Public Transportation Fare Increase"
+    assert any(p["name"] == "baseline_tariff" and p["value"] == 21.0 for p in exp_def["scenario"]["parameters"])
+    assert len(exp_def["task"]["options"]) >= 2
+
+    # 4. Multi-question selection
+    exp_def_q2 = c.get("/api/v2/scenarios/transport_fare_001/experiment-definition",
+                       params={"cohort_id": "c123", "question_id": "q2_policy_support"}).json()
+    assert "support or oppose" in exp_def_q2["task"]["instruction"].lower()
+
+    # 5. Backward-compatible /api/v2/examples/fare-experiment
+    demo = c.get("/api/v2/examples/fare-experiment", params={"cohort_id": "c123"}).json()
+    assert demo["cohort"]["cohort_id"] == "c123"
+    assert "options" in demo["task"]
+

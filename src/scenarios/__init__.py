@@ -7,6 +7,11 @@ Provides comprehensive support for:
 """
 
 try:
+    from .adapter import (
+        get_scenario,
+        list_available_scenarios,
+        scenario_to_experiment_definition,
+    )
     from .eligibility import (
         EligibilityStatus,
         PopulationFilterResult,
@@ -39,6 +44,11 @@ try:
         ScenarioMetadata,
     )
 except ImportError:
+    from scenarios.adapter import (  # type: ignore
+        get_scenario,
+        list_available_scenarios,
+        scenario_to_experiment_definition,
+    )
     from scenarios.eligibility import (  # type: ignore
         EligibilityStatus,
         PopulationFilterResult,
@@ -88,6 +98,10 @@ __all__ = [
     "ScenarioNotFoundError",
     "ScenarioParseError",
     "ScenarioValidationError",
+    # Adapter
+    "list_available_scenarios",
+    "get_scenario",
+    "scenario_to_experiment_definition",
     # Eligibility
     "evaluate_resident",
     "filter_population",

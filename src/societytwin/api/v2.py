@@ -11,7 +11,7 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 
-from societytwin.errors import WorkbenchError
+from societytwin.errors import WorkbenchError, not_found
 from societytwin.national.cohorts import CohortDefinitionRequest, CohortSampleRequest
 from societytwin.national.experiments import ExperimentDefinition, example_fare_definition
 from societytwin.national.generator import MAX_SIZE, GenerationConfig
@@ -180,10 +180,45 @@ def build_router() -> APIRouter:
                         visible_fields: Annotated[list[str] | None, Query()] = None):
         return s.sample_personas(sample_id, offset, limit, visible_fields)
 
+    @r.get("/scenarios", tags=["experiments"],
+           description="List all available policy scenarios from registered scenario directories.")
+    def list_scenarios():
+        from scenarios.adapter import list_available_scenarios
+        return {"items": list_available_scenarios()}
+
+    @r.get("/scenarios/{scenario_id}", tags=["experiments"],
+           description="Retrieve full scenario configuration by scenario_id.")
+    def get_scenario_detail(scenario_id: str):
+        from scenarios.adapter import get_scenario
+        try:
+            return get_scenario(scenario_id).model_dump(mode="json")
+        except KeyError as exc:
+            raise not_found("scenario_not_found", str(exc))
+
+    @r.get("/scenarios/{scenario_id}/experiment-definition", tags=["experiments"],
+           description="Transform a scenario into an experiment definition for a given cohort.")
+    def get_scenario_experiment_definition(
+        scenario_id: str,
+        cohort_id: str,
+        question_id: Annotated[str | None, Query()] = None,
+        seed: Annotated[int, Query()] = 7,
+    ):
+        from scenarios.adapter import get_scenario, scenario_to_experiment_definition
+        try:
+            scenario = get_scenario(scenario_id)
+            return scenario_to_experiment_definition(scenario, cohort_id, question_id, seed)
+        except KeyError as exc:
+            raise not_found("scenario_not_found", str(exc))
+
     @r.get("/examples/fare-experiment", tags=["experiments"],
            description="The demonstration design with explicitly HYPOTHETICAL fare parameters.")
     def example(cohort_id: str):
-        return example_fare_definition(cohort_id)
+        try:
+            from scenarios.adapter import get_scenario, scenario_to_experiment_definition
+            scenario = get_scenario("transport_fare_001")
+            return scenario_to_experiment_definition(scenario, cohort_id)
+        except Exception:
+            return example_fare_definition(cohort_id)
 
     @r.post("/experiments", status_code=201, tags=["experiments"], description="Saves a definition. Nothing runs.")
     def experiment_create(body: ExperimentDefinition, s: S):

@@ -9,7 +9,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { EmptyState, ErrorState, Loading } from "@/components/States";
 import { Badge } from "@/components/StatusBadge";
 import { toApiError, type ApiError } from "@/lib/api/client";
-import { v2, type Cohort, type Environment, type Experiment, type ExperimentDefinition, type Geography, type Plan, type RunView } from "@/lib/api/v2";
+import { v2, type Cohort, type Environment, type Experiment, type ExperimentDefinition, type Geography, type Plan, type RunView, type ScenarioList } from "@/lib/api/v2";
 import { fmtInt, fmtUsd } from "@/lib/format";
 import { useLinkPop, withPop } from "@/lib/population";
 import { useApi } from "@/lib/useApi";
@@ -36,6 +36,9 @@ function Builder({ populationId }: { populationId: string }) {
   const caps = useCapabilities();
   const cohorts = useApi("v2:cohorts", (signal) => v2<{ items: Cohort[] }>("/cohorts", { signal }));
   const geo = useApi(`v2:geo:${populationId}`, (signal) => v2<Geography>("/geography/provinces", { query: { population_id: populationId }, signal }));
+  const scenarios = useApi("v2:scenarios", (signal) => v2<ScenarioList>("/scenarios", { signal }));
+  const [selectedScenarioId, setSelectedScenarioId] = useState<string>("transport_fare_001");
+  const [selectedQuestionId, setSelectedQuestionId] = useState<string>("");
   const [step, setStep] = useState(0);
   const [d, setD] = useState<ExperimentDefinition>(() => blank(params.get("cohort") ?? ""));
   const [plan, setPlan] = useState<Plan | null>(null);
@@ -51,10 +54,25 @@ function Builder({ populationId }: { populationId: string }) {
   const patch = <K extends keyof ExperimentDefinition>(key: K, value: Partial<ExperimentDefinition[K]>) =>
     setD((cur) => ({ ...cur, [key]: { ...(cur[key] as object), ...(value as object) } }));
 
-  const loadExample = async () => {
+  const activeScenario = scenarios.data?.items.find((s) => s.scenario_id === selectedScenarioId)
+    ?? scenarios.data?.items[0];
+
+  const loadPolicyScenario = async (scenarioId: string, qId?: string) => {
     const cohortId = d.cohort.cohort_id || valid.find((c) => !c.minors)?.cohort_id || valid[0]?.cohort_id || "";
-    const ex = await v2<ExperimentDefinition>("/examples/fare-experiment", { query: { cohort_id: cohortId } });
+    const query: Record<string, string> = { cohort_id: cohortId };
+    if (qId) query.question_id = qId;
+    const ex = await v2<ExperimentDefinition>(`/scenarios/${scenarioId}/experiment-definition`, { query });
     setD({ ...ex, persona: { visible_fields: null } });
+  };
+
+  const loadExample = async () => {
+    if (activeScenario) {
+      await loadPolicyScenario(activeScenario.scenario_id, selectedQuestionId || undefined);
+    } else {
+      const cohortId = d.cohort.cohort_id || valid.find((c) => !c.minors)?.cohort_id || valid[0]?.cohort_id || "";
+      const ex = await v2<ExperimentDefinition>("/examples/fare-experiment", { query: { cohort_id: cohortId } });
+      setD({ ...ex, persona: { visible_fields: null } });
+    }
   };
 
   const review = async () => {
@@ -78,11 +96,46 @@ function Builder({ populationId }: { populationId: string }) {
   const indicators = env.data ? Object.values(env.data.domains).flat() : [];
   return (
     <div className="stack">
-      <div className="row" style={{ justifyContent: "space-between" }}>
+      <div className="row" style={{ justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
         <ol className="builder-steps" aria-label="Experiment design steps">
           {STEPS.map((s, i) => <li key={s}><button type="button" aria-current={i === step ? "step" : undefined} onClick={() => setStep(i)} aria-label={`Step ${i + 1}: ${s}`}><span>{i + 1}</span>{s}</button></li>)}
         </ol>
-        <button type="button" className="button small" onClick={loadExample} disabled={!valid.length}>Load example: Ankara fare increase (hypothetical)</button>
+        <div className="row" style={{ alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          <label htmlFor="scenario-select" className="small" style={{ fontWeight: 600 }}>Policy Scenario:</label>
+          <select
+            id="scenario-select"
+            className="small"
+            value={activeScenario?.scenario_id ?? selectedScenarioId}
+            onChange={(e) => {
+              setSelectedScenarioId(e.target.value);
+              setSelectedQuestionId("");
+            }}
+          >
+            {scenarios.data?.items.map((s) => (
+              <option key={s.scenario_id} value={s.scenario_id}>
+                {s.name} ({s.category})
+              </option>
+            ))}
+          </select>
+          {activeScenario && activeScenario.questions.length > 1 ? (
+            <select
+              id="question-select"
+              className="small"
+              value={selectedQuestionId || activeScenario.questions[0].id}
+              onChange={(e) => setSelectedQuestionId(e.target.value)}
+              title="Select specific question from this scenario questionnaire"
+            >
+              {activeScenario.questions.map((q) => (
+                <option key={q.id} value={q.id}>
+                  {q.id}: {q.text.slice(0, 40)}...
+                </option>
+              ))}
+            </select>
+          ) : null}
+          <button type="button" className="button small primary" onClick={loadExample} disabled={!valid.length}>
+            Load Policy Scenario
+          </button>
+        </div>
       </div>
       {cohorts.data && valid.length === 0 ? <EmptyState title="No cohort for this population.">Save a cohort first on the <Link href={withPop("/cohorts", pop)}>Cohorts</Link> page; experiments always run on a saved cohort.</EmptyState> : null}
 

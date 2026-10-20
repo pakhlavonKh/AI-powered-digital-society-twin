@@ -290,3 +290,17 @@ export type Capabilities = {
   vocabularies: Record<string, { attribute: string; note: string; categories: { code: string; label_en: string; label_tr: string | null }[] }>;
   evidence_levels: Record<string, string>; persona_fields: { all: string[]; default_visible: string[] }; groupable: string[];
 };
+
+export type ScenarioListItem = {
+  scenario_id: string;
+  version: string;
+  name: string;
+  description: string;
+  category: string;
+  type: string;
+  location: { province_code: string; province_name: string };
+  questions_count: number;
+  questions: { id: string; text: string }[];
+};
+export type ScenarioList = { items: ScenarioListItem[] };
+
