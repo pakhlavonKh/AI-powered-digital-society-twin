@@ -1,0 +1,578 @@
+﻿file_name,indicator,original_name_tr,description_en,unit,source_table_or_flow
+population_total_and_growth.csv,total_population,Toplam Nüfus (ADNKS),Total province population from Address Based Population Registration System,person,DF_ADNKS_T30_V1.1
+population_total_and_growth.csv,annual_population_growth_rate,Yıllık nüfus artış hızı (‰),Annual population growth rate per thousand,per_thousand,DF_ADNKS_T29_V1.1
+population_total_and_growth.csv,population_density,Nüfus yoğunluğu (km²'ye düşen kişi sayısı),Population density (persons per km2),persons_per_km2,DF_ADNKS_T29_V1.1
+population_by_age_sex.csv,pop_age_total_total,"Nüfus (Toplam yaş, Toplam)",Population aged Toplam (total),person,DF_ADNKS_T16_V1.0
+population_by_age_sex.csv,pop_age_0_4_total,"Nüfus (0-4 yaş, Toplam)",Population aged 0-4 (total),person,DF_ADNKS_T16_V1.0
+population_by_age_sex.csv,pop_age_5_9_total,"Nüfus (5-9 yaş, Toplam)",Population aged 5-9 (total),person,DF_ADNKS_T16_V1.0
+population_by_age_sex.csv,pop_age_10_14_total,"Nüfus (10-14 yaş, Toplam)",Population aged 10-14 (total),person,DF_ADNKS_T16_V1.0
+population_by_age_sex.csv,pop_age_15_19_total,"Nüfus (15-19 yaş, Toplam)",Population aged 15-19 (total),person,DF_ADNKS_T16_V1.0
+population_by_age_sex.csv,pop_age_20_24_total,"Nüfus (20-24 yaş, Toplam)",Population aged 20-24 (total),person,DF_ADNKS_T16_V1.0
+population_by_age_sex.csv,pop_age_25_29_total,"Nüfus (25-29 yaş, Toplam)",Population aged 25-29 (total),person,DF_ADNKS_T16_V1.0
+population_by_age_sex.csv,pop_age_30_34_total,"Nüfus (30-34 yaş, Toplam)",Population aged 30-34 (total),person,DF_ADNKS_T16_V1.0
+population_by_age_sex.csv,pop_age_35_39_total,"Nüfus (35-39 yaş, Toplam)",Population aged 35-39 (total),person,DF_ADNKS_T16_V1.0
+population_by_age_sex.csv,pop_age_40_44_total,"Nüfus (40-44 yaş, Toplam)",Population aged 40-44 (total),person,DF_ADNKS_T16_V1.0
+population_by_age_sex.csv,pop_age_45_49_total,"Nüfus (45-49 yaş, Toplam)",Population aged 45-49 (total),person,DF_ADNKS_T16_V1.0
+population_by_age_sex.csv,pop_age_50_54_total,"Nüfus (50-54 yaş, Toplam)",Population aged 50-54 (total),person,DF_ADNKS_T16_V1.0
+population_by_age_sex.csv,pop_age_55_59_total,"Nüfus (55-59 yaş, Toplam)",Population aged 55-59 (total),person,DF_ADNKS_T16_V1.0
+population_by_age_sex.csv,pop_age_60_64_total,"Nüfus (60-64 yaş, Toplam)",Population aged 60-64 (total),person,DF_ADNKS_T16_V1.0
+population_by_age_sex.csv,pop_age_65_69_total,"Nüfus (65-69 yaş, Toplam)",Population aged 65-69 (total),person,DF_ADNKS_T16_V1.0
+population_by_age_sex.csv,pop_age_70_74_total,"Nüfus (70-74 yaş, Toplam)",Population aged 70-74 (total),person,DF_ADNKS_T16_V1.0
+population_by_age_sex.csv,pop_age_75_79_total,"Nüfus (75-79 yaş, Toplam)",Population aged 75-79 (total),person,DF_ADNKS_T16_V1.0
+population_by_age_sex.csv,pop_age_80_84_total,"Nüfus (80-84 yaş, Toplam)",Population aged 80-84 (total),person,DF_ADNKS_T16_V1.0
+population_by_age_sex.csv,pop_age_85_89_total,"Nüfus (85-89 yaş, Toplam)",Population aged 85-89 (total),person,DF_ADNKS_T16_V1.0
+population_by_age_sex.csv,pop_age_90_plus_total,"Nüfus (90+ yaş, Toplam)",Population aged 90+ (total),person,DF_ADNKS_T16_V1.0
+population_by_age_sex.csv,pop_age_total_male,"Nüfus (Toplam yaş, Erkek)",Population aged Toplam (male),person,DF_ADNKS_T16_V1.0
+population_by_age_sex.csv,pop_age_0_4_male,"Nüfus (0-4 yaş, Erkek)",Population aged 0-4 (male),person,DF_ADNKS_T16_V1.0
+population_by_age_sex.csv,pop_age_5_9_male,"Nüfus (5-9 yaş, Erkek)",Population aged 5-9 (male),person,DF_ADNKS_T16_V1.0
+population_by_age_sex.csv,pop_age_10_14_male,"Nüfus (10-14 yaş, Erkek)",Population aged 10-14 (male),person,DF_ADNKS_T16_V1.0
+population_by_age_sex.csv,pop_age_15_19_male,"Nüfus (15-19 yaş, Erkek)",Population aged 15-19 (male),person,DF_ADNKS_T16_V1.0
+population_by_age_sex.csv,pop_age_20_24_male,"Nüfus (20-24 yaş, Erkek)",Population aged 20-24 (male),person,DF_ADNKS_T16_V1.0
+population_by_age_sex.csv,pop_age_25_29_male,"Nüfus (25-29 yaş, Erkek)",Population aged 25-29 (male),person,DF_ADNKS_T16_V1.0
+population_by_age_sex.csv,pop_age_30_34_male,"Nüfus (30-34 yaş, Erkek)",Population aged 30-34 (male),person,DF_ADNKS_T16_V1.0
+population_by_age_sex.csv,pop_age_35_39_male,"Nüfus (35-39 yaş, Erkek)",Population aged 35-39 (male),person,DF_ADNKS_T16_V1.0
+population_by_age_sex.csv,pop_age_40_44_male,"Nüfus (40-44 yaş, Erkek)",Population aged 40-44 (male),person,DF_ADNKS_T16_V1.0
+population_by_age_sex.csv,pop_age_45_49_male,"Nüfus (45-49 yaş, Erkek)",Population aged 45-49 (male),person,DF_ADNKS_T16_V1.0
+population_by_age_sex.csv,pop_age_50_54_male,"Nüfus (50-54 yaş, Erkek)",Population aged 50-54 (male),person,DF_ADNKS_T16_V1.0
+population_by_age_sex.csv,pop_age_55_59_male,"Nüfus (55-59 yaş, Erkek)",Population aged 55-59 (male),person,DF_ADNKS_T16_V1.0
+population_by_age_sex.csv,pop_age_60_64_male,"Nüfus (60-64 yaş, Erkek)",Population aged 60-64 (male),person,DF_ADNKS_T16_V1.0
+population_by_age_sex.csv,pop_age_65_69_male,"Nüfus (65-69 yaş, Erkek)",Population aged 65-69 (male),person,DF_ADNKS_T16_V1.0
+population_by_age_sex.csv,pop_age_70_74_male,"Nüfus (70-74 yaş, Erkek)",Population aged 70-74 (male),person,DF_ADNKS_T16_V1.0
+population_by_age_sex.csv,pop_age_75_79_male,"Nüfus (75-79 yaş, Erkek)",Population aged 75-79 (male),person,DF_ADNKS_T16_V1.0
+population_by_age_sex.csv,pop_age_80_84_male,"Nüfus (80-84 yaş, Erkek)",Population aged 80-84 (male),person,DF_ADNKS_T16_V1.0
+population_by_age_sex.csv,pop_age_85_89_male,"Nüfus (85-89 yaş, Erkek)",Population aged 85-89 (male),person,DF_ADNKS_T16_V1.0
+population_by_age_sex.csv,pop_age_90_plus_male,"Nüfus (90+ yaş, Erkek)",Population aged 90+ (male),person,DF_ADNKS_T16_V1.0
+population_by_age_sex.csv,pop_age_total_female,"Nüfus (Toplam yaş, Kadın)",Population aged Toplam (female),person,DF_ADNKS_T16_V1.0
+population_by_age_sex.csv,pop_age_0_4_female,"Nüfus (0-4 yaş, Kadın)",Population aged 0-4 (female),person,DF_ADNKS_T16_V1.0
+population_by_age_sex.csv,pop_age_5_9_female,"Nüfus (5-9 yaş, Kadın)",Population aged 5-9 (female),person,DF_ADNKS_T16_V1.0
+population_by_age_sex.csv,pop_age_10_14_female,"Nüfus (10-14 yaş, Kadın)",Population aged 10-14 (female),person,DF_ADNKS_T16_V1.0
+population_by_age_sex.csv,pop_age_15_19_female,"Nüfus (15-19 yaş, Kadın)",Population aged 15-19 (female),person,DF_ADNKS_T16_V1.0
+population_by_age_sex.csv,pop_age_20_24_female,"Nüfus (20-24 yaş, Kadın)",Population aged 20-24 (female),person,DF_ADNKS_T16_V1.0
+population_by_age_sex.csv,pop_age_25_29_female,"Nüfus (25-29 yaş, Kadın)",Population aged 25-29 (female),person,DF_ADNKS_T16_V1.0
+population_by_age_sex.csv,pop_age_30_34_female,"Nüfus (30-34 yaş, Kadın)",Population aged 30-34 (female),person,DF_ADNKS_T16_V1.0
+population_by_age_sex.csv,pop_age_35_39_female,"Nüfus (35-39 yaş, Kadın)",Population aged 35-39 (female),person,DF_ADNKS_T16_V1.0
+population_by_age_sex.csv,pop_age_40_44_female,"Nüfus (40-44 yaş, Kadın)",Population aged 40-44 (female),person,DF_ADNKS_T16_V1.0
+population_by_age_sex.csv,pop_age_45_49_female,"Nüfus (45-49 yaş, Kadın)",Population aged 45-49 (female),person,DF_ADNKS_T16_V1.0
+population_by_age_sex.csv,pop_age_50_54_female,"Nüfus (50-54 yaş, Kadın)",Population aged 50-54 (female),person,DF_ADNKS_T16_V1.0
+population_by_age_sex.csv,pop_age_55_59_female,"Nüfus (55-59 yaş, Kadın)",Population aged 55-59 (female),person,DF_ADNKS_T16_V1.0
+population_by_age_sex.csv,pop_age_60_64_female,"Nüfus (60-64 yaş, Kadın)",Population aged 60-64 (female),person,DF_ADNKS_T16_V1.0
+population_by_age_sex.csv,pop_age_65_69_female,"Nüfus (65-69 yaş, Kadın)",Population aged 65-69 (female),person,DF_ADNKS_T16_V1.0
+population_by_age_sex.csv,pop_age_70_74_female,"Nüfus (70-74 yaş, Kadın)",Population aged 70-74 (female),person,DF_ADNKS_T16_V1.0
+population_by_age_sex.csv,pop_age_75_79_female,"Nüfus (75-79 yaş, Kadın)",Population aged 75-79 (female),person,DF_ADNKS_T16_V1.0
+population_by_age_sex.csv,pop_age_80_84_female,"Nüfus (80-84 yaş, Kadın)",Population aged 80-84 (female),person,DF_ADNKS_T16_V1.0
+population_by_age_sex.csv,pop_age_85_89_female,"Nüfus (85-89 yaş, Kadın)",Population aged 85-89 (female),person,DF_ADNKS_T16_V1.0
+population_by_age_sex.csv,pop_age_90_plus_female,"Nüfus (90+ yaş, Kadın)",Population aged 90+ (female),person,DF_ADNKS_T16_V1.0
+population_structural_indicators.csv,pop_broad_age_0_14,Geniş yaş grubu nüfusu (0-14 yaş),Population aged 0-14,person,DF_ADNKS_T35_V1.1
+population_structural_indicators.csv,pop_broad_age_15_64,Geniş yaş grubu nüfusu (15-64 yaş),Population aged 15-64,person,DF_ADNKS_T35_V1.1
+population_structural_indicators.csv,pop_broad_age_65_plus,Geniş yaş grubu nüfusu (65+ yaş),Population aged 65+,person,DF_ADNKS_T35_V1.1
+population_structural_indicators.csv,median_age_total,Ortanca yaş (Toplam),Median age (total),year,DF_ADNKS_T23_V1.1
+population_structural_indicators.csv,median_age_male,Ortanca yaş (Erkek),Median age (male),year,DF_ADNKS_T23_V1.1
+population_structural_indicators.csv,median_age_female,Ortanca yaş (Kadın),Median age (female),year,DF_ADNKS_T23_V1.1
+population_structural_indicators.csv,age_dependency_ratio_total,Toplam yaş bağımlılık oranı (%),Total age dependency ratio (%),percent,DF_ADNKS_T24_V1.1
+population_structural_indicators.csv,age_dependency_ratio_child,Çocuk bağımlılık oranı % (0-14 yaş),Child dependency ratio (0-14) (%),percent,DF_ADNKS_T24_V1.1
+population_structural_indicators.csv,age_dependency_ratio_elderly,Yaşlı bağımlılık oranı % (65+ yaş),Old-age dependency ratio (65+) (%),percent,DF_ADNKS_T24_V1.1
+population_urban_rural.csv,pop_province_district_centers_total,İl ve ilçe merkezleri nüfusu (Toplam),Population in province district centers (total),person,DF_ADNKS_T14_V1.1
+population_urban_rural.csv,pop_province_district_centers_male,İl ve ilçe merkezleri nüfusu (Erkek),Population in province district centers (male),person,DF_ADNKS_T14_V1.1
+population_urban_rural.csv,pop_province_district_centers_female,İl ve ilçe merkezleri nüfusu (Kadın),Population in province district centers (female),person,DF_ADNKS_T14_V1.1
+population_urban_rural.csv,pop_towns_and_villages_total,Belde ve köyler nüfusu (Toplam),Population in towns and villages (total),person,DF_ADNKS_T14_V1.1
+population_urban_rural.csv,pop_towns_and_villages_male,Belde ve köyler nüfusu (Erkek),Population in towns and villages (male),person,DF_ADNKS_T14_V1.1
+population_urban_rural.csv,pop_towns_and_villages_female,Belde ve köyler nüfusu (Kadın),Population in towns and villages (female),person,DF_ADNKS_T14_V1.1
+population_urban_rural.csv,pop_degurba_dense_urban_total,Yoğun kent nüfusu (Toplam),DEGURBA dense urban population (total),person,DF_ADNKS_T37_V1.1
+population_urban_rural.csv,pop_degurba_dense_urban_male,Yoğun kent nüfusu (Erkek),DEGURBA dense urban population (male),person,DF_ADNKS_T37_V1.1
+population_urban_rural.csv,pop_degurba_dense_urban_female,Yoğun kent nüfusu (Kadın),DEGURBA dense urban population (female),person,DF_ADNKS_T37_V1.1
+population_urban_rural.csv,pop_degurba_intermediate_urban_total,Orta kent nüfusu (Toplam),DEGURBA intermediate urban population (total),person,DF_ADNKS_T37_V1.1
+population_urban_rural.csv,pop_degurba_intermediate_urban_male,Orta kent nüfusu (Erkek),DEGURBA intermediate urban population (male),person,DF_ADNKS_T37_V1.1
+population_urban_rural.csv,pop_degurba_intermediate_urban_female,Orta kent nüfusu (Kadın),DEGURBA intermediate urban population (female),person,DF_ADNKS_T37_V1.1
+population_urban_rural.csv,pop_degurba_rural_total,Kır nüfusu (Toplam),DEGURBA rural population (total),person,DF_ADNKS_T37_V1.1
+population_urban_rural.csv,pop_degurba_rural_male,Kır nüfusu (Erkek),DEGURBA rural population (male),person,DF_ADNKS_T37_V1.1
+population_urban_rural.csv,pop_degurba_rural_female,Kır nüfusu (Kadın),DEGURBA rural population (female),person,DF_ADNKS_T37_V1.1
+vital_fertility_and_birth_indicators.csv,crude_birth_rate,Kaba doğum hızı (‰),Crude birth rate (per thousand population),per_thousand,crude_birth_rate_prov.xls
+vital_fertility_and_birth_indicators.csv,total_fertility_rate,Toplam doğurganlık hızı (çocuk sayısı),Total fertility rate (children per woman),children_per_woman,total_fertility_rate_prov.xls
+vital_fertility_and_birth_indicators.csv,mean_age_of_mother_at_birth,Annenin ortalama yaşı,Mean age of mother at birth,year,DF_DOGUM_ANNE_ORTYAS_C_V1.0
+vital_fertility_and_birth_indicators.csv,mean_age_of_mother_at_first_birth,İlk doğumdaki ortalama anne yaşı,Mean age of mother at birth of first child,year,DF_DOGUM_ORTYAS_ILKDOG_C_V1.0
+vital_mortality_and_life_expectancy.csv,crude_death_rate,Kaba ölüm hızı (‰),Crude death rate (per thousand population),per_thousand,crude_death_rate_prov.xls
+vital_mortality_and_life_expectancy.csv,infant_mortality_rate,Bebek ölüm hızı (‰),Infant mortality rate (per thousand live births),per_thousand,infant_mortality_rate_prov.xls
+vital_mortality_and_life_expectancy.csv,under5_mortality_rate,Beş yaş altı ölüm hızı (‰),Under-five mortality rate (per thousand live births),per_thousand,under5_mortality_rate_prov.xls
+vital_mortality_and_life_expectancy.csv,crude_suicide_rate,Kaba intihar hızı (yüz binde),"Crude suicide rate (per 100,000 population)",per_100k,suicides_rate_prov.xls
+vital_mortality_and_life_expectancy.csv,life_expectancy_at_birth_total,Doğuşta beklenen yaşam süresi (Toplam),Life expectancy at birth (Total),year,life_expectancy_prov.xls
+vital_mortality_and_life_expectancy.csv,life_expectancy_at_birth_male,Doğuşta beklenen yaşam süresi (Erkek),Life expectancy at birth (Male),year,life_expectancy_prov.xls
+vital_mortality_and_life_expectancy.csv,life_expectancy_at_birth_female,Doğuşta beklenen yaşam süresi (Kadın),Life expectancy at birth (Female),year,life_expectancy_prov.xls
+deaths_by_cause.csv,deaths_total,Toplam ölüm sayısı,Total deaths,person,deaths_by_cause_prov.xls
+deaths_by_cause.csv,deaths_circulatory_system,Dolaşım sistemi hastalıkları,Deaths from diseases of the circulatory system,person,deaths_by_cause_prov.xls
+deaths_by_cause.csv,deaths_neoplasms,İyi huylu ve kötü huylu tümörler,Deaths from benign and malignant neoplasms,person,deaths_by_cause_prov.xls
+deaths_by_cause.csv,deaths_respiratory_system,Solunum sistemi hastalıkları,Deaths from diseases of the respiratory system,person,deaths_by_cause_prov.xls
+deaths_by_cause.csv,deaths_nervous_system_and_sense_organs,Sinir sistemi ve duyu organları hastalıkları,Deaths from nervous system and sense organ diseases,person,deaths_by_cause_prov.xls
+deaths_by_cause.csv,deaths_endocrine_nutritional_metabolic,"İç salgı bezi, beslenme ve metabolizma hastalıkları","Deaths from endocrine, nutritional and metabolic diseases",person,deaths_by_cause_prov.xls
+deaths_by_cause.csv,deaths_external_injury_and_poisoning,Dışsal yaralanma nedenleri ve zehirlenmeler,Deaths from external causes of injury and poisoning,person,deaths_by_cause_prov.xls
+deaths_by_cause.csv,deaths_covid19,COVID-19 kaynaklı ölümler,Deaths from COVID-19,person,deaths_by_cause_prov.xls
+deaths_by_cause.csv,deaths_other_causes,Diğer ölüm nedenleri,Deaths from other causes,person,deaths_by_cause_prov.xls
+deaths_by_cause.csv,deaths_unknown_cause,Nedeni bilinmeyen ölümler,Deaths of unknown cause,person,deaths_by_cause_prov.xls
+population_projections_2024_2030.csv,projected_population,Nüfus projeksiyonu (Ana senaryo),"Projected provincial population (Main scenario, 2023 baseline + 2024-2030 projections)",person,pop_projections_prov.xls
+population_projections_2024_2030.csv,projected_avg_annual_growth_rate_2023_2030,2023-2030 dönemi yıllık ortalama nüfus artış hızı (‰),Projected annual average population growth rate for 2023-2030 (per thousand),per_thousand,pop_projections_growth_prov.xls
+households_size_and_types.csv,average_household_size,Ortalama hanehalkı büyüklüğü,Average household size (persons per household),persons,DF_ADNKS_T25_V1.1
+households_size_and_types.csv,households_total,Toplam hanehalkı sayısı,Total number of households,household,DF_ADNKS_T06_V1.1
+households_size_and_types.csv,households_one_person,Tek kişilik hanehalkı sayısı,Number of one-person households,household,DF_ADNKS_T06_V1.1
+households_size_and_types.csv,households_one_family,Tek çekirdek aileden oluşan hanehalkı sayısı,Number of one-family (nuclear) households,household,DF_ADNKS_T06_V1.1
+households_size_and_types.csv,households_extended_family,En az bir çekirdek aile ve diğer kişilerden oluşan hanehalkı sayısı,Number of extended-family households,household,DF_ADNKS_T06_V1.1
+households_size_and_types.csv,households_multi_person_no_family,Çekirdek aile bulunmayan birden fazla kişiden oluşan hanehalkı sayısı,Number of multi-person non-family households,household,DF_ADNKS_T06_V1.1
+households_size_and_types.csv,households_nuclear_couple_only,Sadece eşlerden oluşan çekirdek aile sayısı,Nuclear households: married couple without resident children,household,DF_ADNKS_T08_V1.1
+households_size_and_types.csv,households_nuclear_couple_with_children,Eşler ve çocuklardan oluşan çekirdek aile sayısı,Nuclear households: couple with children,household,DF_ADNKS_T08_V1.1
+households_size_and_types.csv,households_nuclear_lone_parent,Tek ebeveyn ve çocuklardan oluşan çekirdek aile sayısı,Nuclear households: lone parent with children (total),household,DF_ADNKS_T08_V1.1
+households_size_and_types.csv,households_nuclear_father_with_children,Baba ve çocuklardan oluşan çekirdek aile sayısı,Nuclear households: father with children,household,DF_ADNKS_T08_V1.1
+households_size_and_types.csv,households_nuclear_mother_with_children,Anne ve çocuklardan oluşan çekirdek aile sayısı,Nuclear households: mother with children,household,DF_ADNKS_T08_V1.1
+marital_status_by_sex.csv,pop_15plus_marital_total_total,15+ yaş nüfus - Toplam (15+ yaş) (Toplam),Population aged 15+ by marital status: total (total),person,DF_ADNKS_T10_V1.1
+marital_status_by_sex.csv,pop_15plus_marital_never_married_total,15+ yaş nüfus - Hiç evlenmedi (Toplam),Population aged 15+ by marital status: never married (total),person,DF_ADNKS_T10_V1.1
+marital_status_by_sex.csv,pop_15plus_marital_married_total,15+ yaş nüfus - Evli (Toplam),Population aged 15+ by marital status: married (total),person,DF_ADNKS_T10_V1.1
+marital_status_by_sex.csv,pop_15plus_marital_divorced_total,15+ yaş nüfus - Boşandı (Toplam),Population aged 15+ by marital status: divorced (total),person,DF_ADNKS_T10_V1.1
+marital_status_by_sex.csv,pop_15plus_marital_widowed_total,15+ yaş nüfus - Eşi öldü (Toplam),Population aged 15+ by marital status: widowed (total),person,DF_ADNKS_T10_V1.1
+marital_status_by_sex.csv,pop_15plus_marital_unknown_total,15+ yaş nüfus - Bilinmeyen (Toplam),Population aged 15+ by marital status: unknown (total),person,DF_ADNKS_T10_V1.1
+marital_status_by_sex.csv,pop_15plus_marital_total_male,15+ yaş nüfus - Toplam (15+ yaş) (Erkek),Population aged 15+ by marital status: total (male),person,DF_ADNKS_T10_V1.1
+marital_status_by_sex.csv,pop_15plus_marital_never_married_male,15+ yaş nüfus - Hiç evlenmedi (Erkek),Population aged 15+ by marital status: never married (male),person,DF_ADNKS_T10_V1.1
+marital_status_by_sex.csv,pop_15plus_marital_married_male,15+ yaş nüfus - Evli (Erkek),Population aged 15+ by marital status: married (male),person,DF_ADNKS_T10_V1.1
+marital_status_by_sex.csv,pop_15plus_marital_divorced_male,15+ yaş nüfus - Boşandı (Erkek),Population aged 15+ by marital status: divorced (male),person,DF_ADNKS_T10_V1.1
+marital_status_by_sex.csv,pop_15plus_marital_widowed_male,15+ yaş nüfus - Eşi öldü (Erkek),Population aged 15+ by marital status: widowed (male),person,DF_ADNKS_T10_V1.1
+marital_status_by_sex.csv,pop_15plus_marital_unknown_male,15+ yaş nüfus - Bilinmeyen (Erkek),Population aged 15+ by marital status: unknown (male),person,DF_ADNKS_T10_V1.1
+marital_status_by_sex.csv,pop_15plus_marital_total_female,15+ yaş nüfus - Toplam (15+ yaş) (Kadın),Population aged 15+ by marital status: total (female),person,DF_ADNKS_T10_V1.1
+marital_status_by_sex.csv,pop_15plus_marital_never_married_female,15+ yaş nüfus - Hiç evlenmedi (Kadın),Population aged 15+ by marital status: never married (female),person,DF_ADNKS_T10_V1.1
+marital_status_by_sex.csv,pop_15plus_marital_married_female,15+ yaş nüfus - Evli (Kadın),Population aged 15+ by marital status: married (female),person,DF_ADNKS_T10_V1.1
+marital_status_by_sex.csv,pop_15plus_marital_divorced_female,15+ yaş nüfus - Boşandı (Kadın),Population aged 15+ by marital status: divorced (female),person,DF_ADNKS_T10_V1.1
+marital_status_by_sex.csv,pop_15plus_marital_widowed_female,15+ yaş nüfus - Eşi öldü (Kadın),Population aged 15+ by marital status: widowed (female),person,DF_ADNKS_T10_V1.1
+marital_status_by_sex.csv,pop_15plus_marital_unknown_female,15+ yaş nüfus - Bilinmeyen (Kadın),Population aged 15+ by marital status: unknown (female),person,DF_ADNKS_T10_V1.1
+marriage_and_divorce_indicators.csv,marriages_count,Evlenme sayısı,Total number of marriages,count,marriages_count_prov.xls
+marriage_and_divorce_indicators.csv,crude_marriage_rate,Kaba evlenme hızı (‰),Crude marriage rate (per thousand population),per_thousand,crude_marriage_rate_prov.xls
+marriage_and_divorce_indicators.csv,divorces_count,Boşanma sayısı,Total number of divorces,count,divorces_count_prov.xls
+marriage_and_divorce_indicators.csv,crude_divorce_rate,Kaba boşanma hızı (‰),Crude divorce rate (per thousand population),per_thousand,crude_divorce_rate_prov.xls
+marriage_and_divorce_indicators.csv,mean_age_first_marriage_male,Ortalama ilk evlenme yaşı (Erkek),Mean age at first marriage (Male),year,DF_EVLENME_ORT_ILK_EVL_YAS_V1.0
+marriage_and_divorce_indicators.csv,mean_age_first_marriage_female,Ortalama ilk evlenme yaşı (Kadın),Mean age at first marriage (Female),year,DF_EVLENME_ORT_ILK_EVL_YAS_V1.0
+marriage_and_divorce_indicators.csv,consanguineous_marriages_count,Akraba evliliği sayısı,Number of marriages between first cousins (consanguineous marriages),count,DF_EVLENME_AKRABA_EVLILIK_V1.0
+marriage_and_divorce_indicators.csv,consanguineous_marriages_rate,Akraba evliliği oranı (%),Proportion of marriages between first cousins (%),percent,DF_EVLENME_AKRABA_EVLILIK_V1.0
+education_attainment_by_sex.csv,edu_15plus_total_total,15+ yaş bitirilen eğitim düzeyi - Toplam (15+ yaş) (Toplam),Population aged 15+ by completed education: total (total),person,DF_ULUSAL_EGITIM_ISTATISTIK_BED_NUFUS_V1.0
+education_attainment_by_sex.csv,edu_15plus_illiterate_total,15+ yaş bitirilen eğitim düzeyi - Okuma yazma bilmeyen (Toplam),Population aged 15+ by completed education: illiterate (total),person,DF_ULUSAL_EGITIM_ISTATISTIK_BED_NUFUS_V1.0
+education_attainment_by_sex.csv,edu_15plus_literate_no_diploma_total,15+ yaş bitirilen eğitim düzeyi - Okuma yazma bilen fakat bir okul bitirmeyen (Toplam),Population aged 15+ by completed education: literate no diploma (total),person,DF_ULUSAL_EGITIM_ISTATISTIK_BED_NUFUS_V1.0
+education_attainment_by_sex.csv,edu_15plus_primary_school_total,15+ yaş bitirilen eğitim düzeyi - İlkokul (Toplam),Population aged 15+ by completed education: primary school (total),person,DF_ULUSAL_EGITIM_ISTATISTIK_BED_NUFUS_V1.0
+education_attainment_by_sex.csv,edu_15plus_primary_education_total,15+ yaş bitirilen eğitim düzeyi - İlköğretim (Toplam),Population aged 15+ by completed education: primary education (total),person,DF_ULUSAL_EGITIM_ISTATISTIK_BED_NUFUS_V1.0
+education_attainment_by_sex.csv,edu_15plus_lower_secondary_school_total,15+ yaş bitirilen eğitim düzeyi - Ortaokul veya dengi meslek ortaokul (Toplam),Population aged 15+ by completed education: lower secondary school (total),person,DF_ULUSAL_EGITIM_ISTATISTIK_BED_NUFUS_V1.0
+education_attainment_by_sex.csv,edu_15plus_upper_secondary_high_school_total,15+ yaş bitirilen eğitim düzeyi - Lise veya dengi meslek okulu (Toplam),Population aged 15+ by completed education: upper secondary high school (total),person,DF_ULUSAL_EGITIM_ISTATISTIK_BED_NUFUS_V1.0
+education_attainment_by_sex.csv,edu_15plus_higher_education_bachelor_associate_total,15+ yaş bitirilen eğitim düzeyi - Yüksekokul veya fakülte (Toplam),Population aged 15+ by completed education: higher education bachelor associate (total),person,DF_ULUSAL_EGITIM_ISTATISTIK_BED_NUFUS_V1.0
+education_attainment_by_sex.csv,edu_15plus_masters_degree_total,15+ yaş bitirilen eğitim düzeyi - Yüksek lisans (5 veya 6 yıllık fakülteler dahil) (Toplam),Population aged 15+ by completed education: masters degree (total),person,DF_ULUSAL_EGITIM_ISTATISTIK_BED_NUFUS_V1.0
+education_attainment_by_sex.csv,edu_15plus_doctorate_total,15+ yaş bitirilen eğitim düzeyi - Doktora (Toplam),Population aged 15+ by completed education: doctorate (total),person,DF_ULUSAL_EGITIM_ISTATISTIK_BED_NUFUS_V1.0
+education_attainment_by_sex.csv,edu_15plus_unknown_total,15+ yaş bitirilen eğitim düzeyi - Bilinmeyen (Toplam),Population aged 15+ by completed education: unknown (total),person,DF_ULUSAL_EGITIM_ISTATISTIK_BED_NUFUS_V1.0
+education_attainment_by_sex.csv,edu_15plus_total_male,15+ yaş bitirilen eğitim düzeyi - Toplam (15+ yaş) (Erkek),Population aged 15+ by completed education: total (male),person,DF_ULUSAL_EGITIM_ISTATISTIK_BED_NUFUS_V1.0
+education_attainment_by_sex.csv,edu_15plus_illiterate_male,15+ yaş bitirilen eğitim düzeyi - Okuma yazma bilmeyen (Erkek),Population aged 15+ by completed education: illiterate (male),person,DF_ULUSAL_EGITIM_ISTATISTIK_BED_NUFUS_V1.0
+education_attainment_by_sex.csv,edu_15plus_literate_no_diploma_male,15+ yaş bitirilen eğitim düzeyi - Okuma yazma bilen fakat bir okul bitirmeyen (Erkek),Population aged 15+ by completed education: literate no diploma (male),person,DF_ULUSAL_EGITIM_ISTATISTIK_BED_NUFUS_V1.0
+education_attainment_by_sex.csv,edu_15plus_primary_school_male,15+ yaş bitirilen eğitim düzeyi - İlkokul (Erkek),Population aged 15+ by completed education: primary school (male),person,DF_ULUSAL_EGITIM_ISTATISTIK_BED_NUFUS_V1.0
+education_attainment_by_sex.csv,edu_15plus_primary_education_male,15+ yaş bitirilen eğitim düzeyi - İlköğretim (Erkek),Population aged 15+ by completed education: primary education (male),person,DF_ULUSAL_EGITIM_ISTATISTIK_BED_NUFUS_V1.0
+education_attainment_by_sex.csv,edu_15plus_lower_secondary_school_male,15+ yaş bitirilen eğitim düzeyi - Ortaokul veya dengi meslek ortaokul (Erkek),Population aged 15+ by completed education: lower secondary school (male),person,DF_ULUSAL_EGITIM_ISTATISTIK_BED_NUFUS_V1.0
+education_attainment_by_sex.csv,edu_15plus_upper_secondary_high_school_male,15+ yaş bitirilen eğitim düzeyi - Lise veya dengi meslek okulu (Erkek),Population aged 15+ by completed education: upper secondary high school (male),person,DF_ULUSAL_EGITIM_ISTATISTIK_BED_NUFUS_V1.0
+education_attainment_by_sex.csv,edu_15plus_higher_education_bachelor_associate_male,15+ yaş bitirilen eğitim düzeyi - Yüksekokul veya fakülte (Erkek),Population aged 15+ by completed education: higher education bachelor associate (male),person,DF_ULUSAL_EGITIM_ISTATISTIK_BED_NUFUS_V1.0
+education_attainment_by_sex.csv,edu_15plus_masters_degree_male,15+ yaş bitirilen eğitim düzeyi - Yüksek lisans (5 veya 6 yıllık fakülteler dahil) (Erkek),Population aged 15+ by completed education: masters degree (male),person,DF_ULUSAL_EGITIM_ISTATISTIK_BED_NUFUS_V1.0
+education_attainment_by_sex.csv,edu_15plus_doctorate_male,15+ yaş bitirilen eğitim düzeyi - Doktora (Erkek),Population aged 15+ by completed education: doctorate (male),person,DF_ULUSAL_EGITIM_ISTATISTIK_BED_NUFUS_V1.0
+education_attainment_by_sex.csv,edu_15plus_unknown_male,15+ yaş bitirilen eğitim düzeyi - Bilinmeyen (Erkek),Population aged 15+ by completed education: unknown (male),person,DF_ULUSAL_EGITIM_ISTATISTIK_BED_NUFUS_V1.0
+education_attainment_by_sex.csv,edu_15plus_total_female,15+ yaş bitirilen eğitim düzeyi - Toplam (15+ yaş) (Kadın),Population aged 15+ by completed education: total (female),person,DF_ULUSAL_EGITIM_ISTATISTIK_BED_NUFUS_V1.0
+education_attainment_by_sex.csv,edu_15plus_illiterate_female,15+ yaş bitirilen eğitim düzeyi - Okuma yazma bilmeyen (Kadın),Population aged 15+ by completed education: illiterate (female),person,DF_ULUSAL_EGITIM_ISTATISTIK_BED_NUFUS_V1.0
+education_attainment_by_sex.csv,edu_15plus_literate_no_diploma_female,15+ yaş bitirilen eğitim düzeyi - Okuma yazma bilen fakat bir okul bitirmeyen (Kadın),Population aged 15+ by completed education: literate no diploma (female),person,DF_ULUSAL_EGITIM_ISTATISTIK_BED_NUFUS_V1.0
+education_attainment_by_sex.csv,edu_15plus_primary_school_female,15+ yaş bitirilen eğitim düzeyi - İlkokul (Kadın),Population aged 15+ by completed education: primary school (female),person,DF_ULUSAL_EGITIM_ISTATISTIK_BED_NUFUS_V1.0
+education_attainment_by_sex.csv,edu_15plus_primary_education_female,15+ yaş bitirilen eğitim düzeyi - İlköğretim (Kadın),Population aged 15+ by completed education: primary education (female),person,DF_ULUSAL_EGITIM_ISTATISTIK_BED_NUFUS_V1.0
+education_attainment_by_sex.csv,edu_15plus_lower_secondary_school_female,15+ yaş bitirilen eğitim düzeyi - Ortaokul veya dengi meslek ortaokul (Kadın),Population aged 15+ by completed education: lower secondary school (female),person,DF_ULUSAL_EGITIM_ISTATISTIK_BED_NUFUS_V1.0
+education_attainment_by_sex.csv,edu_15plus_upper_secondary_high_school_female,15+ yaş bitirilen eğitim düzeyi - Lise veya dengi meslek okulu (Kadın),Population aged 15+ by completed education: upper secondary high school (female),person,DF_ULUSAL_EGITIM_ISTATISTIK_BED_NUFUS_V1.0
+education_attainment_by_sex.csv,edu_15plus_higher_education_bachelor_associate_female,15+ yaş bitirilen eğitim düzeyi - Yüksekokul veya fakülte (Kadın),Population aged 15+ by completed education: higher education bachelor associate (female),person,DF_ULUSAL_EGITIM_ISTATISTIK_BED_NUFUS_V1.0
+education_attainment_by_sex.csv,edu_15plus_masters_degree_female,15+ yaş bitirilen eğitim düzeyi - Yüksek lisans (5 veya 6 yıllık fakülteler dahil) (Kadın),Population aged 15+ by completed education: masters degree (female),person,DF_ULUSAL_EGITIM_ISTATISTIK_BED_NUFUS_V1.0
+education_attainment_by_sex.csv,edu_15plus_doctorate_female,15+ yaş bitirilen eğitim düzeyi - Doktora (Kadın),Population aged 15+ by completed education: doctorate (female),person,DF_ULUSAL_EGITIM_ISTATISTIK_BED_NUFUS_V1.0
+education_attainment_by_sex.csv,edu_15plus_unknown_female,15+ yaş bitirilen eğitim düzeyi - Bilinmeyen (Kadın),Population aged 15+ by completed education: unknown (female),person,DF_ULUSAL_EGITIM_ISTATISTIK_BED_NUFUS_V1.0
+education_duration_and_schooling_expectancy.csv,mean_years_of_schooling_total,Ortalama eğitim süresi (Toplam),Mean years of schooling (Total),year,DF_ORTALAMA_EGITIM_SURE_V1.0
+education_duration_and_schooling_expectancy.csv,mean_years_of_schooling_male,Ortalama eğitim süresi (Erkek),Mean years of schooling (Male),year,DF_ORTALAMA_EGITIM_SURE_V1.0
+education_duration_and_schooling_expectancy.csv,mean_years_of_schooling_female,Ortalama eğitim süresi (Kadın),Mean years of schooling (Female),year,DF_ORTALAMA_EGITIM_SURE_V1.0
+education_duration_and_schooling_expectancy.csv,mean_years_of_schooling_gender_ratio,Ortalama eğitim süresi cinsiyet oranı,Mean years of schooling gender ratio,index,DF_ORTALAMA_EGITIM_SURE_V1.0
+education_duration_and_schooling_expectancy.csv,school_life_expectancy_isced0_preprimary_total,Muhtemel eğitim süresi - ISCED 0 (okul öncesi) (Toplam),"School life expectancy (isced0 preprimary, total)",year,DF_MUHTEMEL_EGITIM_SURE_ISCED_0_V1.0
+education_duration_and_schooling_expectancy.csv,school_life_expectancy_isced0_preprimary_male,Muhtemel eğitim süresi - ISCED 0 (okul öncesi) (Erkek),"School life expectancy (isced0 preprimary, male)",year,DF_MUHTEMEL_EGITIM_SURE_ISCED_0_V1.0
+education_duration_and_schooling_expectancy.csv,school_life_expectancy_isced0_preprimary_female,Muhtemel eğitim süresi - ISCED 0 (okul öncesi) (Kadın),"School life expectancy (isced0 preprimary, female)",year,DF_MUHTEMEL_EGITIM_SURE_ISCED_0_V1.0
+education_duration_and_schooling_expectancy.csv,school_life_expectancy_isced1_3_primary_secondary_total,Muhtemel eğitim süresi - ISCED 1-3 (ilkokul-ortaöğretim) (Toplam),"School life expectancy (isced1 3 primary secondary, total)",year,DF_MUHTEMEL_EGITIM_SURE_ISCED1_3_V1.0
+education_duration_and_schooling_expectancy.csv,school_life_expectancy_isced1_3_primary_secondary_male,Muhtemel eğitim süresi - ISCED 1-3 (ilkokul-ortaöğretim) (Erkek),"School life expectancy (isced1 3 primary secondary, male)",year,DF_MUHTEMEL_EGITIM_SURE_ISCED1_3_V1.0
+education_duration_and_schooling_expectancy.csv,school_life_expectancy_isced1_3_primary_secondary_female,Muhtemel eğitim süresi - ISCED 1-3 (ilkokul-ortaöğretim) (Kadın),"School life expectancy (isced1 3 primary secondary, female)",year,DF_MUHTEMEL_EGITIM_SURE_ISCED1_3_V1.0
+education_duration_and_schooling_expectancy.csv,school_life_expectancy_isced1_8_primary_to_tertiary_total,Muhtemel eğitim süresi - ISCED 1-8 (ilkokul-yükseköğretim) (Toplam),"School life expectancy (isced1 8 primary to tertiary, total)",year,DF_MUHTEMEL_EGITIM_SURE_ISCED_1_8_V1.0
+education_duration_and_schooling_expectancy.csv,school_life_expectancy_isced1_8_primary_to_tertiary_male,Muhtemel eğitim süresi - ISCED 1-8 (ilkokul-yükseköğretim) (Erkek),"School life expectancy (isced1 8 primary to tertiary, male)",year,DF_MUHTEMEL_EGITIM_SURE_ISCED_1_8_V1.0
+education_duration_and_schooling_expectancy.csv,school_life_expectancy_isced1_8_primary_to_tertiary_female,Muhtemel eğitim süresi - ISCED 1-8 (ilkokul-yükseköğretim) (Kadın),"School life expectancy (isced1 8 primary to tertiary, female)",year,DF_MUHTEMEL_EGITIM_SURE_ISCED_1_8_V1.0
+education_duration_and_schooling_expectancy.csv,gender_parity_index_sle_isced0,Muhtemel eğitim süresine göre cinsiyet eşitliği endeksi (Okul öncesi),Gender parity index for school life expectancy (isced0),index,DF_MUHTEMEL_EGITIM_SURE_CINSIYET_ESITSIZLIK_ENDEKS_V1.0
+education_duration_and_schooling_expectancy.csv,gender_parity_index_sle_isced1_3,Muhtemel eğitim süresine göre cinsiyet eşitliği endeksi (İlkokul-ortaöğretim),Gender parity index for school life expectancy (3),index,DF_MUHTEMEL_EGITIM_SURE_CINSIYET_ESITSIZLIK_ENDEKS_V1.0
+education_duration_and_schooling_expectancy.csv,gender_parity_index_sle_isced1_8,Muhtemel eğitim süresine göre cinsiyet eşitliği endeksi (İlkokul-yükseköğretim),Gender parity index for school life expectancy (8),index,DF_MUHTEMEL_EGITIM_SURE_CINSIYET_ESITSIZLIK_ENDEKS_V1.0
+literacy_and_nonformal_education.csv,pop_6plus_total_total,6+ yaş toplam nüfus (Toplam),Population aged 6+ total (total),person,DF_ULUSAL_EGITIM_ISTATISTIK_BED_NUFUS_V1.0
+literacy_and_nonformal_education.csv,pop_6plus_illiterate_total,6+ yaş okuma yazma bilmeyen nüfus (Toplam),Population aged 6+ illiterate (total),person,DF_ULUSAL_EGITIM_ISTATISTIK_BED_NUFUS_V1.0
+literacy_and_nonformal_education.csv,pop_6plus_total_male,6+ yaş toplam nüfus (Erkek),Population aged 6+ total (male),person,DF_ULUSAL_EGITIM_ISTATISTIK_BED_NUFUS_V1.0
+literacy_and_nonformal_education.csv,pop_6plus_illiterate_male,6+ yaş okuma yazma bilmeyen nüfus (Erkek),Population aged 6+ illiterate (male),person,DF_ULUSAL_EGITIM_ISTATISTIK_BED_NUFUS_V1.0
+literacy_and_nonformal_education.csv,pop_6plus_total_female,6+ yaş toplam nüfus (Kadın),Population aged 6+ total (female),person,DF_ULUSAL_EGITIM_ISTATISTIK_BED_NUFUS_V1.0
+literacy_and_nonformal_education.csv,pop_6plus_illiterate_female,6+ yaş okuma yazma bilmeyen nüfus (Kadın),Population aged 6+ illiterate (female),person,DF_ULUSAL_EGITIM_ISTATISTIK_BED_NUFUS_V1.0
+literacy_and_nonformal_education.csv,census2021_pop_6plus_literate_total,2021 Nüfus ve Konut Sayımı 6+ yaş okuma yazma bilen (Toplam),2021 Census literate population aged 6+ (Total),person,literacy_2021_census_prov.xls
+literacy_and_nonformal_education.csv,census2021_pop_6plus_literate_male,2021 Nüfus ve Konut Sayımı 6+ yaş okuma yazma bilen (Erkek),2021 Census literate population aged 6+ (Male),person,literacy_2021_census_prov.xls
+literacy_and_nonformal_education.csv,census2021_pop_6plus_literate_female,2021 Nüfus ve Konut Sayımı 6+ yaş okuma yazma bilen (Kadın),2021 Census literate population aged 6+ (Female),person,literacy_2021_census_prov.xls
+literacy_and_nonformal_education.csv,nonformal_edu_institutions,Yaygın eğitim kurum sayısı,Non-formal education institutions count,institution,nonformal_edu_prov.xls
+literacy_and_nonformal_education.csv,nonformal_edu_courses,Yaygın eğitim kurs sayısı,Non-formal education courses count,course,nonformal_edu_prov.xls
+literacy_and_nonformal_education.csv,nonformal_edu_attending_total,Yaygın eğitim devam eden kursiyer (Toplam),Non-formal education attending participants (Total),person,nonformal_edu_prov.xls
+literacy_and_nonformal_education.csv,nonformal_edu_attending_male,Yaygın eğitim devam eden kursiyer (Erkek),Non-formal education attending participants (Male),person,nonformal_edu_prov.xls
+literacy_and_nonformal_education.csv,nonformal_edu_attending_female,Yaygın eğitim devam eden kursiyer (Kadın),Non-formal education attending participants (Female),person,nonformal_edu_prov.xls
+literacy_and_nonformal_education.csv,nonformal_edu_graduates_total,Yaygın eğitim bitiren kursiyer (Toplam),Non-formal education graduates (Total),person,nonformal_edu_prov.xls
+literacy_and_nonformal_education.csv,nonformal_edu_graduates_male,Yaygın eğitim bitiren kursiyer (Erkek),Non-formal education graduates (Male),person,nonformal_edu_prov.xls
+literacy_and_nonformal_education.csv,nonformal_edu_graduates_female,Yaygın eğitim bitiren kursiyer (Kadın),Non-formal education graduates (Female),person,nonformal_edu_prov.xls
+literacy_and_nonformal_education.csv,nonformal_edu_teachers_total,Yaygın eğitim öğretmen sayısı (Toplam),Non-formal education teachers (Total),person,nonformal_edu_prov.xls
+literacy_and_nonformal_education.csv,nonformal_edu_classrooms,Yaygın eğitim derslik sayısı,Non-formal education classrooms count,classroom,nonformal_edu_prov.xls
+labor_force_indicators.csv,labor_force_participation_rate,İşgücüne katılma oranı (%),Labor force participation rate (%),percent,lfpr_prov.xls
+labor_force_indicators.csv,labor_force_participation_rate_ci95_lower,İşgücüne katılma oranı (%) - %95 güven aralığı alt sınır,Labor force participation rate (%) - 95% confidence interval lower limit,percent,lfpr_prov.xls
+labor_force_indicators.csv,labor_force_participation_rate_ci95_upper,İşgücüne katılma oranı (%) - %95 güven aralığı üst sınır,Labor force participation rate (%) - 95% confidence interval upper limit,percent,lfpr_prov.xls
+labor_force_indicators.csv,employment_rate,İstihdam oranı (%),Employment rate (%),percent,employment_rate_prov.xls
+labor_force_indicators.csv,employment_rate_ci95_lower,İstihdam oranı (%) - %95 güven aralığı alt sınır,Employment rate (%) - 95% confidence interval lower limit,percent,employment_rate_prov.xls
+labor_force_indicators.csv,employment_rate_ci95_upper,İstihdam oranı (%) - %95 güven aralığı üst sınır,Employment rate (%) - 95% confidence interval upper limit,percent,employment_rate_prov.xls
+labor_force_indicators.csv,unemployment_rate,İşsizlik oranı (%),Unemployment rate (%),percent,unemployment_rate_prov.xls
+labor_force_indicators.csv,unemployment_rate_ci95_lower,İşsizlik oranı (%) - %95 güven aralığı alt sınır,Unemployment rate (%) - 95% confidence interval lower limit,percent,unemployment_rate_prov.xls
+labor_force_indicators.csv,unemployment_rate_ci95_upper,İşsizlik oranı (%) - %95 güven aralığı üst sınır,Unemployment rate (%) - 95% confidence interval upper limit,percent,unemployment_rate_prov.xls
+gdp_and_economy_by_sector.csv,gdp_per_capita_try,Kişi başına GSYH (TL),Gross Domestic Product per capita (current TRY),try,gdp_per_capita_prov.xls
+gdp_and_economy_by_sector.csv,gdp_per_capita_usd,Kişi başına GSYH ($),Gross Domestic Product per capita (current USD),usd,gdp_per_capita_prov.xls
+gdp_and_economy_by_sector.csv,gdp_sector_a_agriculture,"Tarım, ormancılık ve balıkçılık (A) (Bin TL)","GDP: Agriculture, forestry and fishing (NACE A)",thousand_try,gdp_current_by_sector_prov.xls
+gdp_and_economy_by_sector.csv,gdp_sector_bcde_industry,Sanayi (BCDE) (Bin TL),GDP: Industry total (NACE BCDE),thousand_try,gdp_current_by_sector_prov.xls
+gdp_and_economy_by_sector.csv,gdp_sector_c_manufacturing,İmalat sanayi (C) (Bin TL),GDP: Manufacturing (NACE C),thousand_try,gdp_current_by_sector_prov.xls
+gdp_and_economy_by_sector.csv,gdp_sector_f_construction,İnşaat (F) (Bin TL),GDP: Construction (NACE F),thousand_try,gdp_current_by_sector_prov.xls
+gdp_and_economy_by_sector.csv,gdp_sector_ghi_services_trade_transport_accomm,"Ticaret, ulaştırma, konaklama ve yiyecek hizmetleri (GHI) (Bin TL)","GDP: Wholesale/retail trade, transport, accommodation and food services (NACE GHI)",thousand_try,gdp_current_by_sector_prov.xls
+gdp_and_economy_by_sector.csv,gdp_sector_j_info_communication,Bilgi ve iletişim (J) (Bin TL),GDP: Information and communication (NACE J),thousand_try,gdp_current_by_sector_prov.xls
+gdp_and_economy_by_sector.csv,gdp_sector_k_finance_insurance,Finans ve sigorta faaliyetleri (K) (Bin TL),GDP: Financial and insurance activities (NACE K),thousand_try,gdp_current_by_sector_prov.xls
+gdp_and_economy_by_sector.csv,gdp_sector_l_real_estate,Gayrimenkul faaliyetleri (L) (Bin TL),GDP: Real estate activities (NACE L),thousand_try,gdp_current_by_sector_prov.xls
+gdp_and_economy_by_sector.csv,gdp_sector_mn_professional_admin_support,"Mesleki, idari ve destek hizmet faaliyetleri (MN) (Bin TL)","GDP: Professional, scientific, technical, administrative and support services (NACE MN)",thousand_try,gdp_current_by_sector_prov.xls
+gdp_and_economy_by_sector.csv,gdp_sector_opq_public_admin_edu_health,"Kamu yönetimi, eğitim, insan sağlığı ve sosyal hizmet faaliyetleri (OPQ) (Bin TL)","GDP: Public administration, education, human health and social work (NACE OPQ)",thousand_try,gdp_current_by_sector_prov.xls
+gdp_and_economy_by_sector.csv,gdp_sector_rst_other_services,Diğer hizmet faaliyetleri (RST) (Bin TL),GDP: Other service activities (NACE RST),thousand_try,gdp_current_by_sector_prov.xls
+gdp_and_economy_by_sector.csv,gdp_sectoral_total,Sektörler toplamı (Bin TL),GDP: Sectoral total gross value added,thousand_try,gdp_current_by_sector_prov.xls
+gdp_and_economy_by_sector.csv,gdp_taxes_less_subsidies,Vergi-sübvansiyon (Bin TL),GDP: Taxes less subsidies on products,thousand_try,gdp_current_by_sector_prov.xls
+gdp_and_economy_by_sector.csv,gdp_total_current_prices,Gayrisafi yurt içi hasıla (GSYH) (Bin TL),Total Provincial GDP at current prices,thousand_try,gdp_current_by_sector_prov.xls
+socioeconomic_status_and_human_development.csv,ses_average_score,Ortalama sosyoekonomik seviye (SES) skoru,Average Socioeconomic Status (SES) score,score,ses_households_count_prov.xls
+socioeconomic_status_and_human_development.csv,ses_households_total,SES toplam hanehalkı sayısı,Total households in SES classification,households_3yr_avg,ses_households_count_prov.xls
+socioeconomic_status_and_human_development.csv,ses_households_a_plus_highest,SES en üst seviye [A+] hanehalkı sayısı,Households in highest SES level [A+],households_3yr_avg,ses_households_count_prov.xls
+socioeconomic_status_and_human_development.csv,ses_households_a_upper,SES üst seviye [A] hanehalkı sayısı,Households in upper SES level [A],households_3yr_avg,ses_households_count_prov.xls
+socioeconomic_status_and_human_development.csv,ses_households_b_lower_upper,SES üst altı seviye [B] hanehalkı sayısı,Households in lower-upper SES level [B],households_3yr_avg,ses_households_count_prov.xls
+socioeconomic_status_and_human_development.csv,ses_households_c1_upper_middle,SES üst orta seviye [C1] hanehalkı sayısı,Households in upper-middle SES level [C1],households_3yr_avg,ses_households_count_prov.xls
+socioeconomic_status_and_human_development.csv,ses_households_c2_lower_middle,SES alt orta seviye [C2] hanehalkı sayısı,Households in lower-middle SES level [C2],households_3yr_avg,ses_households_count_prov.xls
+socioeconomic_status_and_human_development.csv,ses_households_d_lower,SES alt seviye [D] hanehalkı sayısı,Households in lower SES level [D],households_3yr_avg,ses_households_count_prov.xls
+socioeconomic_status_and_human_development.csv,ses_households_e_lowest,SES en alt seviye [E] hanehalkı sayısı,Households in lowest SES level [E],households_3yr_avg,ses_households_count_prov.xls
+socioeconomic_status_and_human_development.csv,ses_share_a_and_a_plus_pct,SES üst seviye [A ve A+] hanehalkı oranı (%),Share of households in upper SES levels [A and A+] (%),percent,ses_score_and_pct_prov.xls
+socioeconomic_status_and_human_development.csv,ses_share_b_pct,SES üst altı seviye [B] hanehalkı oranı (%),Share of households in lower-upper SES level [B] (%),percent,ses_score_and_pct_prov.xls
+socioeconomic_status_and_human_development.csv,ses_share_c1_and_c2_middle_pct,SES orta seviye [C1 ve C2] hanehalkı oranı (%),Share of households in middle SES levels [C1 and C2] (%),percent,ses_score_and_pct_prov.xls
+socioeconomic_status_and_human_development.csv,ses_share_d_lower_pct,SES alt seviye [D] hanehalkı oranı (%),Share of households in lower SES level [D] (%),percent,ses_score_and_pct_prov.xls
+socioeconomic_status_and_human_development.csv,ses_share_e_lowest_pct,SES en alt seviye [E] hanehalkı oranı (%),Share of households in lowest SES level [E] (%),percent,ses_score_and_pct_prov.xls
+socioeconomic_status_and_human_development.csv,hdi_overall_index,Beşeri Kalkınma Endeksi (BKE),Human Development Index (HDI),index,DF_BESERI_KALKINMA_ENDEKS_V1.0
+socioeconomic_status_and_human_development.csv,hdi_overall_annual_change_pct,Beşeri Kalkınma Endeksi yıllık değişim (%),Human Development Index annual change (%),percent,DF_BESERI_KALKINMA_ENDEKS_V1.0
+socioeconomic_status_and_human_development.csv,hdi_education_subindex,Eğitim Endeksi,HDI Education sub-index,index,DF_BESERI_KALKINMA_ENDEKS_V1.0
+socioeconomic_status_and_human_development.csv,hdi_income_subindex,Gelir Endeksi,HDI Income sub-index,index,DF_BESERI_KALKINMA_ENDEKS_V1.0
+socioeconomic_status_and_human_development.csv,hdi_life_expectancy_subindex,Yaşam Beklentisi Endeksi,HDI Life Expectancy sub-index,index,DF_BESERI_KALKINMA_ENDEKS_V1.0
+socioeconomic_status_and_human_development.csv,hci_overall_index,Beşeri Sermaye Endeksi,Human Capital Index (HCI),index,human_capital_press_0.xls
+socioeconomic_status_and_human_development.csv,hci_overall_annual_change_pct,Beşeri Sermaye Endeksi yıllık değişim oranı (%),Human Capital Index annual change (%),percent,human_capital_press_0.xls
+socioeconomic_status_and_human_development.csv,hci_survival_component,Beşeri Sermaye Endeksi - Hayatta kalma bileşeni,HCI Survival component index,index,human_capital_press_0.xls
+socioeconomic_status_and_human_development.csv,hci_health_component,Beşeri Sermaye Endeksi - Sağlık bileşeni,HCI Health component index,index,human_capital_press_0.xls
+socioeconomic_status_and_human_development.csv,hci_education_component,Beşeri Sermaye Endeksi - Eğitim bileşeni,HCI Education component index,index,human_capital_press_0.xls
+housing_stock_and_dwelling_characteristics.csv,households_residing_in_dwellings,Konutta ikamet eden hanehalkı sayısı,Number of households residing in dwellings,household,housing_ownership_prov.xls
+housing_stock_and_dwelling_characteristics.csv,ownership_owner_occupied_hh,Mülkiyet durumu: Ev sahibi hanehalkı sayısı,Owner-occupied households count,household,housing_ownership_prov.xls
+housing_stock_and_dwelling_characteristics.csv,ownership_tenant_hh,Mülkiyet durumu: Kiracı hanehalkı sayısı,Tenant (rented) households count,household,housing_ownership_prov.xls
+housing_stock_and_dwelling_characteristics.csv,ownership_other_hh,"Mülkiyet durumu: Diğer (lojman, kira ödemeyen vb.) hanehalkı sayısı",Other ownership status households count,household,housing_ownership_prov.xls
+housing_stock_and_dwelling_characteristics.csv,ownership_unknown_hh,Mülkiyet durumu: Bilinmeyen hanehalkı sayısı,Unknown ownership status households count,household,housing_ownership_prov.xls
+housing_stock_and_dwelling_characteristics.csv,ownership_owner_occupied_pct,Mülkiyet durumu: Ev sahibi oranı (%),Owner-occupied households share (%),percent,housing_ownership_prov.xls
+housing_stock_and_dwelling_characteristics.csv,ownership_tenant_pct,Mülkiyet durumu: Kiracı oranı (%),Tenant (rented) households share (%),percent,housing_ownership_prov.xls
+housing_stock_and_dwelling_characteristics.csv,ownership_other_pct,Mülkiyet durumu: Diğer oranı (%),Other ownership status households share (%),percent,housing_ownership_prov.xls
+housing_stock_and_dwelling_characteristics.csv,rooms_per_occupant,Kişi başına düşen oda sayısı,Average number of rooms per occupant,rooms,housing_rooms_per_person_prov.xls
+housing_stock_and_dwelling_characteristics.csv,average_rooms_per_dwelling,Konutlardaki ortalama oda sayısı,Average number of rooms per dwelling,rooms,housing_rooms_count_prov.xls
+housing_stock_and_dwelling_characteristics.csv,dwellings_1_2_rooms_hh,Oda sayısı: 1-2 odalı konutta yaşayan hanehalkı sayısı,Households in dwellings with 1-2 rooms,household,housing_rooms_count_prov.xls
+housing_stock_and_dwelling_characteristics.csv,dwellings_3_rooms_hh,Oda sayısı: 3 odalı konutta yaşayan hanehalkı sayısı,Households in dwellings with 3 rooms,household,housing_rooms_count_prov.xls
+housing_stock_and_dwelling_characteristics.csv,dwellings_4_rooms_hh,Oda sayısı: 4 odalı konutta yaşayan hanehalkı sayısı,Households in dwellings with 4 rooms,household,housing_rooms_count_prov.xls
+housing_stock_and_dwelling_characteristics.csv,dwellings_5plus_rooms_hh,Oda sayısı: 5 ve daha fazla odalı konutta yaşayan hanehalkı sayısı,Households in dwellings with 5+ rooms,household,housing_rooms_count_prov.xls
+housing_stock_and_dwelling_characteristics.csv,dwellings_1_2_rooms_pct,Oda sayısı: 1-2 odalı konut oranı (%),Share of households in dwellings with 1-2 rooms (%),percent,housing_rooms_count_prov.xls
+housing_stock_and_dwelling_characteristics.csv,dwellings_3_rooms_pct,Oda sayısı: 3 odalı konut oranı (%),Share of households in dwellings with 3 rooms (%),percent,housing_rooms_count_prov.xls
+housing_stock_and_dwelling_characteristics.csv,dwellings_4_rooms_pct,Oda sayısı: 4 odalı konut oranı (%),Share of households in dwellings with 4 rooms (%),percent,housing_rooms_count_prov.xls
+housing_stock_and_dwelling_characteristics.csv,dwellings_5plus_rooms_pct,Oda sayısı: 5+ odalı konut oranı (%),Share of households in dwellings with 5+ rooms (%),percent,housing_rooms_count_prov.xls
+housing_stock_and_dwelling_characteristics.csv,heating_system_stove_hh,Isıtma sistemi: Soba kullanan hanehalkı sayısı,Households heated by stove (including natural gas stove),household,housing_heating_system_prov.xls
+housing_stock_and_dwelling_characteristics.csv,heating_system_individual_central_hh,Isıtma sistemi: Kat kaloriferi (kombi) kullanan hanehalkı sayısı,Households heated by individual dwelling central heating (combi),household,housing_heating_system_prov.xls
+housing_stock_and_dwelling_characteristics.csv,heating_system_building_central_hh,Isıtma sistemi: Merkezi kalorifer kullanan hanehalkı sayısı,Households heated by building/district central heating,household,housing_heating_system_prov.xls
+housing_stock_and_dwelling_characteristics.csv,heating_system_other_hh,"Isıtma sistemi: Diğer (klima, elektrik vb.) hanehalkı sayısı","Households heated by other systems (AC, electric, etc.)",household,housing_heating_system_prov.xls
+housing_stock_and_dwelling_characteristics.csv,heating_system_stove_pct,Isıtma sistemi: Soba oranı (%),Share of households heated by stove (%),percent,housing_heating_system_prov.xls
+housing_stock_and_dwelling_characteristics.csv,heating_system_individual_central_pct,Isıtma sistemi: Kat kaloriferi (kombi) oranı (%),Share of households heated by individual central heating (%),percent,housing_heating_system_prov.xls
+housing_stock_and_dwelling_characteristics.csv,heating_system_building_central_pct,Isıtma sistemi: Merkezi kalorifer oranı (%),Share of households heated by building/district central heating (%),percent,housing_heating_system_prov.xls
+housing_stock_and_dwelling_characteristics.csv,heating_system_other_pct,Isıtma sistemi: Diğer oranı (%),Share of households heated by other systems (%),percent,housing_heating_system_prov.xls
+housing_stock_and_dwelling_characteristics.csv,heating_fuel_solid_hh,"Ana ısınma yakıtı: Katı yakıt (kömür, odun vb.) hanehalkı sayısı","Households using solid fuels (coal, wood, etc.) for heating",household,housing_heating_fuel_prov.xls
+housing_stock_and_dwelling_characteristics.csv,heating_fuel_natural_gas_hh,Ana ısınma yakıtı: Doğalgaz hanehalkı sayısı,Households using natural gas for heating,household,housing_heating_fuel_prov.xls
+housing_stock_and_dwelling_characteristics.csv,heating_fuel_other_hh,"Ana ısınma yakıtı: Diğer (elektrik, sıvı yakıt vb.) hanehalkı sayısı","Households using other energy (electricity, liquid/LPG) for heating",household,housing_heating_fuel_prov.xls
+housing_stock_and_dwelling_characteristics.csv,heating_fuel_solid_pct,Ana ısınma yakıtı: Katı yakıt oranı (%),Share of households using solid fuels for heating (%),percent,housing_heating_fuel_prov.xls
+housing_stock_and_dwelling_characteristics.csv,heating_fuel_natural_gas_pct,Ana ısınma yakıtı: Doğalgaz oranı (%),Share of households using natural gas for heating (%),percent,housing_heating_fuel_prov.xls
+housing_stock_and_dwelling_characteristics.csv,heating_fuel_other_pct,Ana ısınma yakıtı: Diğer oranı (%),Share of households using other energy for heating (%),percent,housing_heating_fuel_prov.xls
+housing_stock_and_dwelling_characteristics.csv,building_age_1980_and_before_hh,Bina inşa yılı: 1980 ve öncesi hanehalkı sayısı,Households in buildings constructed in 1980 and before,household,housing_construction_year_prov.xls
+housing_stock_and_dwelling_characteristics.csv,building_age_1981_2000_hh,Bina inşa yılı: 1981-2000 hanehalkı sayısı,Households in buildings constructed in 1981-2000,household,housing_construction_year_prov.xls
+housing_stock_and_dwelling_characteristics.csv,building_age_2001_and_after_hh,Bina inşa yılı: 2001 ve sonrası hanehalkı sayısı,Households in buildings constructed in 2001 and after,household,housing_construction_year_prov.xls
+housing_stock_and_dwelling_characteristics.csv,building_age_unknown_hh,Bina inşa yılı: Bilinmeyen hanehalkı sayısı,Households in buildings of unknown construction year,household,housing_construction_year_prov.xls
+housing_stock_and_dwelling_characteristics.csv,building_age_1980_and_before_pct,Bina inşa yılı: 1980 ve öncesi oranı (%),Share of households in buildings constructed in 1980 and before (%),percent,housing_construction_year_prov.xls
+housing_stock_and_dwelling_characteristics.csv,building_age_1981_2000_pct,Bina inşa yılı: 1981-2000 oranı (%),Share of households in buildings constructed in 1981-2000 (%),percent,housing_construction_year_prov.xls
+housing_stock_and_dwelling_characteristics.csv,building_age_2001_and_after_pct,Bina inşa yılı: 2001 ve sonrası oranı (%),Share of households in buildings constructed in 2001 and after (%),percent,housing_construction_year_prov.xls
+housing_stock_and_dwelling_characteristics.csv,building_age_unknown_pct,Bina inşa yılı: Bilinmeyen oranı (%),Share of households in buildings of unknown construction year (%),percent,housing_construction_year_prov.xls
+housing_stock_and_dwelling_characteristics.csv,average_building_floors,İkamet edilen binanın ortalama kat sayısı,Average number of floors in residential building,floors,housing_floors_prov.xls
+housing_stock_and_dwelling_characteristics.csv,building_floors_1_pct,1 katlı binada yaşayan hanehalkı oranı (%),Share of households in 1-floor buildings (%),percent,housing_floors_prov.xls
+housing_stock_and_dwelling_characteristics.csv,building_floors_2_pct,2 katlı binada yaşayan hanehalkı oranı (%),Share of households in 2-floor buildings (%),percent,housing_floors_prov.xls
+housing_stock_and_dwelling_characteristics.csv,building_floors_3_pct,3 katlı binada yaşayan hanehalkı oranı (%),Share of households in 3-floor buildings (%),percent,housing_floors_prov.xls
+housing_stock_and_dwelling_characteristics.csv,building_floors_4_pct,4 katlı binada yaşayan hanehalkı oranı (%),Share of households in 4-floor buildings (%),percent,housing_floors_prov.xls
+housing_stock_and_dwelling_characteristics.csv,building_floors_5_pct,5 katlı binada yaşayan hanehalkı oranı (%),Share of households in 5-floor buildings (%),percent,housing_floors_prov.xls
+housing_stock_and_dwelling_characteristics.csv,building_floors_6plus_pct,6 ve daha fazla katlı binada yaşayan hanehalkı oranı (%),Share of households in 6+ floor buildings (%),percent,housing_floors_prov.xls
+housing_stock_and_dwelling_characteristics.csv,building_elevator_available_pct,3 ve daha fazla katlı binalarda asansör bulunma oranı (%),Share of households in 3+ floor buildings with an elevator (%),percent,housing_elevator_prov.xls
+housing_stock_and_dwelling_characteristics.csv,building_parking_available_pct,Binada otopark bulunma oranı (%),Share of households in buildings with car parking (%),percent,housing_parking_prov.xls
+housing_sales_and_building_permits.csv,house_sales_total,Toplam konut satış sayısı,Total house sales,count,DF_SATIS_SEKLI_DURUMU_ILILCE_V3_V1.0
+housing_sales_and_building_permits.csv,house_sales_mortgaged,İpotekli konut satış sayısı,Mortgaged house sales,count,DF_SATIS_SEKLI_DURUMU_ILILCE_V3_V1.0
+housing_sales_and_building_permits.csv,house_sales_other,Diğer konut satış sayısı,Non-mortgaged (other) house sales,count,DF_SATIS_SEKLI_DURUMU_ILILCE_V3_V1.0
+housing_sales_and_building_permits.csv,house_sales_first_hand,İlk el konut satış sayısı,First-hand house sales,count,DF_SATIS_SEKLI_DURUMU_ILILCE_V3_V1.0
+housing_sales_and_building_permits.csv,house_sales_second_hand,İkinci el konut satış sayısı,Second-hand house sales,count,DF_SATIS_SEKLI_DURUMU_ILILCE_V3_V1.0
+housing_sales_and_building_permits.csv,house_sales_mortgaged_first_hand,İpotekli ilk el konut satış sayısı,Mortgaged first-hand house sales,count,DF_SATIS_SEKLI_DURUMU_ILILCE_V3_V1.0
+housing_sales_and_building_permits.csv,house_sales_mortgaged_second_hand,İpotekli ikinci el konut satış sayısı,Mortgaged second-hand house sales,count,DF_SATIS_SEKLI_DURUMU_ILILCE_V3_V1.0
+housing_sales_and_building_permits.csv,workplace_sales_total,Toplam iş yeri satış sayısı,Total commercial/workplace property sales,count,DF_SATIS_SEKLI_DURUMU_ILILCE_V3_V1.0
+housing_sales_and_building_permits.csv,workplace_sales_first_hand,İlk el iş yeri satış sayısı,First-hand commercial/workplace property sales,count,DF_SATIS_SEKLI_DURUMU_ILILCE_V3_V1.0
+housing_sales_and_building_permits.csv,workplace_sales_second_hand,İkinci el iş yeri satış sayısı,Second-hand commercial/workplace property sales,count,DF_SATIS_SEKLI_DURUMU_ILILCE_V3_V1.0
+housing_sales_and_building_permits.csv,building_permits_construction_dwellings,Yapı ruhsatı verilen daire sayısı,Number of dwellings granted construction permits (Yapı ruhsatı),dwelling,building_permits_apartments_prov.xls
+housing_sales_and_building_permits.csv,building_permits_occupancy_dwellings,Yapı kullanma izin belgesi verilen daire sayısı,Number of dwellings granted occupancy permits (Yapı kullanma izin belgesi),dwelling,building_permits_apartments_prov.xls
+internal_migration_and_place_of_birth.csv,internal_in_migration,İlin aldığı iç göç,Provincial internal in-migration,person,internal_migration_summary_prov.xls
+internal_migration_and_place_of_birth.csv,internal_out_migration,İlin verdiği iç göç,Provincial internal out-migration,person,internal_migration_summary_prov.xls
+internal_migration_and_place_of_birth.csv,internal_net_migration,İlin net iç göçü,Provincial internal net migration,person,internal_migration_summary_prov.xls
+internal_migration_and_place_of_birth.csv,internal_net_migration_rate,Net iç göç hızı (‰),Provincial rate of net internal migration (per thousand),per_thousand,internal_migration_summary_prov.xls
+internal_migration_and_place_of_birth.csv,pop_born_in_residence_province,İkamet ettikleri ilde doğan nüfus,Population born in their province of residence,person,DF_ADNKS_T4_V1_2
+internal_migration_and_place_of_birth.csv,pop_born_in_other_province,Farklı bir ilde doğan nüfus,Population born in a different Turkish province,person,DF_ADNKS_T4_V1_2
+internal_migration_and_place_of_birth.csv,pop_born_abroad,Yurt dışında doğan nüfus,Population born abroad,person,DF_ADNKS_T4_V1_2
+internal_migration_and_place_of_birth.csv,pop_born_in_residence_province_pct,İkamet ettikleri ilde doğanların oranı (%),Share of population born in their province of residence (%),percent,DF_ADNKS_T4_V1_2
+internal_migration_and_place_of_birth.csv,pop_born_in_other_province_pct,Farklı bir ilde doğanların oranı (%),Share of population born in a different Turkish province (%),percent,DF_ADNKS_T4_V1_2
+internal_migration_and_place_of_birth.csv,pop_born_abroad_pct,Yurt dışında doğanların oranı (%),Share of population born abroad (%),percent,DF_ADNKS_T4_V1_2
+internal_migration_by_reason.csv,in_migration_reason_total,Aldığı göç nedeni: Toplam,Internal in-migration by reason: total,person,internal_in_migration_reason_prov.xls
+internal_migration_by_reason.csv,in_migration_reason_job_assignment_or_transfer,Aldığı göç nedeni: Tayin / iş değişikliği,Internal in-migration by reason: job assignment or transfer,person,internal_in_migration_reason_prov.xls
+internal_migration_by_reason.csv,in_migration_reason_starting_or_finding_job,Aldığı göç nedeni: İşe başlamak / iş bulmak,Internal in-migration by reason: starting or finding job,person,internal_in_migration_reason_prov.xls
+internal_migration_by_reason.csv,in_migration_reason_education,Aldığı göç nedeni: Eğitim,Internal in-migration by reason: education,person,internal_in_migration_reason_prov.xls
+internal_migration_by_reason.csv,in_migration_reason_marital_or_family_change,Aldığı göç nedeni: Medeni durum değişikliği / ailevi nedenler,Internal in-migration by reason: marital or family change,person,internal_in_migration_reason_prov.xls
+internal_migration_by_reason.csv,in_migration_reason_better_housing_and_living_conditions,Aldığı göç nedeni: Daha iyi konut ve yaşam koşulları,Internal in-migration by reason: better housing and living conditions,person,internal_in_migration_reason_prov.xls
+internal_migration_by_reason.csv,in_migration_reason_dependent_household_family_member,Aldığı göç nedeni: Hane / aile fertlerinden birine bağımlı göç,Internal in-migration by reason: dependent household family member,person,internal_in_migration_reason_prov.xls
+internal_migration_by_reason.csv,in_migration_reason_returning_to_family_or_hometown,Aldığı göç nedeni: Aile yanına / memlekete geri dönme,Internal in-migration by reason: returning to family or hometown,person,internal_in_migration_reason_prov.xls
+internal_migration_by_reason.csv,in_migration_reason_health_or_care,Aldığı göç nedeni: Sağlık / bakım,Internal in-migration by reason: health or care,person,internal_in_migration_reason_prov.xls
+internal_migration_by_reason.csv,in_migration_reason_buying_a_house,Aldığı göç nedeni: Ev alınması,Internal in-migration by reason: buying a house,person,internal_in_migration_reason_prov.xls
+internal_migration_by_reason.csv,in_migration_reason_retirement,Aldığı göç nedeni: Emeklilik,Internal in-migration by reason: retirement,person,internal_in_migration_reason_prov.xls
+internal_migration_by_reason.csv,in_migration_reason_other_reason,Aldığı göç nedeni: Diğer,Internal in-migration by reason: other reason,person,internal_in_migration_reason_prov.xls
+internal_migration_by_reason.csv,in_migration_reason_unknown_reason,Aldığı göç nedeni: Bilinmeyen,Internal in-migration by reason: unknown reason,person,internal_in_migration_reason_prov.xls
+internal_migration_by_reason.csv,out_migration_reason_total,Verdiği göç nedeni: Toplam,Internal out-migration by reason: total,person,internal_out_migration_reason_prov.xls
+internal_migration_by_reason.csv,out_migration_reason_job_assignment_or_transfer,Verdiği göç nedeni: Tayin / iş değişikliği,Internal out-migration by reason: job assignment or transfer,person,internal_out_migration_reason_prov.xls
+internal_migration_by_reason.csv,out_migration_reason_starting_or_finding_job,Verdiği göç nedeni: İşe başlamak / iş bulmak,Internal out-migration by reason: starting or finding job,person,internal_out_migration_reason_prov.xls
+internal_migration_by_reason.csv,out_migration_reason_education,Verdiği göç nedeni: Eğitim,Internal out-migration by reason: education,person,internal_out_migration_reason_prov.xls
+internal_migration_by_reason.csv,out_migration_reason_marital_or_family_change,Verdiği göç nedeni: Medeni durum değişikliği / ailevi nedenler,Internal out-migration by reason: marital or family change,person,internal_out_migration_reason_prov.xls
+internal_migration_by_reason.csv,out_migration_reason_better_housing_and_living_conditions,Verdiği göç nedeni: Daha iyi konut ve yaşam koşulları,Internal out-migration by reason: better housing and living conditions,person,internal_out_migration_reason_prov.xls
+internal_migration_by_reason.csv,out_migration_reason_dependent_household_family_member,Verdiği göç nedeni: Hane / aile fertlerinden birine bağımlı göç,Internal out-migration by reason: dependent household family member,person,internal_out_migration_reason_prov.xls
+internal_migration_by_reason.csv,out_migration_reason_returning_to_family_or_hometown,Verdiği göç nedeni: Aile yanına / memlekete geri dönme,Internal out-migration by reason: returning to family or hometown,person,internal_out_migration_reason_prov.xls
+internal_migration_by_reason.csv,out_migration_reason_health_or_care,Verdiği göç nedeni: Sağlık / bakım,Internal out-migration by reason: health or care,person,internal_out_migration_reason_prov.xls
+internal_migration_by_reason.csv,out_migration_reason_buying_a_house,Verdiği göç nedeni: Ev alınması,Internal out-migration by reason: buying a house,person,internal_out_migration_reason_prov.xls
+internal_migration_by_reason.csv,out_migration_reason_retirement,Verdiği göç nedeni: Emeklilik,Internal out-migration by reason: retirement,person,internal_out_migration_reason_prov.xls
+internal_migration_by_reason.csv,out_migration_reason_other_reason,Verdiği göç nedeni: Diğer,Internal out-migration by reason: other reason,person,internal_out_migration_reason_prov.xls
+internal_migration_by_reason.csv,out_migration_reason_unknown_reason,Verdiği göç nedeni: Bilinmeyen,Internal out-migration by reason: unknown reason,person,internal_out_migration_reason_prov.xls
+international_migration_and_foreign_population.csv,intl_immigrants_total,Yurt dışından gelen göç (Toplam),International immigrants (Total),person,intl_migration_sex_prov.xls
+international_migration_and_foreign_population.csv,intl_immigrants_male,Yurt dışından gelen göç (Erkek),International immigrants (Male),person,intl_migration_sex_prov.xls
+international_migration_and_foreign_population.csv,intl_immigrants_female,Yurt dışından gelen göç (Kadın),International immigrants (Female),person,intl_migration_sex_prov.xls
+international_migration_and_foreign_population.csv,intl_emigrants_total,Yurt dışına giden göç (Toplam),International emigrants (Total),person,intl_migration_sex_prov.xls
+international_migration_and_foreign_population.csv,intl_emigrants_male,Yurt dışına giden göç (Erkek),International emigrants (Male),person,intl_migration_sex_prov.xls
+international_migration_and_foreign_population.csv,intl_emigrants_female,Yurt dışına giden göç (Kadın),International emigrants (Female),person,intl_migration_sex_prov.xls
+international_migration_and_foreign_population.csv,intl_net_migration,Uluslararası net göç,International net migration,person,intl_migration_sex_prov.xls
+international_migration_and_foreign_population.csv,intl_immigrants_turkish_citizens,Yurt dışından gelen göç (Türk vatandaşları),International immigrants: Turkish citizens,person,intl_migration_citizenship_prov.xls
+international_migration_and_foreign_population.csv,intl_immigrants_foreign_nationals,Yurt dışından gelen göç (Yabancı uyruklular),International immigrants: Foreign nationals,person,intl_migration_citizenship_prov.xls
+international_migration_and_foreign_population.csv,intl_emigrants_turkish_citizens,Yurt dışına giden göç (Türk vatandaşları),International emigrants: Turkish citizens,person,intl_migration_citizenship_prov.xls
+international_migration_and_foreign_population.csv,intl_emigrants_foreign_nationals,Yurt dışına giden göç (Yabancı uyruklular),International emigrants: Foreign nationals,person,intl_migration_citizenship_prov.xls
+international_migration_and_foreign_population.csv,foreign_resident_population_total,Yabancı uyruklu ikamet eden nüfus (Toplam),Foreign resident population (total),person,DF_ADNKS_T12_V1.1
+international_migration_and_foreign_population.csv,foreign_resident_population_male,Yabancı uyruklu ikamet eden nüfus (Erkek),Foreign resident population (male),person,DF_ADNKS_T12_V1.1
+international_migration_and_foreign_population.csv,foreign_resident_population_female,Yabancı uyruklu ikamet eden nüfus (Kadın),Foreign resident population (female),person,DF_ADNKS_T12_V1.1
+road_motor_vehicles_and_transfers.csv,registered_vehicles_total,"Trafiğe kayıtlı motorlu kara taşıtı sayısı (Toplam, yıl sonu)",Registered road motor vehicles at year-end (total),vehicle,DF_MOTORLU_KARA_TASIT_ILLER_V3_V1.0
+road_motor_vehicles_and_transfers.csv,transferred_vehicles_total,Yıl içinde devri yapılan motorlu kara taşıtı sayısı (Toplam),Annual road motor vehicles handed over / transferred (total),vehicle,DF_MOTORLU_KARA_TASIT_DEVRI_YAPILAN_IL_V3_V1.0
+road_motor_vehicles_and_transfers.csv,registered_vehicles_car,"Trafiğe kayıtlı motorlu kara taşıtı sayısı (Otomobil, yıl sonu)",Registered road motor vehicles at year-end (car),vehicle,DF_MOTORLU_KARA_TASIT_ILLER_V3_V1.0
+road_motor_vehicles_and_transfers.csv,transferred_vehicles_car,Yıl içinde devri yapılan motorlu kara taşıtı sayısı (Otomobil),Annual road motor vehicles handed over / transferred (car),vehicle,DF_MOTORLU_KARA_TASIT_DEVRI_YAPILAN_IL_V3_V1.0
+road_motor_vehicles_and_transfers.csv,registered_vehicles_minibus,"Trafiğe kayıtlı motorlu kara taşıtı sayısı (Minibüs, yıl sonu)",Registered road motor vehicles at year-end (minibus),vehicle,DF_MOTORLU_KARA_TASIT_ILLER_V3_V1.0
+road_motor_vehicles_and_transfers.csv,transferred_vehicles_minibus,Yıl içinde devri yapılan motorlu kara taşıtı sayısı (Minibüs),Annual road motor vehicles handed over / transferred (minibus),vehicle,DF_MOTORLU_KARA_TASIT_DEVRI_YAPILAN_IL_V3_V1.0
+road_motor_vehicles_and_transfers.csv,registered_vehicles_bus,"Trafiğe kayıtlı motorlu kara taşıtı sayısı (Otobüs, yıl sonu)",Registered road motor vehicles at year-end (bus),vehicle,DF_MOTORLU_KARA_TASIT_ILLER_V3_V1.0
+road_motor_vehicles_and_transfers.csv,transferred_vehicles_bus,Yıl içinde devri yapılan motorlu kara taşıtı sayısı (Otobüs),Annual road motor vehicles handed over / transferred (bus),vehicle,DF_MOTORLU_KARA_TASIT_DEVRI_YAPILAN_IL_V3_V1.0
+road_motor_vehicles_and_transfers.csv,registered_vehicles_small_truck,"Trafiğe kayıtlı motorlu kara taşıtı sayısı (Kamyonet, yıl sonu)",Registered road motor vehicles at year-end (small truck),vehicle,DF_MOTORLU_KARA_TASIT_ILLER_V3_V1.0
+road_motor_vehicles_and_transfers.csv,transferred_vehicles_small_truck,Yıl içinde devri yapılan motorlu kara taşıtı sayısı (Kamyonet),Annual road motor vehicles handed over / transferred (small truck),vehicle,DF_MOTORLU_KARA_TASIT_DEVRI_YAPILAN_IL_V3_V1.0
+road_motor_vehicles_and_transfers.csv,registered_vehicles_truck,"Trafiğe kayıtlı motorlu kara taşıtı sayısı (Kamyon, yıl sonu)",Registered road motor vehicles at year-end (truck),vehicle,DF_MOTORLU_KARA_TASIT_ILLER_V3_V1.0
+road_motor_vehicles_and_transfers.csv,transferred_vehicles_truck,Yıl içinde devri yapılan motorlu kara taşıtı sayısı (Kamyon),Annual road motor vehicles handed over / transferred (truck),vehicle,DF_MOTORLU_KARA_TASIT_DEVRI_YAPILAN_IL_V3_V1.0
+road_motor_vehicles_and_transfers.csv,registered_vehicles_motorcycle,"Trafiğe kayıtlı motorlu kara taşıtı sayısı (Motosiklet, yıl sonu)",Registered road motor vehicles at year-end (motorcycle),vehicle,DF_MOTORLU_KARA_TASIT_ILLER_V3_V1.0
+road_motor_vehicles_and_transfers.csv,transferred_vehicles_motorcycle,Yıl içinde devri yapılan motorlu kara taşıtı sayısı (Motosiklet),Annual road motor vehicles handed over / transferred (motorcycle),vehicle,DF_MOTORLU_KARA_TASIT_DEVRI_YAPILAN_IL_V3_V1.0
+road_motor_vehicles_and_transfers.csv,registered_vehicles_special_purpose,"Trafiğe kayıtlı motorlu kara taşıtı sayısı (Özel amaçlı taşıt, yıl sonu)",Registered road motor vehicles at year-end (special purpose),vehicle,DF_MOTORLU_KARA_TASIT_ILLER_V3_V1.0
+road_motor_vehicles_and_transfers.csv,transferred_vehicles_special_purpose,Yıl içinde devri yapılan motorlu kara taşıtı sayısı (Özel amaçlı taşıt),Annual road motor vehicles handed over / transferred (special purpose),vehicle,DF_MOTORLU_KARA_TASIT_DEVRI_YAPILAN_IL_V3_V1.0
+road_motor_vehicles_and_transfers.csv,registered_vehicles_tractor,"Trafiğe kayıtlı motorlu kara taşıtı sayısı (Traktör, yıl sonu)",Registered road motor vehicles at year-end (tractor),vehicle,DF_MOTORLU_KARA_TASIT_ILLER_V3_V1.0
+road_motor_vehicles_and_transfers.csv,transferred_vehicles_tractor,Yıl içinde devri yapılan motorlu kara taşıtı sayısı (Traktör),Annual road motor vehicles handed over / transferred (tractor),vehicle,DF_MOTORLU_KARA_TASIT_DEVRI_YAPILAN_IL_V3_V1.0
+traffic_accidents_and_casualties.csv,traffic_accidents_total,Toplam trafik kaza sayısı,Total number of road traffic accidents,accident,DF_TRAFIK_KAZA_OLU_YARALI_V2_V1.0
+traffic_accidents_and_casualties.csv,traffic_accidents_death_or_injury,Ölümlü ve yaralanmalı trafik kaza sayısı,Number of traffic accidents involving death or injury,accident,DF_TRAFIK_KAZA_OLU_YARALI_V2_V1.0
+traffic_accidents_and_casualties.csv,traffic_persons_killed_total,Trafik kazalarında ölü sayısı (Toplam),Persons killed in traffic accidents (Total),person,DF_TRAFIK_KAZA_OLU_YARALI_V2_V1.0
+traffic_accidents_and_casualties.csv,traffic_persons_killed_at_scene,Trafik kazalarında ölü sayısı (Kaza yerinde),Persons killed in traffic accidents (At accident scene),person,DF_TRAFIK_KAZA_OLU_YARALI_V2_V1.0
+traffic_accidents_and_casualties.csv,traffic_persons_killed_within_30days,Trafik kazalarında ölü sayısı (Kaza sonrası 30 gün içinde),Persons killed in traffic accidents (Within 30 days after accident),person,DF_TRAFIK_KAZA_OLU_YARALI_V2_V1.0
+traffic_accidents_and_casualties.csv,traffic_persons_injured,Trafik kazalarında yaralı sayısı,Persons injured in traffic accidents,person,DF_TRAFIK_KAZA_OLU_YARALI_V2_V1.0
+air_traffic_by_province.csv,aircraft_traffic_total,Uçak trafiği (İniş-Kalkış toplamı),Total aircraft traffic (landings and take-offs),count,air_traffic_prov.xls
+air_traffic_by_province.csv,aircraft_commercial_domestic,Ticari uçak trafiği (İç hat),Commercial aircraft traffic: Domestic,count,air_traffic_prov.xls
+air_traffic_by_province.csv,aircraft_commercial_intl_turkish,Ticari uçak trafiği (Dış hat - Türk tescilli),Commercial aircraft traffic: International (Turkish registered),count,air_traffic_prov.xls
+air_traffic_by_province.csv,aircraft_commercial_intl_foreign,Ticari uçak trafiği (Dış hat - Yabancı tescilli),Commercial aircraft traffic: International (Foreign registered),count,air_traffic_prov.xls
+air_traffic_by_province.csv,air_passengers_total,Havalimanı yolcu sayısı (Toplam),Total air passengers,person,air_traffic_prov.xls
+air_traffic_by_province.csv,air_passengers_domestic_arrivals,İç hat gelen yolcu sayısı,Domestic air passenger arrivals,person,air_traffic_prov.xls
+air_traffic_by_province.csv,air_passengers_domestic_departures,İç hat giden yolcu sayısı,Domestic air passenger departures,person,air_traffic_prov.xls
+air_traffic_by_province.csv,air_passengers_intl_arrivals,Dış hat gelen yolcu sayısı,International air passenger arrivals,person,air_traffic_prov.xls
+air_traffic_by_province.csv,air_passengers_intl_departures,Dış hat giden yolcu sayısı,International air passenger departures,person,air_traffic_prov.xls
+air_traffic_by_province.csv,air_freight_total_tons,"Taşınan toplam yük (Kargo+Bagaj+Posta, Ton)","Total air freight carried (cargo, baggage, mail in tons)",ton,air_traffic_prov.xls
+air_traffic_by_province.csv,air_cargo_total_tons,Taşınan kargo miktarı (Ton),Total air cargo carried (tons),ton,air_traffic_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wellbeing_overall_rank,Genel yaşam endeksi il sıralaması,Overall Well-Being Index provincial rank (1-81),rank,wellbeing_index_ranks_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wellbeing_overall_index,Genel yaşam endeksi endeks değeri,Overall Well-Being Index index score (0-1),index,wellbeing_index_ranks_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wellbeing_housing_rank,Yaşam endeksi: Konut boyutu il sıralaması,Well-Being Index: Housing dimension provincial rank (1-81),rank,wellbeing_index_ranks_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wellbeing_housing_index,Yaşam endeksi: Konut boyutu endeks değeri,Well-Being Index: Housing dimension index score (0-1),index,wellbeing_index_ranks_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wellbeing_work_life_rank,Yaşam endeksi: Çalışma hayatı boyutu il sıralaması,Well-Being Index: Work life dimension provincial rank (1-81),rank,wellbeing_index_ranks_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wellbeing_work_life_index,Yaşam endeksi: Çalışma hayatı boyutu endeks değeri,Well-Being Index: Work life dimension index score (0-1),index,wellbeing_index_ranks_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wellbeing_income_wealth_rank,Yaşam endeksi: Gelir ve servet boyutu il sıralaması,Well-Being Index: Income and wealth dimension provincial rank (1-81),rank,wellbeing_index_ranks_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wellbeing_income_wealth_index,Yaşam endeksi: Gelir ve servet boyutu endeks değeri,Well-Being Index: Income and wealth dimension index score (0-1),index,wellbeing_index_ranks_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wellbeing_health_rank,Yaşam endeksi: Sağlık boyutu il sıralaması,Well-Being Index: Health dimension provincial rank (1-81),rank,wellbeing_index_ranks_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wellbeing_health_index,Yaşam endeksi: Sağlık boyutu endeks değeri,Well-Being Index: Health dimension index score (0-1),index,wellbeing_index_ranks_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wellbeing_education_rank,Yaşam endeksi: Eğitim boyutu il sıralaması,Well-Being Index: Education dimension provincial rank (1-81),rank,wellbeing_index_ranks_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wellbeing_education_index,Yaşam endeksi: Eğitim boyutu endeks değeri,Well-Being Index: Education dimension index score (0-1),index,wellbeing_index_ranks_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wellbeing_environment_rank,Yaşam endeksi: Çevre boyutu il sıralaması,Well-Being Index: Environment dimension provincial rank (1-81),rank,wellbeing_index_ranks_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wellbeing_environment_index,Yaşam endeksi: Çevre boyutu endeks değeri,Well-Being Index: Environment dimension index score (0-1),index,wellbeing_index_ranks_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wellbeing_safety_rank,Yaşam endeksi: Güvenlik boyutu il sıralaması,Well-Being Index: Safety dimension provincial rank (1-81),rank,wellbeing_index_ranks_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wellbeing_safety_index,Yaşam endeksi: Güvenlik boyutu endeks değeri,Well-Being Index: Safety dimension index score (0-1),index,wellbeing_index_ranks_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wellbeing_civic_engagement_rank,Yaşam endeksi: Sivil katılım boyutu il sıralaması,Well-Being Index: Civic engagement dimension provincial rank (1-81),rank,wellbeing_index_ranks_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wellbeing_civic_engagement_index,Yaşam endeksi: Sivil katılım boyutu endeks değeri,Well-Being Index: Civic engagement dimension index score (0-1),index,wellbeing_index_ranks_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wellbeing_infrastructure_access_rank,Yaşam endeksi: Altyapı hizmetlerine erişim boyutu il sıralaması,Well-Being Index: Access to infrastructure services dimension provincial rank (1-81),rank,wellbeing_index_ranks_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wellbeing_infrastructure_access_index,Yaşam endeksi: Altyapı hizmetlerine erişim boyutu endeks değeri,Well-Being Index: Access to infrastructure services dimension index score (0-1),index,wellbeing_index_ranks_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wellbeing_social_life_rank,Yaşam endeksi: Sosyal yaşam boyutu il sıralaması,Well-Being Index: Social life dimension provincial rank (1-81),rank,wellbeing_index_ranks_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wellbeing_social_life_index,Yaşam endeksi: Sosyal yaşam boyutu endeks değeri,Well-Being Index: Social life dimension index score (0-1),index,wellbeing_index_ranks_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wellbeing_life_satisfaction_rank,Yaşam endeksi: Yaşam memnuniyeti boyutu il sıralaması,Well-Being Index: Life satisfaction dimension provincial rank (1-81),rank,wellbeing_index_ranks_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wellbeing_life_satisfaction_index,Yaşam endeksi: Yaşam memnuniyeti boyutu endeks değeri,Well-Being Index: Life satisfaction dimension index score (0-1),index,wellbeing_index_ranks_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wb_ind_rooms_per_person,Fert başına düşen oda sayısı,Number of rooms per person,rooms,wellbeing_index_values_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wb_ind_indoor_toilet_pct,Konutun içinde tuvalet mevcudiyeti oranı (%),Indoor toilet presence in dwellings (%),percent,wellbeing_index_values_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wb_ind_dwelling_quality_problem_pct,Konutun kalitesinde problem yaşayanların oranı (%),Households having problems with dwelling quality (%),percent,wellbeing_index_values_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wb_ind_employment_rate_pct,İstihdam oranı (%),Employment rate (%),percent,wellbeing_index_values_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wb_ind_unemployment_rate_pct,İşsizlik oranı (%),Unemployment rate (%),percent,wellbeing_index_values_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wb_ind_avg_daily_earnings_try,Ortalama günlük kazanç (TL),Average daily earnings (TRY),try,wellbeing_index_values_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wb_ind_job_satisfaction_pct,İşinden memnuniyet oranı (%),Job satisfaction rate (%),percent,wellbeing_index_values_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wb_ind_savings_deposit_per_capita_try,Kişi başına düşen tasarruf mevduatı (TL),Savings deposit per capita (TRY),try,wellbeing_index_values_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wb_ind_middle_or_higher_income_hh_pct,Orta ve üstü gelir grubundaki hanelerin oranı (%),Households in middle or higher income groups (%),percent,wellbeing_index_values_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wb_ind_failing_basic_needs_hh_pct,Temel ihtiyaçlarını karşılayamadığını beyan eden hanelerin oranı (%),Households declaring failure to meet basic needs (%),percent,wellbeing_index_values_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wb_ind_infant_mortality_per_thousand,Bebek ölüm hızı (‰),Infant mortality rate (per thousand),per_thousand,wellbeing_index_values_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wb_ind_life_expectancy_years,Doğuşta beklenen yaşam süresi (Yıl),Life expectancy at birth (years),year,wellbeing_index_values_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wb_ind_consultations_per_doctor,Hekim başına düşen müracaat sayısı,Number of consultations/applications per doctor,applications_per_doctor,wellbeing_index_values_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wb_ind_health_satisfaction_pct,Sağlığından memnuniyet oranı (%),Satisfaction rate with personal health status (%),percent,wellbeing_index_values_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wb_ind_public_health_service_satisfaction_pct,Kamunun sağlık hizmetlerinden memnuniyet oranı (%),Satisfaction rate with public health services (%),percent,wellbeing_index_values_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wb_ind_preprimary_net_schooling_pct,Okul öncesi eğitimde (3-5 yaş) net okullaşma oranı (%),Net schooling ratio in pre-primary education aged 3-5 (%),percent,wellbeing_index_values_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wb_ind_teog_avg_score,TEOG sistemi yerleştirmeye esas puan ortalaması,Average score in Transition to Secondary Education Exam (TEOG),points,wellbeing_index_values_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wb_ind_ygs_avg_score,YGS puan ortalaması,Average score in Transition to Higher Education Exam (YGS),points,wellbeing_index_values_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wb_ind_higher_edu_graduates_pct,Fakülte veya yüksekokul mezunlarının oranı (%),Share of higher education graduates (%),percent,wellbeing_index_values_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wb_ind_public_edu_service_satisfaction_pct,Kamunun eğitim hizmetlerinden memnuniyet oranı (%),Satisfaction rate with public education services (%),percent,wellbeing_index_values_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wb_ind_pm10_air_pollution_ug_m3,"PM10 istasyon değerleri ortalaması (hava kirliliği, µg/m³)",Average PM10 station air pollution concentration (µg/m³),ug_per_m3,wellbeing_index_values_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wb_ind_forest_area_pct,Km²'ye düşen orman alanı (%),Forest area share per km2 (%),percent,wellbeing_index_values_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wb_ind_waste_service_pop_pct,Atık hizmeti verilen nüfusun oranı (%),Population receiving municipal waste services (%),percent,wellbeing_index_values_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wb_ind_street_noise_problem_hh_pct,Sokaktan gelen gürültü problemi yaşayanların oranı (%),Households experiencing noise problems from streets (%),percent,wellbeing_index_values_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wb_ind_municipal_cleaning_satisfaction_pct,Belediyenin temizlik hizmetlerinden memnuniyet oranı (%),Satisfaction rate with municipal cleaning services (%),percent,wellbeing_index_values_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wb_ind_murder_rate_per_million,Cinayet oranı (bir milyon kişide),Murder rate (per million persons),per_million,wellbeing_index_values_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wb_ind_traffic_injury_accidents_per_thousand,Ölümlü ve yaralanmalı trafik kazası sayısı (bin kişide),Traffic accidents involving death/injury (per thousand persons),per_thousand,wellbeing_index_values_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wb_ind_feeling_safe_walking_night_pct,Gece yalnız yürürken kendini güvende hissedenlerin oranı (%),People feeling safe walking alone at night (%),percent,wellbeing_index_values_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wb_ind_public_safety_service_satisfaction_pct,Kamunun asayiş hizmetlerinden memnuniyet oranı (%),Satisfaction rate with public safety services (%),percent,wellbeing_index_values_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wb_ind_local_election_turnout_pct,Mahalli idareler seçimlerine katılım oranı (%),Voter turnout in local administration elections (%),percent,wellbeing_index_values_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wb_ind_political_party_membership_pct,Siyasi partilere üyelik oranı (%),Rate of membership in political parties (%),percent,wellbeing_index_values_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wb_ind_union_association_interest_pct,Sendika/dernek faaliyetleri ile ilgili olanların oranı (%),Persons interested in union/association activities (%),percent,wellbeing_index_values_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wb_ind_internet_subscriptions_per_100,İnternet abone sayısı (yüz kişide),Number of internet subscriptions (per 100 persons),per_100_persons,wellbeing_index_values_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wb_ind_sewerage_and_piped_water_access_pct,Kanalizasyon ve şebeke suyuna erişim oranı (%),Access rate of population to sewerage and piped water (%),percent,wellbeing_index_values_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wb_ind_airport_access_index,Havalimanına erişim oranı,Access to airport indicator,index,wellbeing_index_values_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wb_ind_public_transport_satisfaction_pct,Belediyenin toplu taşıma hizmetlerinden memnuniyet oranı (%),Satisfaction rate with municipal public transport services (%),percent,wellbeing_index_values_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wb_ind_cinema_theatre_audience_per_100,Sinema ve tiyatro seyirci sayısı (yüz kişide),Cinema and theatre audience (per 100 persons),per_100_persons,wellbeing_index_values_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wb_ind_shopping_mall_area_per_1000_m2,Bin kişi başına düşen alışveriş merkezi alanı (m²),"Shopping mall area per 1,000 persons (m2)",m2_per_1000_persons,wellbeing_index_values_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wb_ind_social_relations_satisfaction_pct,Sosyal ilişkilerinden memnuniyet oranı (%),Satisfaction rate with social relations (%),percent,wellbeing_index_values_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wb_ind_social_life_satisfaction_pct,Sosyal hayatından memnuniyet oranı (%),Satisfaction rate with social life (%),percent,wellbeing_index_values_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,wb_ind_happiness_level_pct,Mutluluk düzeyi (%),Level of happiness (%),percent,wellbeing_index_values_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,happiness_happy_total_pct,"Mutluluk düzeyi: Mutlu (Toplam, %)","Happiness level: Happy (Total, %)",percent,happiness_by_sex_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,happiness_happy_male_pct,"Mutluluk düzeyi: Mutlu (Erkek, %)","Happiness level: Happy (Male, %)",percent,happiness_by_sex_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,happiness_happy_female_pct,"Mutluluk düzeyi: Mutlu (Kadın, %)","Happiness level: Happy (Female, %)",percent,happiness_by_sex_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,happiness_neutral_total_pct,"Mutluluk düzeyi: Orta (Toplam, %)","Happiness level: Neither happy nor unhappy (Total, %)",percent,happiness_by_sex_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,happiness_neutral_male_pct,"Mutluluk düzeyi: Orta (Erkek, %)","Happiness level: Neither happy nor unhappy (Male, %)",percent,happiness_by_sex_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,happiness_neutral_female_pct,"Mutluluk düzeyi: Orta (Kadın, %)","Happiness level: Neither happy nor unhappy (Female, %)",percent,happiness_by_sex_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,happiness_unhappy_total_pct,"Mutluluk düzeyi: Mutsuz (Toplam, %)","Happiness level: Unhappy (Total, %)",percent,happiness_by_sex_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,happiness_unhappy_male_pct,"Mutluluk düzeyi: Mutsuz (Erkek, %)","Happiness level: Unhappy (Male, %)",percent,happiness_by_sex_prov.xls
+wellbeing_and_life_satisfaction_indicators.csv,happiness_unhappy_female_pct,"Mutluluk düzeyi: Mutsuz (Kadın, %)","Happiness level: Unhappy (Female, %)",percent,happiness_by_sex_prov.xls
+sports_clubs_and_media_indicators.csv,sports_clubs_total,Toplam spor kulübü sayısı,Total sports clubs,club,sports_clubs_prov.xls
+sports_clubs_and_media_indicators.csv,sports_clubs_military,Askeri spor kulübü sayısı,Military sports clubs,club,sports_clubs_prov.xls
+sports_clubs_and_media_indicators.csv,sports_clubs_specialized,İhtisas spor kulübü sayısı,Specialized sports clubs,club,sports_clubs_prov.xls
+sports_clubs_and_media_indicators.csv,sports_clubs_institutional,Müessese spor kulübü sayısı,Institutional sports clubs,club,sports_clubs_prov.xls
+sports_clubs_and_media_indicators.csv,sports_clubs_school,Okul spor kulübü sayısı,School sports clubs,club,sports_clubs_prov.xls
+sports_clubs_and_media_indicators.csv,sports_clubs_youth,Gençlik spor kulübü sayısı,Youth sports clubs,club,sports_clubs_prov.xls
+sports_clubs_and_media_indicators.csv,official_ad_publications_total,Resmi ilan ve reklam yayımlayan toplam süreli yayın sayısı,Total periodicals publishing official announcements and ads,publication,DF_RESMI_ILAN_KONTENJAN_V1_0
+sports_clubs_and_media_indicators.csv,official_ad_newspapers_and_magazines,Resmi ilan ve reklam yayımlayan toplam gazete ve dergi sayısı,Total newspapers and magazines publishing official announcements/ads,publication,DF_RESMI_ILAN_KONTENJAN_V1_0
+sports_clubs_and_media_indicators.csv,official_ad_internet_news_sites,Resmi ilan ve reklam yayımlayan toplam internet haber sitesi sayısı,Total internet news sites publishing official announcements/ads,publication,DF_RESMI_ILAN_KONTENJAN_V1_0
+opera_and_ballet_by_province.csv,opera_ballet_halls,Opera ve bale salonu sayısı,Number of opera and ballet halls,count,cinema_theatre_press_8.xls
+opera_and_ballet_by_province.csv,opera_ballet_seats,Opera ve bale salonu koltuk sayısı,Number of seats in opera and ballet halls,seat,cinema_theatre_press_8.xls
+opera_and_ballet_by_province.csv,opera_ballet_shows_total,Opera ve bale oynanan eser sayısı (Toplam),Number of opera and ballet shows played (Total),show,cinema_theatre_press_8.xls
+opera_and_ballet_by_province.csv,opera_ballet_performances_total,Opera ve bale gösteri sayısı (Toplam),Number of opera and ballet performances (Total),performance,cinema_theatre_press_8.xls
+opera_and_ballet_by_province.csv,opera_ballet_audience_total,Opera ve bale seyirci sayısı (Toplam),Number of opera and ballet audiences (Total),person,cinema_theatre_press_8.xls
+health_infrastructure_and_personnel.csv,hospitals_total,Hastane sayısı (Toplam),Number of hospitals (Total),hospital,health_hospitals_prov.xls
+health_infrastructure_and_personnel.csv,hospitals_ministry_of_health,Hastane sayısı (Sağlık Bakanlığı),Number of hospitals (Ministry of Health),hospital,health_hospitals_prov.xls
+health_infrastructure_and_personnel.csv,hospitals_university,Hastane sayısı (Üniversite),Number of hospitals (University),hospital,health_hospitals_prov.xls
+health_infrastructure_and_personnel.csv,hospitals_private,Hastane sayısı (Özel),Number of hospitals (Private),hospital,health_hospitals_prov.xls
+health_infrastructure_and_personnel.csv,hospitals_other,Hastane sayısı (Diğer),Number of hospitals (Other),hospital,health_hospitals_prov.xls
+health_infrastructure_and_personnel.csv,hospital_beds_total,Hastane yatak sayısı (Toplam),Number of hospital beds (Total),bed,health_beds_prov.xls
+health_infrastructure_and_personnel.csv,hospital_beds_ministry_of_health,Hastane yatak sayısı (Sağlık Bakanlığı),Number of hospital beds (Ministry of Health),bed,health_beds_prov.xls
+health_infrastructure_and_personnel.csv,hospital_beds_university,Hastane yatak sayısı (Üniversite),Number of hospital beds (University),bed,health_beds_prov.xls
+health_infrastructure_and_personnel.csv,hospital_beds_private,Hastane yatak sayısı (Özel),Number of hospital beds (Private),bed,health_beds_prov.xls
+health_infrastructure_and_personnel.csv,hospital_beds_other,Hastane yatak sayısı (Diğer),Number of hospital beds (Other),bed,health_beds_prov.xls
+health_infrastructure_and_personnel.csv,specialist_physicians_total,Uzman hekim sayısı (Toplam),Specialist physicians (Total),person,health_personnel_prov.xls
+health_infrastructure_and_personnel.csv,general_practitioners_total,Pratisyen hekim sayısı (Toplam),General practitioners (Total),person,health_personnel_prov.xls
+health_infrastructure_and_personnel.csv,medical_residents_total,Asistan hekim sayısı (Toplam),Medical residents (Total),person,health_personnel_prov.xls
+health_infrastructure_and_personnel.csv,physicians_total,Toplam hekim sayısı,Total physicians,person,health_personnel_prov.xls
+health_infrastructure_and_personnel.csv,dentists_total,Diş hekimi sayısı (Toplam),Total dentists,person,health_personnel_prov.xls
+health_infrastructure_and_personnel.csv,nurses_total,Hemşire sayısı (Toplam),Total nurses,person,health_personnel_prov.xls
+health_infrastructure_and_personnel.csv,midwives_total,Ebe sayısı (Toplam),Total midwives,person,health_personnel_prov.xls
+health_infrastructure_and_personnel.csv,pharmacists_total,Eczacı sayısı (Toplam),Total pharmacists,person,health_personnel_prov.xls
+health_infrastructure_and_personnel.csv,other_health_personnel_total,Diğer sağlık personeli sayısı (Toplam),Other health personnel (Total),person,health_personnel_prov.xls
+agricultural_land_by_province.csv,agri_land_total_decare,Toplam tarım alanı (Dekar),Total agricultural land excluding permanent meadows/pastures (decare),decare,agricultural_land_prov.xls
+agricultural_land_by_province.csv,agri_sown_area_cereals_crops_decare,Tahıllar ve diğer bitkisel ürünler: Ekilen alan (Dekar),Sown area of cereals and other crop products (decare),decare,agricultural_land_prov.xls
+agricultural_land_by_province.csv,agri_fallow_land_decare,Nadas alanı (Dekar),Fallow land (decare),decare,agricultural_land_prov.xls
+agricultural_land_by_province.csv,agri_vegetable_gardens_decare,Sebze bahçeleri alanı (Dekar),Area of vegetable gardens (decare),decare,agricultural_land_prov.xls
+agricultural_land_by_province.csv,agri_fruits_beverage_spice_decare,"Meyveler, içecek ve baharat bitkileri alanı (Dekar)","Area of fruits, beverage and spice crops (decare)",decare,agricultural_land_prov.xls
+agricultural_land_by_province.csv,agri_ornamental_plants_decare,Süs bitkileri alanı (Dekar),Area of ornamental plants (decare),decare,agricultural_land_prov.xls
+agricultural_wages_by_province.csv,seasonal_agri_daily_wage_female_try,"Mevsimlik tarım işçisi ortalama günlük ücret (Kadın, TL)",Average daily wage of female seasonal agricultural workers (TRY),try,agricultural_wages_prov.xls
+agricultural_wages_by_province.csv,seasonal_agri_daily_wage_male_try,"Mevsimlik tarım işçisi ortalama günlük ücret (Erkek, TL)",Average daily wage of male seasonal agricultural workers (TRY),try,agricultural_wages_prov.xls
+agricultural_wages_by_province.csv,permanent_agri_monthly_wage_female_try,"Sürekli tarım işçisi ortalama aylık ücret (Kadın, TL)",Average monthly wage of female permanent agricultural workers (TRY),try,agricultural_wages_prov.xls
+agricultural_wages_by_province.csv,permanent_agri_monthly_wage_male_try,"Sürekli tarım işçisi ortalama aylık ücret (Erkek, TL)",Average monthly wage of male permanent agricultural workers (TRY),try,agricultural_wages_prov.xls
+municipal_water_and_waste_services.csv,municipalities_total_count,Toplam belediye sayısı,Total number of municipalities,count,DF_ATIK_BELEDIYE_HIZMET_V1_V1.0
+municipal_water_and_waste_services.csv,municipal_population_total,Toplam belediye nüfusu,Total municipal population,person,DF_ATIK_BELEDIYE_HIZMET_V1_V1.0
+municipal_water_and_waste_services.csv,waste_service_municipalities_count,Atık hizmeti veren belediye sayısı,Number of municipalities providing waste services,count,DF_ATIK_BELEDIYE_HIZMET_V1_V1.0
+municipal_water_and_waste_services.csv,waste_service_population,Atık hizmeti verilen belediye nüfusu,Municipal population receiving waste services,person,DF_ATIK_BELEDIYE_HIZMET_V1_V1.0
+municipal_water_and_waste_services.csv,waste_service_population_share_pct,Atık hizmeti verilen belediye nüfusunun toplam belediye nüfusuna oranı (%),Share of municipal population receiving waste services (%),percent,DF_ATIK_BELEDIYE_HIZMET_V1_V1.0
+municipal_water_and_waste_services.csv,waste_collected_total_tons,Toplanan atık miktarı (Ton),Total amount of municipal waste collected (tons),ton,DF_ATIK_BELEDIYE_HIZMET_V1_V1.0
+municipal_water_and_waste_services.csv,waste_per_capita_daily_kg,Kişi başı toplanan ortalama günlük atık miktarı (Kg/Kişi-Gün),Average daily municipal waste collected per capita (kg/person-day),kg_per_capita_day,DF_ATIK_BELEDIYE_HIZMET_V1_V1.0
+municipal_water_and_waste_services.csv,water_abstracted_total_thousand_m3,Belediyeler tarafından kaynaklardan çekilen toplam su miktarı (Bin m³),Total water abstracted by municipalities (thousand m3),thousand_m3,DF_SU_ATIKSU_BELEDIYE_CEKILEN_DAGITILAN_V1_V1.0
+municipal_water_and_waste_services.csv,water_distributed_total_thousand_m3,Belediyeler tarafından dağıtılan toplam su miktarı (Bin m³),Total water distributed by municipalities (thousand m3),thousand_m3,DF_SU_ATIKSU_BELEDIYE_CEKILEN_DAGITILAN_V1_V1.0
+municipal_water_and_waste_services.csv,wastewater_discharged_total_thousand_m3,Kanalizasyon şebekesinden deşarj edilen toplam atıksu miktarı (Bin m³),Total wastewater discharged from municipal sewerage network (thousand m3),thousand_m3,DF_SU_ATIKSU_BELEDIYE_CEKILEN_DAGITILAN_V1_V1.0
+prison_convicts_by_crime.csv,convicts_total_male,Ceza infaz kurumuna giren toplam hükümlü sayısı (Erkek),Total convicts received into prison by permanent residence (Male),person,prison_convicts_prov.xls
+prison_convicts_by_crime.csv,convicts_total_female,Ceza infaz kurumuna giren toplam hükümlü sayısı (Kadın),Total convicts received into prison by permanent residence (Female),person,prison_convicts_prov.xls
+prison_convicts_by_crime.csv,convicts_homicide_male,Öldürme suçu hükümlü sayısı (Erkek),Convicts received into prison: Homicide (Male),person,prison_convicts_prov.xls
+prison_convicts_by_crime.csv,convicts_homicide_female,Öldürme suçu hükümlü sayısı (Kadın),Convicts received into prison: Homicide (Female),person,prison_convicts_prov.xls
+prison_convicts_by_crime.csv,convicts_assault_male,Yaralama suçu hükümlü sayısı (Erkek),Convicts received into prison: Assault (Male),person,prison_convicts_prov.xls
+prison_convicts_by_crime.csv,convicts_assault_female,Yaralama suçu hükümlü sayısı (Kadın),Convicts received into prison: Assault (Female),person,prison_convicts_prov.xls
+prison_convicts_by_crime.csv,convicts_sexual_crimes_male,Cinsel suçlar hükümlü sayısı (Erkek),Convicts received into prison: Sexual crimes (Male),person,prison_convicts_prov.xls
+prison_convicts_by_crime.csv,convicts_sexual_crimes_female,Cinsel suçlar hükümlü sayısı (Kadın),Convicts received into prison: Sexual crimes (Female),person,prison_convicts_prov.xls
+prison_convicts_by_crime.csv,convicts_kidnapping_male,Kişiyi hürriyetinden yoksun kılma hükümlü sayısı (Erkek),Convicts received into prison: Kidnapping / deprivation of liberty (Male),person,prison_convicts_prov.xls
+prison_convicts_by_crime.csv,convicts_kidnapping_female,Kişiyi hürriyetinden yoksun kılma hükümlü sayısı (Kadın),Convicts received into prison: Kidnapping / deprivation of liberty (Female),person,prison_convicts_prov.xls
+prison_convicts_by_crime.csv,convicts_defamation_male,Hakaret suçu hükümlü sayısı (Erkek),Convicts received into prison: Defamation (Male),person,prison_convicts_prov.xls
+prison_convicts_by_crime.csv,convicts_defamation_female,Hakaret suçu hükümlü sayısı (Kadın),Convicts received into prison: Defamation (Female),person,prison_convicts_prov.xls
+prison_convicts_by_crime.csv,convicts_theft_male,Hırsızlık suçu hükümlü sayısı (Erkek),Convicts received into prison: Theft (Male),person,prison_convicts_prov.xls
+prison_convicts_by_crime.csv,convicts_theft_female,Hırsızlık suçu hükümlü sayısı (Kadın),Convicts received into prison: Theft (Female),person,prison_convicts_prov.xls
+prison_convicts_by_crime.csv,convicts_robbery_male,Yağma (gasp) suçu hükümlü sayısı (Erkek),Convicts received into prison: Robbery / looting (Male),person,prison_convicts_prov.xls
+prison_convicts_by_crime.csv,convicts_robbery_female,Yağma (gasp) suçu hükümlü sayısı (Kadın),Convicts received into prison: Robbery / looting (Female),person,prison_convicts_prov.xls
+prison_convicts_by_crime.csv,convicts_swindling_male,Dolandırıcılık suçu hükümlü sayısı (Erkek),Convicts received into prison: Swindling / fraud (Male),person,prison_convicts_prov.xls
+prison_convicts_by_crime.csv,convicts_swindling_female,Dolandırıcılık suçu hükümlü sayısı (Kadın),Convicts received into prison: Swindling / fraud (Female),person,prison_convicts_prov.xls
+prison_convicts_by_crime.csv,convicts_drug_production_commerce_male,Uyuşturucu veya uyarıcı madde imal ve ticareti hükümlü sayısı (Erkek),Convicts received into prison: Production and commerce of drugs (Male),person,prison_convicts_prov.xls
+prison_convicts_by_crime.csv,convicts_drug_production_commerce_female,Uyuşturucu veya uyarıcı madde imal ve ticareti hükümlü sayısı (Kadın),Convicts received into prison: Production and commerce of drugs (Female),person,prison_convicts_prov.xls
+prison_convicts_by_crime.csv,convicts_drug_use_purchase_male,Uyuşturucu veya uyarıcı madde kullanma/satın alma hükümlü sayısı (Erkek),Convicts received into prison: Use and purchase of drugs (Male),person,prison_convicts_prov.xls
+prison_convicts_by_crime.csv,convicts_drug_use_purchase_female,Uyuşturucu veya uyarıcı madde kullanma/satın alma hükümlü sayısı (Kadın),Convicts received into prison: Use and purchase of drugs (Female),person,prison_convicts_prov.xls
+prison_convicts_by_crime.csv,convicts_forgery_male,Sahtecilik suçu hükümlü sayısı (Erkek),Convicts received into prison: Forgery (Male),person,prison_convicts_prov.xls
+prison_convicts_by_crime.csv,convicts_forgery_female,Sahtecilik suçu hükümlü sayısı (Kadın),Convicts received into prison: Forgery (Female),person,prison_convicts_prov.xls
+prison_convicts_by_crime.csv,convicts_smuggling_male,Kaçakçılık suçu hükümlü sayısı (Erkek),Convicts received into prison: Smuggling (Male),person,prison_convicts_prov.xls
+prison_convicts_by_crime.csv,convicts_smuggling_female,Kaçakçılık suçu hükümlü sayısı (Kadın),Convicts received into prison: Smuggling (Female),person,prison_convicts_prov.xls
+prison_convicts_by_crime.csv,convicts_traffic_crimes_male,Trafik suçları hükümlü sayısı (Erkek),Convicts received into prison: Traffic crimes (Male),person,prison_convicts_prov.xls
+prison_convicts_by_crime.csv,convicts_traffic_crimes_female,Trafik suçları hükümlü sayısı (Kadın),Convicts received into prison: Traffic crimes (Female),person,prison_convicts_prov.xls
+prison_convicts_by_crime.csv,convicts_firearms_knives_male,Ateşli silahlar ve bıçaklar ile ilgili suçlar hükümlü sayısı (Erkek),Convicts received into prison: Firearms and knives offenses (Male),person,prison_convicts_prov.xls
+prison_convicts_by_crime.csv,convicts_firearms_knives_female,Ateşli silahlar ve bıçaklar ile ilgili suçlar hükümlü sayısı (Kadın),Convicts received into prison: Firearms and knives offenses (Female),person,prison_convicts_prov.xls
+prison_convicts_by_crime.csv,convicts_bankruptcy_enforcement_law_male,İcra İflas Kanunu'na muhalefet hükümlü sayısı (Erkek),Convicts received into prison: Opposition to Bankruptcy and Enforcement Law (Male),person,prison_convicts_prov.xls
+prison_convicts_by_crime.csv,convicts_bankruptcy_enforcement_law_female,İcra İflas Kanunu'na muhalefet hükümlü sayısı (Kadın),Convicts received into prison: Opposition to Bankruptcy and Enforcement Law (Female),person,prison_convicts_prov.xls
+prison_convicts_by_crime.csv,convicts_threat_male,Tehdit suçu hükümlü sayısı (Erkek),Convicts received into prison: Threat (Male),person,prison_convicts_prov.xls
+prison_convicts_by_crime.csv,convicts_threat_female,Tehdit suçu hükümlü sayısı (Kadın),Convicts received into prison: Threat (Female),person,prison_convicts_prov.xls
+prison_convicts_by_crime.csv,convicts_property_damage_male,Mala zarar verme hükümlü sayısı (Erkek),Convicts received into prison: Damage to property (Male),person,prison_convicts_prov.xls
+prison_convicts_by_crime.csv,convicts_property_damage_female,Mala zarar verme hükümlü sayısı (Kadın),Convicts received into prison: Damage to property (Female),person,prison_convicts_prov.xls
+prison_convicts_by_crime.csv,convicts_family_protection_violation_male,Ailenin korunması tedbirine aykırılık hükümlü sayısı (Erkek),Convicts received into prison: Contrary to family protection measures (Male),person,prison_convicts_prov.xls
+prison_convicts_by_crime.csv,convicts_family_protection_violation_female,Ailenin korunması tedbirine aykırılık hükümlü sayısı (Kadın),Convicts received into prison: Contrary to family protection measures (Female),person,prison_convicts_prov.xls
+prison_convicts_by_crime.csv,convicts_other_crimes_male,Diğer suçlar hükümlü sayısı (Erkek),Convicts received into prison: Other crimes (Male),person,prison_convicts_prov.xls
+prison_convicts_by_crime.csv,convicts_other_crimes_female,Diğer suçlar hükümlü sayısı (Kadın),Convicts received into prison: Other crimes (Female),person,prison_convicts_prov.xls
