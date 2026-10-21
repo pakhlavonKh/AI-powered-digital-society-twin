@@ -11,7 +11,10 @@ from __future__ import annotations
 
 import argparse
 import json
-import resource
+try:
+    import resource
+except ImportError:
+    resource = None
 import sys
 import time
 
@@ -123,7 +126,7 @@ def _benchmark(service, args) -> int:
                      "load_s": round(t4 - t3, 3), "filter_and_3_distributions_s": round(t5 - t4, 3), "sorted_page_s": round(t6 - t5, 3),
                      "pps_sample_100_s": round(t7 - t6, 3), "parquet_bytes": size_bytes, "population_id": manifest["population_id"],
                      "constraint_violations": report["constraint_violations"]})
-    peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss if resource else 0
     print(json.dumps({"rows": rows, "peak_rss": peak, "peak_rss_unit": "bytes" if sys.platform == "darwin" else "kilobytes",
                       "python": sys.version.split()[0]}, indent=2))
     return 0
