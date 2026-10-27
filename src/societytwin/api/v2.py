@@ -49,6 +49,13 @@ class ReplayRequest(BaseModel):
     idempotency_key: str = Field(min_length=8, max_length=128, pattern=r"^[A-Za-z0-9_-]+$")
 
 
+class ScenarioPromptRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    prompt: str = Field(min_length=3, max_length=4000, description="Natural language prompt describing the policy scenario")
+    model: str | None = Field(default=None, max_length=128, description="Optional LLM model identifier")
+    save: bool = Field(default=True, description="Whether to register and save the generated scenario to catalog")
+
+
 def _filters(
     province_codes: Annotated[list[str] | None, Query()] = None,
     age_min: Annotated[int | None, Query(ge=0, le=120)] = None,
@@ -220,6 +227,20 @@ def build_router() -> APIRouter:
             return saved.model_dump(mode="json")
         except (ValueError, KeyError) as exc:
             raise invalid("scenario_invalid", str(exc))
+
+    @r.post("/scenarios/from-prompt", status_code=201, tags=["experiments"],
+           description="Compile a natural language prompt into a validated policy scenario.")
+    def create_scenario_from_prompt(body: ScenarioPromptRequest):
+        from scenarios.compiler import compile_scenario_from_prompt
+        from scenarios.adapter import save_custom_scenario
+        try:
+            scenario = compile_scenario_from_prompt(body.prompt, model=body.model)
+            if body.save:
+                saved = save_custom_scenario(scenario)
+                return saved.model_dump(mode="json")
+            return scenario.model_dump(mode="json")
+        except Exception as exc:
+            raise invalid("scenario_compilation_failed", str(exc))
 
     @r.get("/examples/fare-experiment", tags=["experiments"],
            description="The demonstration design with explicitly HYPOTHETICAL fare parameters.")

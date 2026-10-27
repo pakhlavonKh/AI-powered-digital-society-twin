@@ -28,6 +28,7 @@ try:
         load_scenario,
         save_scenario,
     )
+    from .compiler import compile_scenario_from_prompt
     from .prompt_renderer import render_scenario_prompt
     from .response_validator import (
         AgentResponseEnvelope,
@@ -66,6 +67,7 @@ except ImportError:
         load_scenario,
         save_scenario,
     )
+    from scenarios.compiler import compile_scenario_from_prompt  # type: ignore
     from scenarios.prompt_renderer import render_scenario_prompt  # type: ignore
     from scenarios.response_validator import (  # type: ignore
         AgentResponseEnvelope,
@@ -105,6 +107,8 @@ __all__ = [
     "get_scenario",
     "save_custom_scenario",
     "scenario_to_experiment_definition",
+    # Compiler
+    "compile_scenario_from_prompt",
     # Eligibility
     "evaluate_resident",
     "filter_population",

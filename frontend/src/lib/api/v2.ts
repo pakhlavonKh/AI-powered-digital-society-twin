@@ -332,3 +332,11 @@ export type CreateScenarioPayload = {
   }[];
 };
 
+export type ScenarioPromptRequest = {
+  prompt: string;
+  model?: string | null;
+  save?: boolean;
+};
+
+export type CompiledScenarioResponse = CreateScenarioPayload;
+

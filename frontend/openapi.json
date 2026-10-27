@@ -408,10 +408,10 @@
                   "type": "array",
                   "items": {
                     "enum": [
-                      "Hiç evlenmedi",
+                      "Hi\u00e7 evlenmedi",
                       "Evli",
-                      "Boşandı",
-                      "Eşi öldü",
+                      "Bo\u015fand\u0131",
+                      "E\u015fi \u00f6ld\u00fc",
                       "not_applicable"
                     ],
                     "type": "string"
@@ -421,10 +421,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Source TÜİK label (v2 only)",
+              "description": "Source T\u00dc\u0130K label (v2 only)",
               "title": "Marital Status"
             },
-            "description": "Source TÜİK label (v2 only)"
+            "description": "Source T\u00dc\u0130K label (v2 only)"
           }
         ],
         "responses": {
@@ -649,10 +649,10 @@
                   "type": "array",
                   "items": {
                     "enum": [
-                      "Hiç evlenmedi",
+                      "Hi\u00e7 evlenmedi",
                       "Evli",
-                      "Boşandı",
-                      "Eşi öldü",
+                      "Bo\u015fand\u0131",
+                      "E\u015fi \u00f6ld\u00fc",
                       "not_applicable"
                     ],
                     "type": "string"
@@ -662,10 +662,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Source TÜİK label (v2 only)",
+              "description": "Source T\u00dc\u0130K label (v2 only)",
               "title": "Marital Status"
             },
-            "description": "Source TÜİK label (v2 only)"
+            "description": "Source T\u00dc\u0130K label (v2 only)"
           }
         ],
         "responses": {
@@ -4101,6 +4101,46 @@
         }
       }
     },
+    "/api/v2/scenarios/from-prompt": {
+      "post": {
+        "tags": [
+          "experiments"
+        ],
+        "summary": "Create Scenario From Prompt",
+        "description": "Compile a natural language prompt into a validated policy scenario.",
+        "operationId": "create_scenario_from_prompt_api_v2_scenarios_from_prompt_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScenarioPromptRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v2/examples/fare-experiment": {
       "get": {
         "tags": [
@@ -7119,7 +7159,7 @@
               }
             ],
             "title": "Genders",
-            "description": "Administrative sex category as recorded by TÜİK."
+            "description": "Administrative sex category as recorded by T\u00dc\u0130K."
           },
           "marital_statuses": {
             "anyOf": [
@@ -7127,10 +7167,10 @@
                 "items": {
                   "type": "string",
                   "enum": [
-                    "Hiç evlenmedi",
+                    "Hi\u00e7 evlenmedi",
                     "Evli",
-                    "Boşandı",
-                    "Eşi öldü",
+                    "Bo\u015fand\u0131",
+                    "E\u015fi \u00f6ld\u00fc",
                     "not_applicable"
                   ]
                 },
@@ -7142,7 +7182,7 @@
               }
             ],
             "title": "Marital Statuses",
-            "description": "Source TÜİK labels; available in v2 builds only."
+            "description": "Source T\u00dc\u0130K labels; available in v2 builds only."
           }
         },
         "additionalProperties": false,
@@ -8684,6 +8724,25 @@
               }
             ],
             "title": "Subsidized Exemptions Note"
+          },
+          "policy_summary": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Policy Summary",
+            "description": "Summary or rationale of the policy intervention"
+          },
+          "custom_details": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Custom Details",
+            "description": "Arbitrary policy domain attributes"
           }
         },
         "additionalProperties": false,
@@ -10526,7 +10585,7 @@
             "type": "string",
             "pattern": "^\\d{2}$",
             "title": "Province Code",
-            "description": "Two-digit TÜİK province code (e.g. '06' for Ankara)"
+            "description": "Two-digit T\u00dc\u0130K province code (e.g. '06' for Ankara)"
           },
           "province_name": {
             "type": "string",
@@ -10694,6 +10753,42 @@
           "value"
         ],
         "title": "ScenarioParameter"
+      },
+      "ScenarioPromptRequest": {
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "maxLength": 4000,
+            "minLength": 3,
+            "title": "Prompt",
+            "description": "Natural language prompt describing the policy scenario"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model",
+            "description": "Optional LLM model identifier"
+          },
+          "save": {
+            "type": "boolean",
+            "title": "Save",
+            "description": "Whether to register and save the generated scenario to catalog",
+            "default": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "prompt"
+        ],
+        "title": "ScenarioPromptRequest"
       },
       "Scope": {
         "properties": {

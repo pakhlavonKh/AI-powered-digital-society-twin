@@ -50,6 +50,8 @@ class PolicyParameters(BaseModel):
     fare_category: str | None = Field(default="full_adult_standard", max_length=64)
     effective_date: str | None = Field(default=None, max_length=32)
     subsidized_exemptions_note: str | None = Field(default=None, max_length=1000)
+    policy_summary: str | None = Field(default=None, max_length=2000, description="Summary or rationale of the policy intervention")
+    custom_details: dict[str, Any] = Field(default_factory=dict, description="Arbitrary policy domain attributes")
 
     @model_validator(mode="after")
     def _validate_consistency(self) -> PolicyParameters:
