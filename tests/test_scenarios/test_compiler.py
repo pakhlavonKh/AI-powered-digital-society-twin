@@ -128,3 +128,18 @@ def test_api_compile_scenario_from_prompt(tmp_path, monkeypatch):
     assert data["policy"]["category"] == "energy"
     assert len(data["questions"]) >= 1
 
+
+def test_compile_discount_prompt_uses_negative_percentage():
+    prompt = "How would university students in Istanbul respond to a 50% transit pass discount?"
+    scenario = compile_scenario_from_prompt(prompt, force_heuristic=True)
+    assert scenario.location.province_code == "34"
+    assert scenario.policy.parameters.increase_percentage == -50.0
+    assert scenario.policy.parameters.baseline_fare == 40.0
+    assert scenario.policy.parameters.new_fare == 20.0
+    assert "(-50%)" in scenario.name
+    assert "decrease by 50%" in scenario.questions[0].text
+    assert scenario.target_population.minimum_age == 18
+    assert scenario.target_population.maximum_age == 26
+    assert scenario.target_population.province_codes == ["34"]
+
+

@@ -2,8 +2,9 @@ scenario_id: energy_subsidy_001
 version: "1.0.0"
 name: Ankara Residential Electricity Tariff Subsidy
 description: >-
-  A hypothetical municipal social support policy providing a 25% targeted subsidy on monthly
-  residential electricity consumption (up to 240 kWh/month) for households in Ankara.
+  A hypothetical municipal social support policy subsidising monthly residential electricity
+  consumption (up to 240 kWh/month) for households in {province_name}: the low-tier tariff changes by
+  {increase_percentage}% (from {baseline_fare} {currency} to {new_fare} {currency}).
 location:
   province_code: "06"
   province_name: Ankara
@@ -13,8 +14,8 @@ metadata:
   hypothetical: true
   source_note: >-
     Derived from Energy Market Regulatory Authority (EPDK) residential low-consumption
-    tariff benchmarks (approx. 2.07 TL/kWh). The 25% subsidy to 1.55 TL/kWh is a controlled
-    simulation experiment parameter.
+    tariff benchmarks (approx. 2.07 TL/kWh). The subsidy percentage (policy.parameters.increase_percentage)
+    is a controlled simulation experiment parameter; the subsidised tariff is derived from it.
   author: SocietyTwin Scenario Engine Module
   reference_year: 2024
 
@@ -23,8 +24,8 @@ policy:
   type: subsidy
   parameters:
     baseline_fare: 2.07
-    new_fare: 1.55
-    increase_percentage: -25.12
+    # new_fare is derived (2.07 * 0.75 = 1.55)
+    increase_percentage: -25.0
     currency: TL/kWh
     fare_category: residential_low_tier
     effective_date: "2024-10-01"
@@ -44,7 +45,7 @@ target_population:
 
 questions:
   - id: q1_financial_relief
-    text: "How significantly would a 25% municipal electricity bill subsidy affect your household's monthly finances?"
+    text: "How significantly would a municipal electricity subsidy lowering the tariff from {baseline_fare} to {new_fare} {currency} affect your household's monthly finances?"
     type: single_choice
     options:
       - id: major_relief

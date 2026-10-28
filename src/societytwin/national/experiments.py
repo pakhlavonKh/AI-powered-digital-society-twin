@@ -140,6 +140,55 @@ class PersonaPolicy(BaseModel):
         return self
 
 
+class ScenarioReference(BaseModel):
+    """Provenance and targeting of a definition built from a Scenario Engine config (src/scenarios).
+
+    Optional: hand-written definitions omit it. When present, the plan enforces its geographic and age
+    scope against every sampled persona and blocks execution on any mismatch.
+    """
+    model_config = ConfigDict(extra="forbid")
+    scenario_id: str = Field(pattern=r"^[a-z][a-z0-9_]{1,63}$")
+    scenario_version: str = Field(pattern=r"^\d+\.\d+\.\d+$")
+    question_id: str = Field(pattern=r"^[a-z][a-z0-9_]{1,63}$")
+    question_type: str = Field(default="single_choice", pattern="^single_choice$")
+    province_codes: list[str] | None = Field(default=None, max_length=81,
+                                             description="Provinces the scenario applies to; None = no restriction.")
+    minimum_age: int | None = Field(default=None, ge=0, le=120)
+    maximum_age: int | None = Field(default=None, ge=0, le=120)
+    unenforced_filters: list[str] = Field(default_factory=list, max_length=10,
+                                          description="Scenario filters this runtime cannot enforce; a non-empty list blocks the plan.")
+
+    @model_validator(mode="after")
+    def _codes(self):
+        for code in self.province_codes or []:
+            if not re.fullmatch(r"\d{2}", code):
+                raise ValueError(f"Invalid province code {code!r} in scenario_ref")
+        if self.minimum_age is not None and self.maximum_age is not None and self.minimum_age > self.maximum_age:
+            raise ValueError("scenario_ref minimum_age exceeds maximum_age")
+        return self
+
+
+def scenario_scope_issues(ref: ScenarioReference, record: dict) -> list[str]:
+    """Reasons a population record falls outside a scenario's target scope ([] = in scope).
+
+    Missing values are reported, never assumed to match.
+    """
+    issues = []
+    if ref.province_codes:
+        code = record.get("province_code")
+        if code is None:
+            issues.append("province_missing")
+        elif code not in ref.province_codes:
+            issues.append("province_outside_scope")
+    if ref.minimum_age is not None or ref.maximum_age is not None:
+        age = record.get("age")
+        if age is None:
+            issues.append("age_missing")
+        elif (ref.minimum_age is not None and age < ref.minimum_age) or (ref.maximum_age is not None and age > ref.maximum_age):
+            issues.append("age_outside_scope")
+    return issues
+
+
 class ExperimentDefinition(BaseModel):
     model_config = ConfigDict(extra="forbid")
     title: str = Field(min_length=1, max_length=160)
@@ -150,6 +199,7 @@ class ExperimentDefinition(BaseModel):
     model: ModelSpec
     execution: ExecutionSpec
     persona: PersonaPolicy = Field(default_factory=PersonaPolicy)
+    scenario_ref: ScenarioReference | None = Field(default=None, exclude_if=lambda v: v is None)
 
     def definition_hash(self) -> str:
         return canonical_hash({"version": DEFINITION_VERSION, **self.model_dump()})

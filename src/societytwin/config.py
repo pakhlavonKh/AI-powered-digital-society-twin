@@ -121,9 +121,43 @@ class Settings:
         return replace(self, **kwargs)
 
 
+def _load_dotenv_files(*paths: Path) -> None:
+    if "PYTEST_CURRENT_TEST" in os.environ:
+        return
+    for path in paths:
+        if not path.is_file():
+            continue
+        try:
+            for raw in path.read_text(encoding="utf-8").splitlines():
+                line = raw.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                key, val = line.split("=", 1)
+                key = key.strip()
+                val = val.strip().strip('"').strip("'")
+                if not key or not val or os.environ.get(key):
+                    continue
+                if key == "MATRAIX_ROOT" and not Path(val).is_absolute():
+                    resolved = (path.parent / val).resolve()
+                    if not resolved.is_dir():
+                        resolved = (REPO_ROOT_DEFAULT / val).resolve()
+                    if resolved.is_dir():
+                        val = str(resolved)
+                    else:
+                        continue
+                os.environ[key] = val
+        except OSError:
+            continue
+
+
 def load_settings() -> Settings:
     repo_root = _env_path("SOCIETYTWIN_REPO_ROOT") or REPO_ROOT_DEFAULT
     experiment_root = _env_path("SOCIETYTWIN_EXPERIMENT_ROOT") or repo_root / EXPERIMENT_REL
+    _load_dotenv_files(repo_root / ".env", experiment_root / ".env")
+    has_provider_key = any(
+        os.environ.get(k)
+        for k in ("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GEMINI_API_KEY", "GOOGLE_API_KEY")
+    )
     layout = ExperimentLayout.load(experiment_root)
     import_runs_root = _env_path("SOCIETYTWIN_IMPORT_RUNS_DIR") or experiment_root / layout.runs_dir
     # data/results/* is git-ignored; managed state never shares a folder with imported evidence.
@@ -142,7 +176,10 @@ def load_settings() -> Settings:
         runtime_python=_env_path("SOCIETYTWIN_RUNTIME_PYTHON"),
         frontend_origins=origins,
         local_mutations=_env_flag("SOCIETYTWIN_LOCAL_MUTATIONS", True),
-        live_execution_enabled=_env_flag("SOCIETYTWIN_ENABLE_LIVE_EXECUTION", False),
+        live_execution_enabled=_env_flag(
+            "SOCIETYTWIN_ENABLE_LIVE_EXECUTION",
+            has_provider_key and "PYTEST_CURRENT_TEST" not in os.environ,
+        ),
         start_worker=_env_flag("SOCIETYTWIN_START_WORKER", True),
         subprocess_timeout_seconds=timeout,
         layout=layout,

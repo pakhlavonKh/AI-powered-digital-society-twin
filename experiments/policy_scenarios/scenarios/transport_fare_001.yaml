@@ -2,8 +2,9 @@ scenario_id: transport_fare_001
 version: "1.0.0"
 name: Ankara Public Transportation Fare Increase
 description: >-
-  A hypothetical municipal policy intervention simulating a 20% increase in the standard
-  electronic single-ride transit fare in Ankara (EGO bus, Ankaray, and Metro).
+  A hypothetical municipal policy intervention simulating a {increase_percentage}% increase in the standard
+  electronic single-ride transit fare in {province_name} (EGO bus, Ankaray, and Metro), from
+  {baseline_fare} {currency} to {new_fare} {currency}. Concession fares are not changed.
 location:
   province_code: "06"
   province_name: Ankara
@@ -13,8 +14,8 @@ metadata:
   hypothetical: true
   source_note: >-
     Baseline single-use electronic card fare is derived from the August 2024 UKOME tariff
-    for Ankara EGO General Directorate (21.00 TL). The 20% increase to 25.20 TL is a
-    controlled simulation parameter.
+    for Ankara EGO General Directorate (21.00 TL). The percentage increase (policy.parameters.increase_percentage)
+    is a controlled simulation parameter; the new fare is derived from it.
   author: SocietyTwin Scenario Engine Module
   reference_year: 2024
 
@@ -23,7 +24,7 @@ policy:
   type: fare_increase
   parameters:
     baseline_fare: 21.0
-    new_fare: 25.2
+    # new_fare is derived (21.00 * 1.20 = 25.20); set it explicitly only if it must be pinned.
     increase_percentage: 20.0
     currency: TL
     fare_category: full_adult_standard
@@ -45,7 +46,7 @@ target_population:
 
 questions:
   - id: q1_usage_change
-    text: "If standard public transportation fares in Ankara increase by 20% (from 21.00 TL to 25.20 TL), how would your transit usage most likely change?"
+    text: "If standard public transportation fares in {province_name} increase by {increase_percentage}% (from {baseline_fare} {currency} to {new_fare} {currency}), how would your transit usage most likely change?"
     type: single_choice
     options:
       - id: maintain_usage

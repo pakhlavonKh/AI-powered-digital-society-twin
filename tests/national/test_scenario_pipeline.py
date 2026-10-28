@@ -1,0 +1,200 @@
+"""Integration tests for Scenario Engine execution within the SocietyTwin national pipeline.
+
+Verifies:
+- P0: Geographic restriction enforcement: Ankara-only scenario cannot execute against an Amasya cohort
+  (or any other non-Ankara cohort).
+- P0: Full execution flow with stub backend preserves scenario_ref in plan and manifest.
+- P0: Nonexistent question ID queries return 404 question_not_found.
+- P1: Conflict handling when attempting to overwrite registered scenarios.
+"""
+
+from __future__ import annotations
+
+import csv
+import shutil
+import pytest
+
+from scenarios.adapter import get_scenario, scenario_to_experiment_definition
+from tests.conftest import make_client
+from tests.national.conftest import MAPPING, PACKAGE
+from tests.national.test_api_v2 import _cohort
+
+
+def _append_amasya_to_package(pkg_dir):
+    """Clone Ankara (06) rows in the artificial package as Amasya (05, TR834) for cohort testing."""
+    for filename in ("population_by_age_sex.csv", "marital_status_by_sex.csv", "education_by_sex.csv"):
+        csv_path = pkg_dir / filename
+        with csv_path.open("r", encoding="utf-8", newline="") as f:
+            rows = list(csv.reader(f))
+        header, body = rows[0], rows[1:]
+        amasya_rows = []
+        for row in body:
+            if row[1] == "06":
+                new_row = list(row)
+                new_row[1] = "05"
+                new_row[2] = "Amasya"
+                new_row[3] = "TR834"
+                amasya_rows.append(new_row)
+        with csv_path.open("w", encoding="utf-8", newline="") as f:
+            writer = csv.writer(f, lineterminator="\n")
+            writer.writerow(header)
+            writer.writerows(body + amasya_rows)
+
+
+def test_ankara_scenario_cannot_execute_against_amasya_cohort(make_settings, tmp_path):
+    """P0: Regression test proving that an Ankara-only scenario cannot execute against an Amasya cohort."""
+    pkg = tmp_path / "data" / "raw" / "tuik_package"
+    shutil.copytree(PACKAGE, pkg)
+    _append_amasya_to_package(pkg)
+    settings = make_settings(tuik_package_dir=pkg, tuik_mapping_path=MAPPING)
+
+    with make_client(settings) as c:
+        assert c.post("/api/v2/controls/build").status_code == 200
+        pop_res = c.post(
+            "/api/v2/populations",
+            json={"synthetic_size": 1000, "seed": 42, "province_codes": ["05", "06"], "min_records_per_province": 100},
+        )
+        assert pop_res.status_code == 201, pop_res.text
+        pop_id = pop_res.json()["population"]["population_id"]
+
+        # 1. Create an Amasya ('05') cohort
+        amasya_cohort_id = _cohort(c, pop_id, {"province_codes": ["05"], "adult_only": True})
+
+        # 2. Convert Ankara-only scenario ('transport_fare_001') to experiment definition targeting the Amasya cohort
+        scenario = get_scenario("transport_fare_001")
+        assert scenario.location.province_code == "06"
+        assert scenario.target_population.province_codes == ["06"]
+
+        definition = scenario_to_experiment_definition(
+            scenario,
+            cohort_id=amasya_cohort_id,
+            question_id="q1_usage_change",
+        )
+
+        # 3. Create experiment and review plan: must be blocked with scenario_province_mismatch
+        exp = c.post("/api/v2/experiments", json=definition).json()
+        exp_id = exp["experiment_id"]
+
+        plan = c.post(f"/api/v2/experiments/{exp_id}/plan").json()
+        assert plan["executable"] is False
+        blocker_codes = [b["code"] for b in plan["blockers"]]
+        assert "scenario_province_mismatch" in blocker_codes
+        assert any("Ankara (06)" in b["message"] and "Amasya (05)" in b["message"] for b in plan["blockers"])
+
+        # 4. Attempting to execute the run must be rejected with HTTP 409 plan_blocked
+        run_attempt = c.post(
+            f"/api/v2/experiments/{exp_id}/runs",
+            json={"plan_hash": plan["plan_hash"], "idempotency_key": "amasya-blocked-run-1", "confirm": True},
+        )
+        assert run_attempt.status_code == 409
+        assert run_attempt.json()["error"]["code"] == "plan_blocked"
+
+
+def test_ankara_scenario_blocked_on_non_ankara_cohort(national_client, population_id):
+    """P0: Enforce geographic restrictions on default artificial fixture cohorts (Adana '01')."""
+    c = national_client
+
+    # 1. Create a non-Ankara cohort (Adana '01')
+    non_ankara_cohort_id = _cohort(c, population_id, {"province_codes": ["01"], "adult_only": True})
+
+    # 2. Convert Ankara scenario to experiment definition
+    scenario = get_scenario("transport_fare_001")
+    definition = scenario_to_experiment_definition(
+        scenario,
+        cohort_id=non_ankara_cohort_id,
+        question_id="q1_usage_change",
+    )
+    definition["environment"]["province_code"] = "06"
+
+    # 3. Create experiment & review plan
+    exp = c.post("/api/v2/experiments", json=definition).json()
+    exp_id = exp["experiment_id"]
+
+    plan = c.post(f"/api/v2/experiments/{exp_id}/plan").json()
+    assert plan["executable"] is False
+    blocker_codes = [b["code"] for b in plan["blockers"]]
+    assert "scenario_province_mismatch" in blocker_codes
+
+    # 4. Attempting to start a run must be rejected with 409 conflict
+    run_attempt = c.post(
+        f"/api/v2/experiments/{exp_id}/runs",
+        json={"plan_hash": plan["plan_hash"], "idempotency_key": "blocked-run-key-1", "confirm": True},
+    )
+    assert run_attempt.status_code == 409
+    assert run_attempt.json()["error"]["code"] == "plan_blocked"
+
+
+def test_ankara_scenario_succeeds_on_ankara_cohort_and_preserves_metadata(national_client, population_id):
+    """P0: An Ankara scenario targeting an Ankara cohort succeeds and preserves scenario_ref."""
+    c = national_client
+
+    # 1. Create Ankara cohort ('06')
+    ankara_cohort_id = _cohort(c, population_id, {"province_codes": ["06"], "adult_only": True})
+
+    # 2. Convert Ankara scenario
+    scenario = get_scenario("transport_fare_001")
+    definition = scenario_to_experiment_definition(
+        scenario,
+        cohort_id=ankara_cohort_id,
+        question_id="q1_usage_change",
+        seed=11,
+    )
+    definition["environment"]["province_code"] = "06"
+
+    # 3. Create experiment
+    exp = c.post("/api/v2/experiments", json=definition).json()
+    exp_id = exp["experiment_id"]
+
+    # 4. Plan: must be executable and carry scenario_ref
+    plan = c.post(f"/api/v2/experiments/{exp_id}/plan").json()
+    assert plan["executable"] is True
+    assert plan["blockers"] == []
+    assert "scenario_ref" in plan
+    assert plan["scenario_ref"]["scenario_id"] == "transport_fare_001"
+    assert plan["scenario_ref"]["question_id"] == "q1_usage_change"
+    assert plan["scenario_ref"]["province_codes"] == ["06"]
+
+    # 5. Execute run with stub backend
+    run_resp = c.post(
+        f"/api/v2/experiments/{exp_id}/runs",
+        json={"plan_hash": plan["plan_hash"], "idempotency_key": "ankara-run-key-001", "confirm": True},
+    )
+    assert run_resp.status_code == 202
+    run = run_resp.json()["run"]
+    assert run["state"] == "completed"
+    assert run["valid_responses"] > 0
+
+    # 6. Verify manifest preserves scenario_ref
+    detail = c.get(f"/api/v2/runs/{run['run_id']}").json()
+    assert detail["manifest"] is not None
+    assert "scenario_ref" in detail["manifest"]
+    manifest_ref = detail["manifest"]["scenario_ref"]
+    assert manifest_ref["scenario_id"] == "transport_fare_001"
+    assert manifest_ref["question_id"] == "q1_usage_change"
+    assert manifest_ref["scenario_version"] == "1.0.0"
+
+
+def test_api_rejects_nonexistent_question_id(national_client):
+    """P0: API endpoint for scenario-to-experiment conversion rejects invalid question_id with 404."""
+    c = national_client
+    resp = c.get(
+        "/api/v2/scenarios/transport_fare_001/experiment-definition",
+        params={"question_id": "nonexistent_q_xyz"},
+    )
+    assert resp.status_code == 404
+    body = resp.json()
+    assert body["error"]["code"] == "question_not_found"
+    assert "nonexistent_q_xyz" in body["error"]["message"]
+
+
+def test_api_scenario_creation_conflict(national_client):
+    """P1: Attempting to register a different scenario with an existing ID returns 409 conflict."""
+    c = national_client
+    scenario = get_scenario("transport_fare_001")
+    conflicting = scenario.model_dump(mode="json")
+    conflicting["name"] = "Conflicting Scenario Name With Existing ID"
+
+    resp = c.post("/api/v2/scenarios", json=conflicting)
+    assert resp.status_code == 409
+    body = resp.json()
+    assert body["error"]["code"] == "scenario_conflict"

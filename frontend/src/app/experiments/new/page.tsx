@@ -496,29 +496,75 @@ function Builder({ populationId }: { populationId: string }) {
     }
   };
 
+  const ensureCompatibleCohort = async (
+    provinces?: string[] | null,
+    ageMin?: number | null,
+    ageMax?: number | null,
+    provinceName?: string,
+  ): Promise<string> => {
+    const wantProvs = provinces && provinces.length > 0 ? [...provinces].sort() : null;
+    const wantMin = ageMin ?? 18;
+    const wantMax = ageMax ?? null;
+
+    const matches = (c: Cohort) => {
+      const f = c.filters ?? {};
+      if ((f.age_min ?? 0) < wantMin) return false;
+      if (wantMax !== null && (f.age_max === undefined || f.age_max === null || f.age_max > wantMax)) return false;
+      if (wantMax === null && f.age_max !== undefined && f.age_max !== null) return false;
+      if (wantProvs) {
+        const cProvs = f.province_codes ? [...f.province_codes].sort() : [];
+        if (cProvs.length === 0 || !cProvs.every((p) => wantProvs.includes(p))) return false;
+      }
+      return true;
+    };
+
+    const current = valid.find((c) => c.cohort_id === d.cohort.cohort_id);
+    if (current && matches(current)) return current.cohort_id;
+
+    const existing = valid.find(matches);
+    if (existing) return existing.cohort_id;
+
+    const provLabel = provinceName || (wantProvs ? wantProvs.join(", ") : "National");
+    const ageLabel = wantMax ? `Ages ${wantMin}–${wantMax}` : `Adults ${wantMin}+`;
+    const filters: Record<string, unknown> = { age_min: wantMin, adult_only: wantMin >= 18 };
+    if (wantMax !== null) filters.age_max = wantMax;
+    if (wantProvs) filters.province_codes = wantProvs;
+
+    setPromptFeedback(`Sampling matching cohort (${provLabel} · ${ageLabel})…`);
+    try {
+      const createdCohort = await v2<Cohort>("/cohorts", {
+        method: "POST",
+        body: {
+          name: `${provLabel} (${ageLabel})`,
+          population_id: populationId,
+          filters,
+        },
+      });
+      await cohorts.reload();
+      return createdCohort.cohort_id;
+    } catch {
+      // Fallback if population does not contain the target province (e.g., single-province population)
+      if (valid[0]) return valid[0].cohort_id;
+      const fallback = await v2<Cohort>("/cohorts", {
+        method: "POST",
+        body: {
+          name: "Representative Adult Sample",
+          population_id: populationId,
+          filters: { age_min: 18 },
+        },
+      });
+      await cohorts.reload();
+      return fallback.cohort_id;
+    }
+  };
+
   const handleSimulateDirectly = async (customPrompt?: string) => {
     const raw = (customPrompt ?? promptText).trim();
     if (raw.length < 3) return;
     setCompilingPrompt(true);
     setPromptFeedback("Analyzing prompt and compiling policy parameters…");
     try {
-      // 1. Ensure cohort exists or auto-create default adult cohort
-      let cohortId = d.cohort.cohort_id || valid[0]?.cohort_id;
-      if (!cohortId) {
-        setPromptFeedback("Sampling initial representative adult cohort…");
-        const newCohort = await v2<Cohort>("/cohorts", {
-          method: "POST",
-          body: {
-            name: "Representative Adult Sample",
-            population_id: populationId,
-            filters: { age_min: 18 },
-          },
-        });
-        await cohorts.reload();
-        cohortId = newCohort.cohort_id;
-      }
-
-      // 2. Compile scenario from prompt
+      // 1. Compile scenario from prompt first so we know its geographic & age scope
       setPromptFeedback("Synthesizing scenario and calibrated questions…");
       const res = await v2<CompiledScenarioResponse>("/scenarios/from-prompt", {
         method: "POST",
@@ -528,11 +574,26 @@ function Builder({ populationId }: { populationId: string }) {
       setSelectedScenarioId(res.scenario_id);
       setSelectedQuestionId("");
 
+      // 2. Find or create a cohort matching the scenario's target_population
+      const tp = res.target_population;
+      const targetProvs = tp?.province_codes?.length ? tp.province_codes : [res.location.province_code];
+      const cohortId = await ensureCompatibleCohort(
+        targetProvs,
+        tp?.minimum_age ?? 18,
+        tp?.maximum_age ?? null,
+        res.location.province_name,
+      );
+
       // 3. Transform to experiment definition
       setPromptFeedback("Preparing experiment definition…");
       const ex = await v2<ExperimentDefinition>(`/scenarios/${res.scenario_id}/experiment-definition`, {
         query: { cohort_id: cohortId },
       });
+
+      const liveModel =
+        d.model.transport === "live"
+          ? d.model.model || "openai/gpt-4o-mini"
+          : null;
 
       const fullDef: ExperimentDefinition = {
         ...ex,
@@ -545,10 +606,11 @@ function Builder({ populationId }: { populationId: string }) {
           ...ex.model,
           backend: d.model.backend,
           transport: d.model.transport,
+          model: liveModel,
         },
         environment: {
           ...ex.environment,
-          province_code: d.environment.province_code ?? ex.environment.province_code,
+          province_code: ex.environment.province_code ?? d.environment.province_code,
         },
         persona: { visible_fields: null },
       };
@@ -560,6 +622,10 @@ function Builder({ populationId }: { populationId: string }) {
       setExp(created);
       const planRes = await v2<Plan>(`/experiments/${created.experiment_id}/plan`, { method: "POST", body: {} });
       setPlan(planRes);
+      if (!planRes.executable || planRes.blockers.length > 0) {
+        const reasons = planRes.blockers.map((b) => `${b.code}: ${b.message}`).join(" | ");
+        throw new Error(reasons || "Execution plan has blockers. Check Review step for details.");
+      }
 
       // 5. Run simulation
       setPromptFeedback("Simulating persona responses across cohort…");
@@ -605,16 +671,29 @@ function Builder({ populationId }: { populationId: string }) {
   };
 
   const loadPolicyScenario = async (scenarioId: string, qId?: string) => {
-    const cohortId = d.cohort.cohort_id || valid.find((c) => !c.minors)?.cohort_id || valid[0]?.cohort_id || "";
+    const baseCohortId = d.cohort.cohort_id || valid.find((c) => !c.minors)?.cohort_id || valid[0]?.cohort_id || "";
     const query: Record<string, string> = {};
-    if (cohortId) query.cohort_id = cohortId;
+    if (baseCohortId) query.cohort_id = baseCohortId;
     if (qId) query.question_id = qId;
     const ex = await v2<ExperimentDefinition>(`/scenarios/${scenarioId}/experiment-definition`, { query });
+    const ref = ex.scenario_ref;
+    const targetProvs = ref?.province_codes?.length ? ref.province_codes : ex.environment.province_code ? [ex.environment.province_code] : null;
+    const matchedCohortId = await ensureCompatibleCohort(
+      targetProvs,
+      ref?.minimum_age ?? 18,
+      ref?.maximum_age ?? null,
+    );
     setD((cur) => ({
       ...ex,
       cohort: {
         ...ex.cohort,
-        cohort_id: cur.cohort.cohort_id || ex.cohort.cohort_id || cohortId,
+        cohort_id: matchedCohortId || cur.cohort.cohort_id || ex.cohort.cohort_id || baseCohortId,
+      },
+      model: {
+        ...ex.model,
+        backend: cur.model.backend,
+        transport: cur.model.transport,
+        model: cur.model.transport === "live" ? (cur.model.model || "openai/gpt-4o-mini") : null,
       },
       persona: { visible_fields: null },
     }));
@@ -815,9 +894,9 @@ function Builder({ populationId }: { populationId: string }) {
                   }}
                   onClick={() => {
                     setPromptText(example);
-                    handleSimulateDirectly(example);
+                    setPromptFeedback(null);
                   }}
-                  title="Click to run this example simulation directly"
+                  title="Click to populate prompt input"
                 >
                   {example.slice(0, 48)}...
                 </button>
@@ -928,7 +1007,11 @@ function Builder({ populationId }: { populationId: string }) {
               value={`${d.model.backend}:${d.model.transport}`}
               onChange={(e) => {
                 const [backend, transport] = e.target.value.split(":") as ["stub" | "matraix", "fake" | "live"];
-                patch("model", { backend, transport });
+                patch("model", {
+                  backend,
+                  transport,
+                  model: transport === "live" ? (d.model.model || "openai/gpt-4o-mini") : null,
+                });
               }}
             >
               <option value="matraix:fake" disabled={!caps.data?.backends.matraix_fake.available}>
@@ -1118,7 +1201,7 @@ function Builder({ populationId }: { populationId: string }) {
             <section className="card stack" aria-labelledby="m-h"><h2 id="m-h">Model — what executes it?</h2>
               <div className="form-grid">
                 <div className="field"><label htmlFor="m-backend">Execution Engine</label>
-                  <select id="m-backend" value={`${d.model.backend}:${d.model.transport}`} onChange={(e) => { const [backend, transport] = e.target.value.split(":") as ["stub" | "matraix", "fake" | "live"]; patch("model", { backend, transport }); }}>
+                  <select id="m-backend" value={`${d.model.backend}:${d.model.transport}`} onChange={(e) => { const [backend, transport] = e.target.value.split(":") as ["stub" | "matraix", "fake" | "live"]; patch("model", { backend, transport, model: transport === "live" ? (d.model.model || "openai/gpt-4o-mini") : null }); }}>
                     <option value="matraix:fake" disabled={!caps.data?.backends.matraix_fake.available}>AI Citizen Agents (Zero-cost simulation){caps.data?.backends.matraix_fake.available ? "" : " — unavailable"}</option>
                     <option value="matraix:live">AI Citizen Agents (Live cloud LLM provider — gated)</option>
                     <option value="stub:fake">Pipeline Test (Deterministic placeholder — offline, no AI model)</option>

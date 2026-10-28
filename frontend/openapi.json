@@ -408,10 +408,10 @@
                   "type": "array",
                   "items": {
                     "enum": [
-                      "Hi\u00e7 evlenmedi",
+                      "Hiç evlenmedi",
                       "Evli",
-                      "Bo\u015fand\u0131",
-                      "E\u015fi \u00f6ld\u00fc",
+                      "Boşandı",
+                      "Eşi öldü",
                       "not_applicable"
                     ],
                     "type": "string"
@@ -421,10 +421,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Source T\u00dc\u0130K label (v2 only)",
+              "description": "Source TÜİK label (v2 only)",
               "title": "Marital Status"
             },
-            "description": "Source T\u00dc\u0130K label (v2 only)"
+            "description": "Source TÜİK label (v2 only)"
           }
         ],
         "responses": {
@@ -649,10 +649,10 @@
                   "type": "array",
                   "items": {
                     "enum": [
-                      "Hi\u00e7 evlenmedi",
+                      "Hiç evlenmedi",
                       "Evli",
-                      "Bo\u015fand\u0131",
-                      "E\u015fi \u00f6ld\u00fc",
+                      "Boşandı",
+                      "Eşi öldü",
                       "not_applicable"
                     ],
                     "type": "string"
@@ -662,10 +662,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Source T\u00dc\u0130K label (v2 only)",
+              "description": "Source TÜİK label (v2 only)",
               "title": "Marital Status"
             },
-            "description": "Source T\u00dc\u0130K label (v2 only)"
+            "description": "Source TÜİK label (v2 only)"
           }
         ],
         "responses": {
@@ -6590,6 +6590,16 @@
           },
           "persona": {
             "$ref": "#/components/schemas/PersonaPolicy"
+          },
+          "scenario_ref": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ScenarioReference"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -7159,7 +7169,7 @@
               }
             ],
             "title": "Genders",
-            "description": "Administrative sex category as recorded by T\u00dc\u0130K."
+            "description": "Administrative sex category as recorded by TÜİK."
           },
           "marital_statuses": {
             "anyOf": [
@@ -7167,10 +7177,10 @@
                 "items": {
                   "type": "string",
                   "enum": [
-                    "Hi\u00e7 evlenmedi",
+                    "Hiç evlenmedi",
                     "Evli",
-                    "Bo\u015fand\u0131",
-                    "E\u015fi \u00f6ld\u00fc",
+                    "Boşandı",
+                    "Eşi öldü",
                     "not_applicable"
                   ]
                 },
@@ -7182,7 +7192,7 @@
               }
             ],
             "title": "Marital Statuses",
-            "description": "Source T\u00dc\u0130K labels; available in v2 builds only."
+            "description": "Source TÜİK labels; available in v2 builds only."
           }
         },
         "additionalProperties": false,
@@ -8673,14 +8683,16 @@
           "increase_percentage": {
             "anyOf": [
               {
-                "type": "number"
+                "type": "number",
+                "maximum": 1000.0,
+                "exclusiveMinimum": -100.0
               },
               {
                 "type": "null"
               }
             ],
             "title": "Increase Percentage",
-            "description": "Percentage change in tariff (e.g. 20.0 for +20%)"
+            "description": "Percentage change in tariff (e.g. 20.0 for +20%; negative for a reduction)"
           },
           "currency": {
             "type": "string",
@@ -10585,7 +10597,7 @@
             "type": "string",
             "pattern": "^\\d{2}$",
             "title": "Province Code",
-            "description": "Two-digit T\u00dc\u0130K province code (e.g. '06' for Ankara)"
+            "description": "Two-digit TÜİK province code (e.g. '06' for Ankara)"
           },
           "province_name": {
             "type": "string",
@@ -10789,6 +10801,91 @@
           "prompt"
         ],
         "title": "ScenarioPromptRequest"
+      },
+      "ScenarioReference": {
+        "properties": {
+          "scenario_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{1,63}$",
+            "title": "Scenario Id"
+          },
+          "scenario_version": {
+            "type": "string",
+            "pattern": "^\\d+\\.\\d+\\.\\d+$",
+            "title": "Scenario Version"
+          },
+          "question_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{1,63}$",
+            "title": "Question Id"
+          },
+          "question_type": {
+            "type": "string",
+            "pattern": "^single_choice$",
+            "title": "Question Type",
+            "default": "single_choice"
+          },
+          "province_codes": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "maxItems": 81
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Province Codes",
+            "description": "Provinces the scenario applies to; None = no restriction."
+          },
+          "minimum_age": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 120.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minimum Age"
+          },
+          "maximum_age": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 120.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Maximum Age"
+          },
+          "unenforced_filters": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 10,
+            "title": "Unenforced Filters",
+            "description": "Scenario filters this runtime cannot enforce; a non-empty list blocks the plan."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "scenario_id",
+          "scenario_version",
+          "question_id"
+        ],
+        "title": "ScenarioReference",
+        "description": "Provenance and targeting of a definition built from a Scenario Engine config (src/scenarios).\n\nOptional: hand-written definitions omit it. When present, the plan enforces its geographic and age\nscope against every sampled persona and blocks execution on any mismatch."
       },
       "Scope": {
         "properties": {

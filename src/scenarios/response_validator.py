@@ -35,7 +35,7 @@ class AgentResponseEnvelope:
     resident_id: str
     schema_version: str = RESPONSE_SCHEMA_VERSION
     status: ResponseStatus = ResponseStatus.VALID
-    answers: dict[str, str] = field(default_factory=dict)
+    answers: dict[str, Any] = field(default_factory=dict)
     other_text: dict[str, str] = field(default_factory=dict)
     rationale: str | None = None
     errors: list[str] = field(default_factory=list)
@@ -133,7 +133,7 @@ def validate_agent_response(
         }
 
     # 3. Validate against each question in the scenario
-    parsed_answers: dict[str, str] = {}
+    parsed_answers: dict[str, Any] = {}
     parsed_other: dict[str, str] = {}
     refused = False
 
@@ -150,30 +150,73 @@ def validate_agent_response(
             errors.append(f"Answer for question '{qid}' is null")
             continue
 
-        chosen_str = str(chosen_val).strip()
+        if question.type == "multiple_choice":
+            if isinstance(chosen_val, (list, tuple, set)):
+                items = [str(x).strip() for x in chosen_val]
+            elif isinstance(chosen_val, str) and chosen_val.strip().lower() in ("refused", "refuse", "declined"):
+                parsed_answers[qid] = ["refused"]
+                refused = True
+                continue
+            elif isinstance(chosen_val, str):
+                items = [chosen_val.strip()]
+            else:
+                errors.append(f"Answer for multiple_choice question '{qid}' must be a list of option IDs")
+                continue
 
-        # Handle refusal token
-        if chosen_str.lower() in ("refused", "refuse", "declined"):
-            parsed_answers[qid] = "refused"
-            refused = True
-            continue
+            if not items:
+                errors.append(f"Answer for multiple_choice question '{qid}' cannot be empty")
+                continue
 
-        if chosen_str not in allowed_option_ids:
-            errors.append(
-                f"Invalid choice '{chosen_str}' for question '{qid}'. "
-                f"Must be one of: {sorted(allowed_option_ids)}"
-            )
-            continue
+            invalid_items = [it for it in items if it not in allowed_option_ids]
+            if invalid_items:
+                errors.append(
+                    f"Invalid choice(s) {invalid_items} for question '{qid}'. "
+                    f"Must be a subset of: {sorted(allowed_option_ids)}"
+                )
+                continue
 
-        parsed_answers[qid] = chosen_str
+            unique_items = list(dict.fromkeys(items))
+            parsed_answers[qid] = unique_items
 
-        # Check 'other' text if question allows other
-        if chosen_str == "other" and question.allow_other:
-            other_dict = payload.get("other_text") or {}
-            if isinstance(other_dict, dict) and qid in other_dict:
-                parsed_other[qid] = str(other_dict[qid])
-            elif "other" in payload and isinstance(payload["other"], str):
-                parsed_other[qid] = payload["other"]
+            if "other" in unique_items and question.allow_other:
+                other_dict = payload.get("other_text") or {}
+                if isinstance(other_dict, dict) and qid in other_dict:
+                    parsed_other[qid] = str(other_dict[qid])
+                elif "other" in payload and isinstance(payload["other"], str):
+                    parsed_other[qid] = payload["other"]
+
+        else:
+            # Single choice
+            if isinstance(chosen_val, (list, tuple, set)):
+                errors.append(
+                    f"Question '{qid}' is single_choice, but received a list of choices: {chosen_val}"
+                )
+                continue
+
+            chosen_str = str(chosen_val).strip()
+
+            # Handle refusal token
+            if chosen_str.lower() in ("refused", "refuse", "declined"):
+                parsed_answers[qid] = "refused"
+                refused = True
+                continue
+
+            if chosen_str not in allowed_option_ids:
+                errors.append(
+                    f"Invalid choice '{chosen_str}' for question '{qid}'. "
+                    f"Must be one of: {sorted(allowed_option_ids)}"
+                )
+                continue
+
+            parsed_answers[qid] = chosen_str
+
+            # Check 'other' text if question allows other
+            if chosen_str == "other" and question.allow_other:
+                other_dict = payload.get("other_text") or {}
+                if isinstance(other_dict, dict) and qid in other_dict:
+                    parsed_other[qid] = str(other_dict[qid])
+                elif "other" in payload and isinstance(payload["other"], str):
+                    parsed_other[qid] = payload["other"]
 
     # 4. Check for unrequested rogue question IDs
     scenario_qids = {q.id for q in scenario.questions}

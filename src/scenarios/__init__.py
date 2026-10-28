@@ -8,6 +8,8 @@ Provides comprehensive support for:
 
 try:
     from .adapter import (
+        ScenarioConflictError,
+        UnsupportedQuestionTypeError,
         get_scenario,
         list_available_scenarios,
         save_custom_scenario,
@@ -36,6 +38,7 @@ try:
         validate_agent_response,
     )
     from .schema import (
+        TEMPLATE_FIELDS,
         PolicyConfig,
         PolicyParameters,
         PopulationFilterConfig,
@@ -44,9 +47,13 @@ try:
         ScenarioConfig,
         ScenarioLocation,
         ScenarioMetadata,
+        UnknownQuestionError,
+        template_fields,
     )
 except ImportError:
     from scenarios.adapter import (  # type: ignore
+        ScenarioConflictError,
+        UnsupportedQuestionTypeError,
         get_scenario,
         list_available_scenarios,
         save_custom_scenario,
@@ -75,6 +82,7 @@ except ImportError:
         validate_agent_response,
     )
     from scenarios.schema import (  # type: ignore
+        TEMPLATE_FIELDS,
         PolicyConfig,
         PolicyParameters,
         PopulationFilterConfig,
@@ -83,6 +91,8 @@ except ImportError:
         ScenarioConfig,
         ScenarioLocation,
         ScenarioMetadata,
+        UnknownQuestionError,
+        template_fields,
     )
 
 __all__ = [
@@ -95,6 +105,9 @@ __all__ = [
     "QuestionOption",
     "ScenarioLocation",
     "ScenarioMetadata",
+    "UnknownQuestionError",
+    "template_fields",
+    "TEMPLATE_FIELDS",
     # Loader
     "load_scenario",
     "save_scenario",
@@ -107,6 +120,8 @@ __all__ = [
     "get_scenario",
     "save_custom_scenario",
     "scenario_to_experiment_definition",
+    "UnsupportedQuestionTypeError",
+    "ScenarioConflictError",
     # Compiler
     "compile_scenario_from_prompt",
     # Eligibility

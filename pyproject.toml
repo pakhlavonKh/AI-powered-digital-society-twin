@@ -20,11 +20,11 @@ dependencies = [
 dev = ["pytest>=8.4", "httpx>=0.28"]
 
 [tool.setuptools.packages.find]
-# Only the societytwin package is installed. The research-phase placeholder
+# The societytwin and scenarios packages are installed. The research-phase placeholder
 # package at src/__init__.py and the experiment's own `src` package are never
 # importable through this distribution, which avoids the two `src` trees colliding.
 where = ["src"]
-include = ["societytwin*"]
+include = ["societytwin*", "scenarios*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

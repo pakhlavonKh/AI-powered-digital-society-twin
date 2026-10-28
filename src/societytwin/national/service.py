@@ -23,7 +23,7 @@ from societytwin.national.controls import ControlsError, ControlStore, read_stor
 from societytwin.national.dependencies import DEFAULT_REGISTRY_PATH, RegistryError, load_registry
 from societytwin.national.environment import coverage_summary, province_environment
 from societytwin.national.experiments import (DEFINITION_VERSION, PROMPT_TEMPLATE_VERSION, ExperimentDefinition,
-                                              render_prompts)
+                                              render_prompts, scenario_scope_issues)
 from societytwin.national.generator import GenerationConfig, GenerationError, generate
 from societytwin.national.model import dependency_graph
 from societytwin.national.persona_selection import experiment_persona_builder
@@ -419,6 +419,9 @@ class NationalService:
         first_prompt = None
         minors = 0
         unavailable_counts: dict[str, int] = {}
+        ref = d.scenario_ref
+        scope_counts: dict[str, int] = {}
+        outside_provinces: set[str] = set()
         build_selected = experiment_persona_builder(loaded, d.persona)
         for m in sample["members"]:
             rec = loaded.record(m["synthetic_id"])
@@ -429,6 +432,11 @@ class NationalService:
                 if a["status"] == "unavailable" and (d.persona.visible_fields is None or a["field"] in d.persona.visible_fields) \
                         and a["field"] in DEFAULT_VISIBLE:
                     unavailable_counts[a["field"]] = unavailable_counts.get(a["field"], 0) + 1
+            if ref is not None:
+                for issue in scenario_scope_issues(ref, rec):
+                    scope_counts[issue] = scope_counts.get(issue, 0) + 1
+                    if issue == "province_outside_scope":
+                        outside_provinces.add(rec["province_code"])
             code = d.environment.province_code or rec["province_code"]
             context, notes = self._context(store, code, loaded.manifest["reference_year"], d.environment.context_indicators)
             ctx_notes.extend(n for n in notes if n not in ctx_notes)
@@ -446,6 +454,27 @@ class NationalService:
                 if note not in warnings:
                     warnings.append(note)
         n = len(personas)
+        if ref is not None:
+            scope = ", ".join(f"{geo.province(c).name} ({c})" for c in ref.province_codes or []) or "any province"
+            if scope_counts.get("province_outside_scope"):
+                found = ", ".join(f"{geo.province(c).name} ({c})" for c in sorted(outside_provinces))
+                block("scenario_province_mismatch",
+                      f"Scenario '{ref.scenario_id}' applies to {scope}, but {scope_counts['province_outside_scope']} sampled "
+                      f"persona(s) live in {found}. Restrict the cohort to the scenario's provinces.")
+            if d.environment.province_code and ref.province_codes and d.environment.province_code not in ref.province_codes:
+                block("scenario_environment_mismatch",
+                      f"Environment province {d.environment.province_code} is outside scenario '{ref.scenario_id}' scope ({scope}).")
+            if scope_counts.get("age_outside_scope"):
+                block("scenario_age_mismatch",
+                      f"{scope_counts['age_outside_scope']} sampled persona(s) are outside the scenario's age range "
+                      f"({ref.minimum_age if ref.minimum_age is not None else 0}-{ref.maximum_age if ref.maximum_age is not None else 'any'}).")
+            for missing in ("province_missing", "age_missing"):
+                if scope_counts.get(missing):
+                    block(f"scenario_{missing}", f"{scope_counts[missing]} sampled persona(s) lack the value needed to check "
+                                                 f"scenario scope ({missing.split('_')[0]}); they are never assumed eligible.")
+            if ref.unenforced_filters:
+                block("scenario_filters_unenforced",
+                      f"Scenario '{ref.scenario_id}' targets {ref.unenforced_filters}, which this runtime cannot enforce.")
         planned_calls = n * d.execution.repetitions
         max_calls = planned_calls * d.execution.max_attempts
         if n > self.settings.max_agents_per_run:
@@ -518,6 +547,8 @@ class NationalService:
                                       else d.persona.visible_fields or list(DEFAULT_VISIBLE)),
             "blockers": blockers, "warnings": warnings, "executable": not blockers,
         }
+        if ref is not None:
+            plan["scenario_ref"] = ref.model_dump()
         plan["plan_hash"] = canonical_hash(plan)
         plan["created_at"] = utc_now()
         self.db.insert_plan(plan)
@@ -597,6 +628,10 @@ class NationalService:
             code = d.environment.province_code or rec["province_code"]
             context, _ = self._context(store, code, loaded.manifest["reference_year"], d.environment.context_indicators)
             system, user = render_prompts(d, p, context, geo.province(code).name)
+            if d.scenario_ref is not None:
+                issues = scenario_scope_issues(d.scenario_ref, rec)
+                if issues or d.scenario_ref.unenforced_filters:
+                    raise RuntimeError(f"Scenario '{d.scenario_ref.scenario_id}' scope violated during execution: {issues or d.scenario_ref.unenforced_filters}")
             members[rec["synthetic_id"]] = {**{f: rec.get(f) for f in GROUPABLE}, "analysis_weight": m["analysis_weight"]}
             for k in range(1, d.execution.repetitions + 1):
                 requests.append(CallRequest(f"{p['persona_id']}:{k}", p, k, 1, system, user))
@@ -659,6 +694,7 @@ class NationalService:
                                                                                          "eligible_records", "selected", "algorithm_version")},
             "persona_template_version": TEMPLATE_VERSION, "prompt_template_version": PROMPT_TEMPLATE_VERSION,
             "experiment_definition": exp["definition"], "definition_hash": exp["definition_hash"], "plan_hash": plan["plan_hash"],
+            "scenario_ref": d.scenario_ref.model_dump() if d.scenario_ref is not None else None,
             "model": d.model.model_dump(), "backend": backend.name, "backend_label": backend.label,
             "source_versions": {"controls_fingerprint": store.fingerprint if store else None,
                                 "sources": m["source_versions"]["sources"]},

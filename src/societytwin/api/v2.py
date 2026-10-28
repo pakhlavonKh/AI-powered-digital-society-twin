@@ -12,7 +12,7 @@ from fastapi import APIRouter, Body, Depends, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 
 from scenarios.schema import ScenarioConfig
-from societytwin.errors import WorkbenchError, invalid, not_found
+from societytwin.errors import WorkbenchError, conflict, invalid, not_found
 from societytwin.national.cohorts import CohortDefinitionRequest, CohortSampleRequest
 from societytwin.national.experiments import ExperimentDefinition, example_fare_definition
 from societytwin.national.generator import MAX_SIZE, GenerationConfig
@@ -211,20 +211,27 @@ def build_router() -> APIRouter:
         question_id: Annotated[str | None, Query()] = None,
         seed: Annotated[int, Query()] = 7,
     ):
-        from scenarios.adapter import get_scenario, scenario_to_experiment_definition
+        from scenarios.adapter import get_scenario, scenario_to_experiment_definition, UnsupportedQuestionTypeError
+        from scenarios.schema import UnknownQuestionError
         try:
             scenario = get_scenario(scenario_id)
             return scenario_to_experiment_definition(scenario, cohort_id or "", question_id, seed)
         except KeyError as exc:
             raise not_found("scenario_not_found", str(exc))
+        except UnknownQuestionError as exc:
+            raise not_found("question_not_found", str(exc))
+        except UnsupportedQuestionTypeError as exc:
+            raise invalid("unsupported_question_type", str(exc))
 
     @r.post("/scenarios", status_code=201, tags=["experiments"],
            description="Create and register a custom policy scenario definition.")
     def create_scenario(body: ScenarioConfig):
-        from scenarios.adapter import save_custom_scenario
+        from scenarios.adapter import save_custom_scenario, ScenarioConflictError
         try:
             saved = save_custom_scenario(body)
             return saved.model_dump(mode="json")
+        except ScenarioConflictError as exc:
+            raise conflict("scenario_conflict", str(exc))
         except (ValueError, KeyError) as exc:
             raise invalid("scenario_invalid", str(exc))
 
@@ -249,7 +256,7 @@ def build_router() -> APIRouter:
             from scenarios.adapter import get_scenario, scenario_to_experiment_definition
             scenario = get_scenario("transport_fare_001")
             return scenario_to_experiment_definition(scenario, cohort_id)
-        except Exception:
+        except KeyError:
             return example_fare_definition(cohort_id)
 
     @r.post("/experiments", status_code=201, tags=["experiments"], description="Saves a definition. Nothing runs.")

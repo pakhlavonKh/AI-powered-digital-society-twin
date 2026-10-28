@@ -1764,6 +1764,7 @@ export interface components {
             model: components["schemas"]["ModelSpec"];
             execution: components["schemas"]["ExecutionSpec"];
             persona?: components["schemas"]["PersonaPolicy"];
+            scenario_ref?: components["schemas"]["ScenarioReference"] | null;
         };
         /** ExperimentDetail */
         ExperimentDetail: {
@@ -2452,7 +2453,7 @@ export interface components {
             new_fare?: number | null;
             /**
              * Increase Percentage
-             * @description Percentage change in tariff (e.g. 20.0 for +20%)
+             * @description Percentage change in tariff (e.g. 20.0 for +20%; negative for a reduction)
              */
             increase_percentage?: number | null;
             /**
@@ -3113,6 +3114,40 @@ export interface components {
              * @default true
              */
             save: boolean;
+        };
+        /**
+         * ScenarioReference
+         * @description Provenance and targeting of a definition built from a Scenario Engine config (src/scenarios).
+         *
+         *     Optional: hand-written definitions omit it. When present, the plan enforces its geographic and age
+         *     scope against every sampled persona and blocks execution on any mismatch.
+         */
+        ScenarioReference: {
+            /** Scenario Id */
+            scenario_id: string;
+            /** Scenario Version */
+            scenario_version: string;
+            /** Question Id */
+            question_id: string;
+            /**
+             * Question Type
+             * @default single_choice
+             */
+            question_type: string;
+            /**
+             * Province Codes
+             * @description Provinces the scenario applies to; None = no restriction.
+             */
+            province_codes?: string[] | null;
+            /** Minimum Age */
+            minimum_age?: number | null;
+            /** Maximum Age */
+            maximum_age?: number | null;
+            /**
+             * Unenforced Filters
+             * @description Scenario filters this runtime cannot enforce; a non-empty list blocks the plan.
+             */
+            unenforced_filters?: string[];
         };
         /** Scope */
         Scope: {

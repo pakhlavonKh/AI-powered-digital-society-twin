@@ -164,6 +164,16 @@ export type ExperimentDefinition = {
   model: { backend: "stub" | "matraix"; transport: "fake" | "live"; model?: string | null; temperature: number; seed?: number | null; max_output_tokens?: number };
   execution: { repetitions: number; max_attempts: number; max_calls: number; max_cost_usd?: number | null };
   persona?: { visible_fields: string[] | null };
+  scenario_ref?: {
+    scenario_id: string;
+    scenario_version: string;
+    question_id: string;
+    question_type?: string;
+    province_codes?: string[] | null;
+    minimum_age?: number | null;
+    maximum_age?: number | null;
+    unenforced_filters?: string[];
+  } | null;
 };
 export type Blocker = { code: string; message: string };
 export type Plan = {
@@ -321,6 +331,13 @@ export type CreateScenarioPayload = {
       currency?: string;
       fare_category?: string;
     };
+  };
+  target_population?: {
+    minimum_age?: number;
+    maximum_age?: number | null;
+    province_codes?: string[] | null;
+    adult_only?: boolean;
+    required_attributes?: string[];
   };
   questions: {
     id: string;

@@ -102,6 +102,10 @@ def evaluate_resident(
     # 1. Check required attributes existence
     for req in filter_config.required_attributes:
         val = resident.get(req)
+        if val is None and req == "sex":
+            val = resident.get("gender")
+        elif val is None and req == "gender":
+            val = resident.get("sex")
         if val is None or val == "" or val == "unavailable":
             missing.append(req)
 

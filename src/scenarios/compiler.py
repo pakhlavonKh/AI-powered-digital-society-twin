@@ -79,8 +79,14 @@ def extract_percentages_and_numbers(text: str) -> tuple[float | None, float | No
     if not pct_match:
         pct_match = re.search(r"(\d+(?:\.\d+)?)\s*(?:percent|yüzde)", text, flags=re.IGNORECASE)
     if pct_match:
+        raw_num = pct_match.group(1)
         try:
-            pct = float(pct_match.group(1))
+            pct = float(raw_num)
+            if not raw_num.startswith(("+", "-")) and _has_keyword(
+                text,
+                ("discount", "reduction", "decrease", "cut", "drop", "lower", "indirim", "ucuz", "düşüş", "azalma"),
+            ):
+                pct = -abs(pct)
         except ValueError:
             pass
 
@@ -100,32 +106,44 @@ def extract_percentages_and_numbers(text: str) -> tuple[float | None, float | No
             pass
 
     # If only percentage is found and it is transit, default baseline to 40.0 TL (Ankara reference)
-    if pct is not None and baseline is None:
+    is_transit = any(k in text.lower() for k in ("transit", "bus", "metro", "fare", "bilet", "otobüs", "dolmuş", "ego", "iett", "transport", "ulaşım"))
+    if is_transit and pct is not None and baseline is None:
         baseline = 40.0
         new_val = round(baseline * (1.0 + pct / 100.0), 2)
 
     return pct, baseline, new_val
 
 
+def _has_keyword(text: str, keywords: tuple[str, ...]) -> bool:
+    """Check if any keyword appears in text as a whole word or phrase."""
+    lower = text.lower()
+    tokens = set(re.findall(r"\b[a-za-zçğıöşüâîû0-9+-]+\b", lower))
+    for kw in keywords:
+        if " " in kw:
+            if kw in lower:
+                return True
+        elif kw in tokens:
+            return True
+    return False
+
+
 def detect_domain_and_category(text: str) -> tuple[str, str]:
     """Classify prompt into policy category and intervention type."""
-    lower = text.lower()
-
-    if any(k in lower for k in ("transit", "bus", "metro", "fare", "bilet", "otobüs", "dolmuş", "ego", "iett", "transport", "ulaşım")):
-        p_type = "fare_increase" if any(k in lower for k in ("increase", "zam", "hike", "raise", "artış")) else "fare_adjustment"
+    if _has_keyword(text, ("transit", "bus", "metro", "fare", "bilet", "otobüs", "dolmuş", "ego", "iett", "transport", "ulaşım")):
+        p_type = "fare_increase" if _has_keyword(text, ("increase", "zam", "hike", "raise", "artış")) else "fare_adjustment"
         return "transportation", p_type
 
-    if any(k in lower for k in ("rent", "housing", "kira", "konut", "ev", "barınma", "apartment", "deprem", "earthquake")):
-        p_type = "subsidy" if any(k in lower for k in ("subsidy", "destek", "yardım", "relief")) else "rent_regulation"
+    if _has_keyword(text, ("rent", "housing", "kira", "konut", "ev", "barınma", "apartment", "deprem", "earthquake")):
+        p_type = "subsidy" if _has_keyword(text, ("subsidy", "destek", "yardım", "relief")) else "rent_regulation"
         return "housing", p_type
 
-    if any(k in lower for k in ("electricity", "elektrik", "water", "su", "gas", "doğalgaz", "energy", "enerji", "tariff")):
+    if _has_keyword(text, ("electricity", "elektrik", "water", "su", "gas", "doğalgaz", "energy", "enerji", "tariff")):
         return "energy", "tariff_adjustment"
 
-    if any(k in lower for k in ("wage", "salary", "maaş", "ücret", "income", "gelir", "tax", "vergi", "pension", "emekli")):
+    if _has_keyword(text, ("wage", "salary", "maaş", "ücret", "income", "gelir", "tax", "vergi", "pension", "emekli")):
         return "economic", "income_support"
 
-    if any(k in lower for k in ("student", "öğrenci", "school", "okul", "university", "üniversite", "burs", "scholarship")):
+    if _has_keyword(text, ("student", "öğrenci", "school", "okul", "university", "üniversite", "burs", "scholarship")):
         return "education", "student_support"
 
     return "public_policy", "policy_intervention"
@@ -163,11 +181,12 @@ def synthesize_questions(
 ) -> list[QuestionConfig]:
     """Generate balanced, relevant survey questions and options based on policy context."""
     if domain == "transportation":
+        action = "decrease" if (pct is not None and pct < 0) else "increase"
         pct_text = f" by {abs(pct):.0f}%" if pct is not None else ""
         return [
             QuestionConfig(
                 id="q1_usage_change",
-                text=f"If public transit fares in {province_name} increase{pct_text}, how would your daily travel habits most likely change?",
+                text=f"If public transit fares in {province_name} {action}{pct_text}, how would your daily travel habits most likely change?",
                 type="single_choice",
                 options=[
                     QuestionOption(id="maintain_usage", label="Continue using public transit as before (no significant change)"),
@@ -314,7 +333,10 @@ def compile_scenario_from_prompt_heuristic(prompt: str) -> ScenarioConfig:
 
 
 def compile_scenario_with_llm(prompt: str, model: str | None = None) -> ScenarioConfig | None:
-    """Compile scenario using an LLM provider if credentials are available."""
+    """Compile scenario using an LLM provider if credentials are available and live execution is enabled."""
+    if os.environ.get("SOCIETYTWIN_ENABLE_LIVE_SCENARIO_LLM", "").lower() not in ("1", "true", "yes"):
+        return None
+
     api_key = os.environ.get("OPENAI_API_KEY")
     if not api_key:
         return None
