@@ -135,23 +135,12 @@ def render_card(model_visible: dict, record: dict) -> str:
     return "\n".join(lines)
 
 
-def matraix_persona(persona: dict) -> dict:
-    """MatrAIx persona document. Custom ``dst_`` dimensions carry the model-visible SocietyTwin attributes verbatim;
-    catalog dimensions are added only where the meaning is identical (never 'Single' for 'never married', never
-    gender identity for administrative sex). Evidence limitations go to metadata (for researchers), not to the prompt."""
-    visible = persona["model_visible"]
-    dims = {}
-    for field, text in visible.items():
-        dims[f"dst_{'residence_province' if field == 'province_name' else field}"] = text
-    status = next((a["value"] for a in persona["attributes"] if a["field"] == "marital_status"), None)
-    catalog_marital = {"married": "Married", "divorced": "Divorced", "widowed": "Widowed"}
-    if "marital_status" in visible and status in catalog_marital:
-        dims["demo_marital_status"] = catalog_marital[status]
-    result = {"persona_id": persona["synthetic_id"], "version": "1.0", "source": "synthetic", "dimensions": dims,
-            "metadata": {"societytwin_persona_id": persona["persona_id"], "template_version": persona["template_version"],
-                         "population_id": persona["population_id"], "prompt_visible_fields": sorted(dims),
-                         "hidden_fields": persona["hidden"], "evidence_limitations": persona["limitations"],
-                         "provenance": persona["provenance"]}}
-    if "field_selection" in persona:
-        result["metadata"]["field_selection"] = persona["field_selection"]
-    return result
+def matraix_persona(persona: dict, *, catalog: dict | None = None) -> dict:
+    """Project the selected view through the reviewed, versioned MatrAIx crosswalk.
+
+    A catalog may be supplied explicitly for offline enum validation. Ordinary
+    persona generation never imports MatrAIx or searches for a checkout.
+    """
+    from societytwin.national.matraix_projection import project_persona
+
+    return project_persona(persona, catalog=catalog)
