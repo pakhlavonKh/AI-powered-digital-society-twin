@@ -20,10 +20,12 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_SCENARIOS_DIRS = [
+_BUILTIN_SCENARIOS_DIR = Path(__file__).resolve().parent / "builtin_scenarios"
+_DEFAULT_REL_DIRS = (
     Path("experiments/policy_scenarios/scenarios"),
     Path("scenarios"),
-]
+)
+DEFAULT_SCENARIOS_DIRS = list(_DEFAULT_REL_DIRS)
 
 # Question types the national experiment runtime (TaskSpec) can execute.
 EXECUTABLE_QUESTION_TYPES = frozenset({"single_choice"})
@@ -45,9 +47,15 @@ def find_scenario_paths(custom_dirs: list[Path] | None = None) -> dict[str, Path
     Invalid files and duplicate IDs are skipped with a logged warning (never silently).
     """
     paths: dict[str, Path] = {}
-    search_dirs = custom_dirs or DEFAULT_SCENARIOS_DIRS
+    if custom_dirs is not None:
+        search_dirs = list(custom_dirs)
+    elif tuple(DEFAULT_SCENARIOS_DIRS) == _DEFAULT_REL_DIRS:
+        search_dirs = [*DEFAULT_SCENARIOS_DIRS, _BUILTIN_SCENARIOS_DIR]
+    else:
+        search_dirs = list(DEFAULT_SCENARIOS_DIRS)
 
     for s_dir in search_dirs:
+        is_builtin_fallback = s_dir == _BUILTIN_SCENARIOS_DIR
         resolved = s_dir if s_dir.is_absolute() else Path.cwd() / s_dir
         if not resolved.is_dir():
             continue
@@ -59,21 +67,62 @@ def find_scenario_paths(custom_dirs: list[Path] | None = None) -> dict[str, Path
                     logger.warning("Skipping invalid scenario file %s: %s", file_path, exc)
                     continue
                 if loaded.scenario_id in paths:
-                    logger.warning("Duplicate scenario_id '%s' in %s ignored; using %s",
-                                   loaded.scenario_id, file_path, paths[loaded.scenario_id])
+                    if not is_builtin_fallback:
+                        logger.warning("Duplicate scenario_id '%s' in %s ignored; using %s",
+                                       loaded.scenario_id, file_path, paths[loaded.scenario_id])
                     continue
                 paths[loaded.scenario_id] = file_path
 
     return paths
 
 
-def list_available_scenarios(custom_dirs: list[Path] | None = None) -> list[dict[str, Any]]:
-    """List summary metadata for all discovered policy scenarios."""
+def _matches_province_filter(scenario: ScenarioConfig, province: str) -> bool:
+    want = province.strip()
+    if not want:
+        return True
+    want_code: str | None = None
+    if want.isdigit() and 1 <= int(want) <= 81:
+        want_code = f"{int(want):02d}"
+    else:
+        try:
+            from societytwin.national.geography import _BY_NAME, name_key, normalize_code
+
+            try:
+                want_code = normalize_code(want)
+            except Exception:  # noqa: BLE001
+                prov_obj = _BY_NAME.get(name_key(want))
+                if prov_obj is not None:
+                    want_code = prov_obj.code
+        except ImportError:
+            pass
+    if want_code is not None:
+        if scenario.location.province_code == want_code:
+            return True
+        if scenario.target_population.province_codes and want_code in scenario.target_population.province_codes:
+            return True
+        return False
+    return (
+        scenario.location.province_code.lower() == want.lower()
+        or scenario.location.province_name.lower() == want.lower()
+    )
+
+
+def list_available_scenarios(
+    custom_dirs: list[Path] | None = None,
+    category: str | None = None,
+    province: str | None = None,
+) -> list[dict[str, Any]]:
+    """List summary metadata for all discovered policy scenarios, optionally filtered by category and province."""
     catalog = find_scenario_paths(custom_dirs)
     items: list[dict[str, Any]] = []
+    want_category = category.strip().lower() if category and category.strip() else None
 
     for scenario_id, path in sorted(catalog.items()):
         scenario = load_scenario(path)
+        if want_category and scenario.policy.category.lower() != want_category:
+            continue
+        if province and province.strip() and not _matches_province_filter(scenario, province):
+            continue
         shown = scenario.rendered()
         items.append({
             "scenario_id": scenario.scenario_id,
@@ -222,6 +271,7 @@ def scenario_to_experiment_definition(
             "province_codes": list(tp.province_codes) if tp.province_codes else [scenario.location.province_code],
             "minimum_age": tp.minimum_age,
             "maximum_age": tp.maximum_age,
+            "required_attributes": list(tp.required_attributes),
             "unenforced_filters": unenforced,
         },
     }

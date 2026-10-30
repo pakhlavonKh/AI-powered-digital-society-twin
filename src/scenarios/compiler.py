@@ -104,12 +104,51 @@ def extract_percentages_and_numbers(text: str) -> tuple[float | None, float | No
                 pct = round(((new_val - baseline) / baseline) * 100.0, 1)
         except ValueError:
             pass
+    else:
+        # Standalone baseline fare, e.g. "from 21 TL", "currently 21 TL", "baseline 21 TL", "21 TL'den"
+        base_match = (
+            re.search(
+                r"\b(?:from|currently|baseline(?:\s+of)?|at|mevcut)\s*(\d+(?:\.\d+)?)\s*(?:tl|lira|try|₺)\b",
+                text,
+                flags=re.IGNORECASE,
+            )
+            or re.search(
+                r"(\d+(?:\.\d+)?)\s*(?:tl|lira|try|₺)\s*(?:'?den|'?dan)\b",
+                text,
+                flags=re.IGNORECASE,
+            )
+        )
+        if base_match:
+            try:
+                baseline = float(base_match.group(1))
+            except ValueError:
+                pass
 
-    # If only percentage is found and it is transit, default baseline to 40.0 TL (Ankara reference)
-    is_transit = any(k in text.lower() for k in ("transit", "bus", "metro", "fare", "bilet", "otobüs", "dolmuş", "ego", "iett", "transport", "ulaşım"))
-    if is_transit and pct is not None and baseline is None:
-        baseline = 40.0
-        new_val = round(baseline * (1.0 + pct / 100.0), 2)
+        # Standalone target/new fare, e.g. "to 27.3 TL", "27.3 TL'ye"
+        new_match = (
+            re.search(
+                r"\bto\s*(\d+(?:\.\d+)?)\s*(?:tl|lira|try|₺)\b",
+                text,
+                flags=re.IGNORECASE,
+            )
+            or re.search(
+                r"(\d+(?:\.\d+)?)\s*(?:tl|lira|try|₺)\s*(?:'?ye|'?ya|'?e|'?a)\b",
+                text,
+                flags=re.IGNORECASE,
+            )
+        )
+        if new_match:
+            try:
+                new_val = float(new_match.group(1))
+            except ValueError:
+                pass
+
+        if baseline is not None and new_val is not None and pct is None and baseline > 0:
+            pct = round(((new_val - baseline) / baseline) * 100.0, 1)
+        elif baseline is not None and pct is not None and new_val is None:
+            new_val = round(baseline * (1.0 + pct / 100.0), 2)
+        elif new_val is not None and pct is not None and baseline is None and (1.0 + pct / 100.0) > 0:
+            baseline = round(new_val / (1.0 + pct / 100.0), 2)
 
     return pct, baseline, new_val
 

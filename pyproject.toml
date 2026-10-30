@@ -26,6 +26,10 @@ dev = ["pytest>=8.4", "httpx>=0.28"]
 where = ["src"]
 include = ["societytwin*", "scenarios*"]
 
+[tool.setuptools.package-data]
+"societytwin.national" = ["*.yaml"]
+"scenarios" = ["builtin_scenarios/*.yaml"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]

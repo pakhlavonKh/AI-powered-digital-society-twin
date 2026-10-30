@@ -115,6 +115,8 @@ class PolicyParameters(BaseModel):
             new = round(base * (1.0 + pct / 100.0), 2)
         elif base is not None and new is not None and pct is None:
             pct = round((new - base) / base * 100.0, 2)
+        elif new is not None and pct is not None and base is None and (1.0 + pct / 100.0) > 0:
+            base = round(new / (1.0 + pct / 100.0), 2)
         return {"baseline_fare": base, "new_fare": new, "increase_percentage": pct}
 
 

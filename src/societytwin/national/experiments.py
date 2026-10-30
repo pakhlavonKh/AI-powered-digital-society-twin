@@ -155,6 +155,11 @@ class ScenarioReference(BaseModel):
                                              description="Provinces the scenario applies to; None = no restriction.")
     minimum_age: int | None = Field(default=None, ge=0, le=120)
     maximum_age: int | None = Field(default=None, ge=0, le=120)
+    required_attributes: list[str] = Field(
+        default_factory=list,
+        max_length=20,
+        description="Population attributes required by the scenario; missing or unavailable values block the plan.",
+    )
     unenforced_filters: list[str] = Field(default_factory=list, max_length=10,
                                           description="Scenario filters this runtime cannot enforce; a non-empty list blocks the plan.")
 
@@ -165,6 +170,7 @@ class ScenarioReference(BaseModel):
                 raise ValueError(f"Invalid province code {code!r} in scenario_ref")
         if self.minimum_age is not None and self.maximum_age is not None and self.minimum_age > self.maximum_age:
             raise ValueError("scenario_ref minimum_age exceeds maximum_age")
+        self.required_attributes = [str(f).strip() for f in self.required_attributes if str(f).strip()]
         return self
 
 
@@ -186,6 +192,64 @@ def scenario_scope_issues(ref: ScenarioReference, record: dict) -> list[str]:
             issues.append("age_missing")
         elif (ref.minimum_age is not None and age < ref.minimum_age) or (ref.maximum_age is not None and age > ref.maximum_age):
             issues.append("age_outside_scope")
+    for attr in ref.required_attributes:
+        val = record.get(attr)
+        if val is None or val == "" or val == "unavailable":
+            issues.append(f"required_attribute_missing:{attr}")
+    return issues
+
+
+def scenario_parameter_issues(definition: "ExperimentDefinition") -> list[str]:
+    """Check mathematical and prompt-text consistency of tariff/fare scenario parameters."""
+    params = {p.name: p.value for p in definition.scenario.parameters}
+    base = params.get("baseline_tariff")
+    new = params.get("new_tariff")
+    pct = params.get("tariff_change_percent")
+
+    def _is_num(v) -> bool:
+        return isinstance(v, (int, float)) and not isinstance(v, bool)
+
+    issues: list[str] = []
+    if _is_num(base) and _is_num(new) and _is_num(pct):
+        expected_new = float(base) * (1.0 + float(pct) / 100.0)
+        if abs(expected_new - float(new)) > 0.05:
+            issues.append(
+                f"Scenario parameters are mathematically inconsistent: baseline_tariff ({float(base):g}) "
+                f"with tariff_change_percent ({float(pct):g}%) implies {expected_new:.2f}, "
+                f"but new_tariff is {float(new):g}."
+            )
+
+    for label, text in (
+        ("scenario description", definition.scenario.description),
+        ("task instruction", definition.task.instruction),
+    ):
+        if _is_num(pct):
+            pct_matches = re.findall(r"([+-]?\d+(?:\.\d+)?)\s*%", text)
+            if pct_matches and not any(abs(abs(float(m)) - abs(float(pct))) <= 0.05 for m in pct_matches):
+                found_str = ", ".join(f"{m}%" for m in pct_matches)
+                issues.append(
+                    f"The {label} mentions {found_str}, which contradicts parameter "
+                    f"tariff_change_percent ({float(pct):g}%)."
+                )
+        if _is_num(new):
+            from_to = re.search(
+                r"\bfrom\s+(\d+(?:\.\d+)?)\s*(?:[A-Za-z/₺]+)?\s+to\s+(\d+(?:\.\d+)?)",
+                text,
+                flags=re.IGNORECASE,
+            )
+            if from_to:
+                text_base = float(from_to.group(1))
+                text_new = float(from_to.group(2))
+                if _is_num(base) and abs(text_base - float(base)) > 0.05:
+                    issues.append(
+                        f"The {label} states a baseline of {text_base:g}, which contradicts "
+                        f"parameter baseline_tariff ({float(base):g})."
+                    )
+                if abs(text_new - float(new)) > 0.05:
+                    issues.append(
+                        f"The {label} states a proposed value of {text_new:g}, which contradicts "
+                        f"parameter new_tariff ({float(new):g})."
+                    )
     return issues
 
 

@@ -172,6 +172,7 @@ export type ExperimentDefinition = {
     province_codes?: string[] | null;
     minimum_age?: number | null;
     maximum_age?: number | null;
+    required_attributes?: string[];
     unenforced_filters?: string[];
   } | null;
 };

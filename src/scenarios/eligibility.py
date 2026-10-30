@@ -99,13 +99,9 @@ def evaluate_resident(
     failed: list[str] = []
     missing: list[str] = []
 
-    # 1. Check required attributes existence
+    # 1. Check required attributes existence (administrative sex and gender are never aliased)
     for req in filter_config.required_attributes:
         val = resident.get(req)
-        if val is None and req == "sex":
-            val = resident.get("gender")
-        elif val is None and req == "gender":
-            val = resident.get("sex")
         if val is None or val == "" or val == "unavailable":
             missing.append(req)
 
@@ -150,9 +146,9 @@ def evaluate_resident(
         except (ValueError, TypeError):
             failed.append(f"Invalid non-integer age value: '{age}'")
 
-    # 4. Check Sex / Gender
+    # 4. Check Administrative Sex
     if filter_config.sexes is not None:
-        sex = resident.get("sex") or resident.get("gender")
+        sex = resident.get("sex")
         if sex is None:
             missing.append("sex")
         else:

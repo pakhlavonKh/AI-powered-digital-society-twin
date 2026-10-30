@@ -3144,6 +3144,11 @@ export interface components {
             /** Maximum Age */
             maximum_age?: number | null;
             /**
+             * Required Attributes
+             * @description Population attributes required by the scenario; missing or unavailable values block the plan.
+             */
+            required_attributes?: string[];
+            /**
              * Unenforced Filters
              * @description Scenario filters this runtime cannot enforce; a non-empty list blocks the plan.
              */
@@ -6022,7 +6027,12 @@ export interface operations {
     };
     list_scenarios_api_v2_scenarios_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Filter scenarios by policy category */
+                category?: string | null;
+                /** @description Filter scenarios by province code or name */
+                province?: string | null;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -6036,6 +6046,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

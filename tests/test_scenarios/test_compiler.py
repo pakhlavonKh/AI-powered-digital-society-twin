@@ -38,8 +38,13 @@ def test_extract_location_specific_provinces():
 def test_extract_percentages_and_numbers():
     pct, base, new_val = extract_percentages_and_numbers("Bus fares increase by 25% in Ankara")
     assert pct == 25.0
-    assert base == 40.0
-    assert new_val == 50.0
+    assert base is None
+    assert new_val is None
+
+    pct, base, new_val = extract_percentages_and_numbers("Ankara public transport fares rise by 30% from 21 TL")
+    assert pct == 30.0
+    assert base == 21.0
+    assert new_val == 27.3
 
     pct, base, new_val = extract_percentages_and_numbers("Fare change from 20 TL to 30 TL")
     assert base == 20.0
@@ -134,8 +139,8 @@ def test_compile_discount_prompt_uses_negative_percentage():
     scenario = compile_scenario_from_prompt(prompt, force_heuristic=True)
     assert scenario.location.province_code == "34"
     assert scenario.policy.parameters.increase_percentage == -50.0
-    assert scenario.policy.parameters.baseline_fare == 40.0
-    assert scenario.policy.parameters.new_fare == 20.0
+    assert scenario.policy.parameters.baseline_fare is None
+    assert scenario.policy.parameters.new_fare is None
     assert "(-50%)" in scenario.name
     assert "decrease by 50%" in scenario.questions[0].text
     assert scenario.target_population.minimum_age == 18

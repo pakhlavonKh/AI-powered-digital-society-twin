@@ -18,7 +18,9 @@ from societytwin.national.constraints import ADULT_AGE, RULES_BY_ID
 from societytwin.national.controls import TABLE_KINDS, ControlStore
 from societytwin.national.vocab import AGE_GROUPS, VOCABULARIES
 
-DEFAULT_REGISTRY_PATH = Path(__file__).resolve().parents[3] / "data" / "dependency_registry.yaml"
+_CHECKOUT_REGISTRY_PATH = Path(__file__).resolve().parents[3] / "data" / "dependency_registry.yaml"
+_PACKAGED_REGISTRY_PATH = Path(__file__).resolve().parent / "dependency_registry.yaml"
+DEFAULT_REGISTRY_PATH = _CHECKOUT_REGISTRY_PATH if _CHECKOUT_REGISTRY_PATH.is_file() else _PACKAGED_REGISTRY_PATH
 Scope = Literal["person", "household", "geography"]
 Method = Literal["joint_allocation", "uniform_within_band", "conditional_age_sex", "ipf_sex", "marginal", "derived"]
 EvidenceClass = Literal["A", "B", "C", "D", "E", "F"]

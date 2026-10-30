@@ -213,3 +213,51 @@ def test_save_custom_scenario_prevents_accidental_overwrite(tmp_path):
     # 4. Explicit overwrite=True succeeds
     overwritten = save_custom_scenario(modified, target_dir=tmp_path, overwrite=True)
     assert overwritten.name == "Different Ankara Transit Name"
+
+
+def test_compile_standalone_baseline_fare_from_prompt():
+    """Audit Repro 3: 'rise by 30% from 21 TL' must extract 21.0 -> 27.3 TL, not fallback to 40 -> 52 TL."""
+    from scenarios.compiler import compile_scenario_from_prompt
+
+    sc = compile_scenario_from_prompt("Ankara public transport fares rise by 30% from 21 TL", force_heuristic=True)
+    assert sc.location.province_code == "06"
+    assert sc.policy.parameters.baseline_fare == 21.0
+    assert sc.policy.parameters.new_fare == 27.3
+    assert sc.policy.parameters.increase_percentage == 30.0
+
+
+def test_eligibility_does_not_alias_sex_and_gender():
+    """Audit Section H: Administrative sex and gender must remain distinct in eligibility checks."""
+    from scenarios.eligibility import EligibilityStatus, evaluate_resident
+    from scenarios.schema import PopulationFilterConfig
+
+    filt = PopulationFilterConfig(
+        minimum_age=18,
+        province_codes=["06"],
+        required_attributes=["age", "province_code", "sex"],
+        sexes=["female"],
+    )
+    resident_only_gender = {"resident_id": "R1", "age": 30, "province_code": "06", "gender": "female"}
+    res = evaluate_resident(resident_only_gender, filt)
+    assert res.status == EligibilityStatus.CANNOT_EVALUATE
+    assert "sex" in res.missing_attributes
+
+
+def test_packaged_scenarios_and_registry_available_outside_checkout(tmp_path, monkeypatch):
+    """Audit Repro 5: Built-in scenarios and dependency registry work when cwd is outside the repo checkout."""
+    from scenarios.adapter import get_scenario, list_available_scenarios
+    from societytwin.national.dependencies import _CHECKOUT_REGISTRY_PATH, _PACKAGED_REGISTRY_PATH, load_registry
+
+    monkeypatch.chdir(tmp_path)
+    items = list_available_scenarios()
+    ids = {item["scenario_id"] for item in items}
+    assert "transport_fare_001" in ids
+    assert "energy_subsidy_001" in ids
+    sc = get_scenario("transport_fare_001")
+    assert sc.policy.parameters.baseline_fare == 21.0
+
+    # Packaged dependency registry matches checkout dependency registry
+    assert _PACKAGED_REGISTRY_PATH.is_file()
+    reg_packaged = load_registry(_PACKAGED_REGISTRY_PATH)
+    reg_checkout = load_registry(_CHECKOUT_REGISTRY_PATH)
+    assert reg_packaged.model_dump() == reg_checkout.model_dump()

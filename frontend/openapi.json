@@ -3927,12 +3927,60 @@
         "summary": "List Scenarios",
         "description": "List all available policy scenarios from registered scenario directories.",
         "operationId": "list_scenarios_api_v2_scenarios_get",
+        "parameters": [
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter scenarios by policy category",
+              "title": "Category"
+            },
+            "description": "Filter scenarios by policy category"
+          },
+          {
+            "name": "province",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter scenarios by province code or name",
+              "title": "Province"
+            },
+            "description": "Filter scenarios by province code or name"
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
               }
             }
           }
@@ -3946,14 +3994,14 @@
         "description": "Create and register a custom policy scenario definition.",
         "operationId": "create_scenario_api_v2_scenarios_post",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/ScenarioConfig"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "201": {
@@ -10866,6 +10914,15 @@
               }
             ],
             "title": "Maximum Age"
+          },
+          "required_attributes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "title": "Required Attributes",
+            "description": "Population attributes required by the scenario; missing or unavailable values block the plan."
           },
           "unenforced_filters": {
             "items": {

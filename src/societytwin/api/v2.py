@@ -190,9 +190,12 @@ def build_router() -> APIRouter:
 
     @r.get("/scenarios", tags=["experiments"],
            description="List all available policy scenarios from registered scenario directories.")
-    def list_scenarios():
+    def list_scenarios(
+        category: Annotated[str | None, Query(description="Filter scenarios by policy category")] = None,
+        province: Annotated[str | None, Query(description="Filter scenarios by province code or name")] = None,
+    ):
         from scenarios.adapter import list_available_scenarios
-        return {"items": list_available_scenarios()}
+        return {"items": list_available_scenarios(category=category, province=province)}
 
     @r.get("/scenarios/{scenario_id}", tags=["experiments"],
            description="Retrieve full scenario configuration by scenario_id.")

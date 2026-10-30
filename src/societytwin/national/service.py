@@ -23,7 +23,7 @@ from societytwin.national.controls import ControlsError, ControlStore, read_stor
 from societytwin.national.dependencies import DEFAULT_REGISTRY_PATH, RegistryError, load_registry
 from societytwin.national.environment import coverage_summary, province_environment
 from societytwin.national.experiments import (DEFINITION_VERSION, PROMPT_TEMPLATE_VERSION, ExperimentDefinition,
-                                              render_prompts, scenario_scope_issues)
+                                              render_prompts, scenario_parameter_issues, scenario_scope_issues)
 from societytwin.national.generator import GenerationConfig, GenerationError, generate
 from societytwin.national.model import dependency_graph
 from societytwin.national.persona_selection import experiment_persona_builder
@@ -472,9 +472,27 @@ class NationalService:
                 if scope_counts.get(missing):
                     block(f"scenario_{missing}", f"{scope_counts[missing]} sampled persona(s) lack the value needed to check "
                                                  f"scenario scope ({missing.split('_')[0]}); they are never assumed eligible.")
+            missing_req_attrs = sorted(
+                issue.split(":", 1)[1]
+                for issue in scope_counts
+                if issue.startswith("required_attribute_missing:") and scope_counts[issue] > 0
+            )
+            if missing_req_attrs:
+                counts_desc = ", ".join(
+                    f"{attr} ({scope_counts[f'required_attribute_missing:{attr}']} persona(s))"
+                    for attr in missing_req_attrs
+                )
+                block(
+                    "scenario_required_attribute_missing",
+                    f"Scenario '{ref.scenario_id}' requires attribute(s) missing or unavailable in the sampled cohort: "
+                    f"{counts_desc}. Missing required attributes are never assumed eligible.",
+                )
             if ref.unenforced_filters:
                 block("scenario_filters_unenforced",
                       f"Scenario '{ref.scenario_id}' targets {ref.unenforced_filters}, which this runtime cannot enforce.")
+        param_issues = scenario_parameter_issues(d)
+        if param_issues:
+            block("scenario_parameter_inconsistency", " ".join(param_issues))
         planned_calls = n * d.execution.repetitions
         max_calls = planned_calls * d.execution.max_attempts
         if n > self.settings.max_agents_per_run:
@@ -632,6 +650,9 @@ class NationalService:
                 issues = scenario_scope_issues(d.scenario_ref, rec)
                 if issues or d.scenario_ref.unenforced_filters:
                     raise RuntimeError(f"Scenario '{d.scenario_ref.scenario_id}' scope violated during execution: {issues or d.scenario_ref.unenforced_filters}")
+            param_issues = scenario_parameter_issues(d)
+            if param_issues:
+                raise RuntimeError(f"Scenario parameter inconsistency during execution: {' '.join(param_issues)}")
             members[rec["synthetic_id"]] = {**{f: rec.get(f) for f in GROUPABLE}, "analysis_weight": m["analysis_weight"]}
             for k in range(1, d.execution.repetitions + 1):
                 requests.append(CallRequest(f"{p['persona_id']}:{k}", p, k, 1, system, user))

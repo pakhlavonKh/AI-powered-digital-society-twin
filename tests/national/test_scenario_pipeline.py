@@ -198,3 +198,100 @@ def test_api_scenario_creation_conflict(national_client):
     assert resp.status_code == 409
     body = resp.json()
     assert body["error"]["code"] == "scenario_conflict"
+
+
+def test_required_attributes_enforced_in_national_plan(national_client, population_id):
+    """Audit Repro 1: Adding an unavailable attribute ('income') to required_attributes blocks the plan."""
+    from scenarios.eligibility import EligibilityStatus, evaluate_resident
+
+    c = national_client
+    ankara_cohort_id = _cohort(c, population_id, {"province_codes": ["06"], "adult_only": True})
+
+    scenario = get_scenario("transport_fare_001")
+    updated_tp = scenario.target_population.model_copy(
+        update={"required_attributes": ["age", "province_code", "sex", "income"]}
+    )
+    scenario_with_income = scenario.model_copy(update={"target_population": updated_tp})
+
+    # Standalone evaluator returns cannot_evaluate for a record lacking 'income'
+    ev = evaluate_resident(
+        {"synthetic_id": "ST-1", "age": 34, "province_code": "06", "sex": "female"},
+        scenario_with_income.target_population,
+    )
+    assert ev.status == EligibilityStatus.CANNOT_EVALUATE
+    assert "income" in ev.missing_attributes
+
+    # National pipeline plan must also block when sampled personas lack 'income'
+    definition = scenario_to_experiment_definition(
+        scenario_with_income,
+        cohort_id=ankara_cohort_id,
+        question_id="q1_usage_change",
+    )
+    assert "income" in definition["scenario_ref"]["required_attributes"]
+
+    exp = c.post("/api/v2/experiments", json=definition).json()
+    plan = c.post(f"/api/v2/experiments/{exp['experiment_id']}/plan").json()
+    assert plan["executable"] is False
+    blocker_codes = [b["code"] for b in plan["blockers"]]
+    assert "scenario_required_attribute_missing" in blocker_codes
+    assert any("income" in b["message"] for b in plan["blockers"])
+
+
+def test_stale_text_or_inconsistent_parameters_blocked_in_plan(national_client, population_id):
+    """Audit Repro 2: Editing parameters without updating prompt text (or inconsistent math) blocks the plan."""
+    c = national_client
+    ankara_cohort_id = _cohort(c, population_id, {"province_codes": ["06"], "adult_only": True})
+
+    scenario = get_scenario("transport_fare_001")
+    definition = scenario_to_experiment_definition(
+        scenario,
+        cohort_id=ankara_cohort_id,
+        question_id="q1_usage_change",
+    )
+
+    # Simulate stale wizard state: parameters edited to 27.3 TL / 30%, but description & question left at 20% / 25.20 TL
+    for p in definition["scenario"]["parameters"]:
+        if p["name"] == "new_tariff":
+            p["value"] = 27.3
+        elif p["name"] == "tariff_change_percent":
+            p["value"] = 30.0
+
+    exp_stale = c.post("/api/v2/experiments", json=definition).json()
+    plan_stale = c.post(f"/api/v2/experiments/{exp_stale['experiment_id']}/plan").json()
+    assert plan_stale["executable"] is False
+    blocker_codes = [b["code"] for b in plan_stale["blockers"]]
+    assert "scenario_parameter_inconsistency" in blocker_codes
+
+    # When description and task instruction are updated to match 30% and 27.30 TL, the plan is executable
+    definition["scenario"]["description"] = (
+        definition["scenario"]["description"].replace("20%", "30%").replace("25.20 TL", "27.30 TL")
+    )
+    definition["task"]["instruction"] = (
+        definition["task"]["instruction"].replace("20%", "30%").replace("25.20 TL", "27.30 TL")
+    )
+    exp_synced = c.post("/api/v2/experiments", json=definition).json()
+    plan_synced = c.post(f"/api/v2/experiments/{exp_synced['experiment_id']}/plan").json()
+    assert plan_synced["executable"] is True
+    assert plan_synced["blockers"] == []
+
+
+def test_api_scenarios_filtering_by_category_and_province(national_client):
+    """Audit Repro 4: GET /api/v2/scenarios supports category and province query filters."""
+    c = national_client
+
+    # Filter by category=energy and province=06 -> returns energy_subsidy_001
+    res_ankara_energy = c.get("/api/v2/scenarios", params={"category": "energy", "province": "06"})
+    assert res_ankara_energy.status_code == 200
+    items_ae = res_ankara_energy.json()["items"]
+    assert [i["scenario_id"] for i in items_ae] == ["energy_subsidy_001"]
+
+    # Filter by category=energy and province=34 (Istanbul) -> empty for Ankara-only builtin scenarios
+    res_ist_energy = c.get("/api/v2/scenarios", params={"category": "energy", "province": "34"})
+    assert res_ist_energy.status_code == 200
+    assert res_ist_energy.json()["items"] == []
+
+    # Filter by category=transportation and province=Ankara
+    res_ankara_trans = c.get("/api/v2/scenarios", params={"category": "transportation", "province": "Ankara"})
+    assert res_ankara_trans.status_code == 200
+    items_at = res_ankara_trans.json()["items"]
+    assert [i["scenario_id"] for i in items_at] == ["transport_fare_001"]
