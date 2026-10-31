@@ -1,0 +1,13 @@
+﻿province_code,province_name,nuts3_code,year,opera_ballet_halls,opera_ballet_seats,opera_ballet_shows_total,opera_ballet_performances_total,opera_ballet_audience_total
+06,Ankara,TR510,2023-2024,2,1022,37,142,80666
+06,Ankara,TR510,2024-2025,5,4152,73,213,109094
+07,Antalya,TR611,2023-2024,1,802,18,72,55240
+07,Antalya,TR611,2024-2025,1,802,26,89,57612
+33,Mersin,TR622,2023-2024,1,638,40,84,38074
+33,Mersin,TR622,2024-2025,1,638,39,94,44410
+34,İstanbul,TR100,2023-2024,5,3941,45,139,151899
+34,İstanbul,TR100,2024-2025,4,3479,38,166,176154
+35,İzmir,TR310,2023-2024,2,1101,39,125,71506
+35,İzmir,TR310,2024-2025,2,1131,42,127,79181
+55,Samsun,TR831,2023-2024,2,737,30,120,41565
+55,Samsun,TR831,2024-2025,2,721,33,142,44925

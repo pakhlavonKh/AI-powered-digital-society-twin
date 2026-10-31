@@ -1,0 +1,181 @@
+﻿province_code,province_name,district_name,year,indicator,value,unit
+06,Ankara,Ankaray (A1 AŞTİ-Dikimevi),2022,passengers_carried,34763941,person
+06,Ankara,Ankaray (A1 AŞTİ-Dikimevi),2023,passengers_carried,35125695,person
+06,Ankara,Ankaray (A1 AŞTİ-Dikimevi),2024,passengers_carried,38556299,person
+06,Ankara,Ankaray (A1 AŞTİ-Dikimevi),2025,passengers_carried,38022517,person
+06,Ankara,Ankaray (A1 AŞTİ-Dikimevi),2025,trips_operated,64169,count
+06,Ankara,Ankaray (A1 AŞTİ-Dikimevi),2025,energy_consumed_kwh,18083249.86,kwh
+06,Ankara,Ankaray (A1 AŞTİ-Dikimevi),2025,line_length_m,8527,meter
+06,Ankara,Ankaray (A1 AŞTİ-Dikimevi),2025,stations_count,11,count
+06,Ankara,Ankaray (A1 AŞTİ-Dikimevi),2025,rail_vehicles_count,33,vehicle
+06,Ankara,Ankaray (A1 AŞTİ-Dikimevi),2025,commercial_speed_kmh,30,km_per_hour
+06,Ankara,Ankaray (A1 AŞTİ-Dikimevi),2026-Jan-Aug,passengers_carried,23450695,person
+06,Ankara,Ankaray (A1 AŞTİ-Dikimevi),2026-Jan-Aug,trips_operated,42394,count
+06,Ankara,Ankaray (A1 AŞTİ-Dikimevi),2026-Jan-Aug,distance_operated_km,722987.28,km
+06,Ankara,Ankaray (A1 AŞTİ-Dikimevi),2026-Jan-Aug,energy_consumed_kwh,11943685.05,kwh
+06,Ankara,Ankaray (A1 AŞTİ-Dikimevi),2026-Jan-Aug,passengers_full_fare,6598232,person
+06,Ankara,Ankaray (A1 AŞTİ-Dikimevi),2026-Jan-Aug,passengers_discounted,4558362,person
+06,Ankara,Ankaray (A1 AŞTİ-Dikimevi),2026-Jan-Aug,passengers_student_subscription,7597722,person
+06,Ankara,Ankaray (A1 AŞTİ-Dikimevi),2026-Jan-Aug,passengers_mobile_nfc_qr,2241169,person
+06,Ankara,Ankaray (A1 AŞTİ-Dikimevi),2026-Jan-Aug,passengers_free_pass,2455210,person
+06,Ankara,Ankaray (A1 AŞTİ-Dikimevi),2026-Jan-Aug,trips_planned,42534,count
+06,Ankara,Ankaray (A1 AŞTİ-Dikimevi),2026-Jan-Aug,energy_cost_tl,65950457.87,tl
+06,Ankara,District Transit Corridor: Akyurt-Sıhhiye,2025,passengers_carried,1770069,person
+06,Ankara,District Transit Corridor: Beypazarı-Ankara,2025,passengers_carried,174077,person
+06,Ankara,District Transit Corridor: Elmadağ-Ankara,2025,passengers_carried,1053983,person
+06,Ankara,District Transit Corridor: Hasanoğlan-Ankara,2025,passengers_carried,449018,person
+06,Ankara,District Transit Corridor: Hasanoğlan-Elmadağ,2025,passengers_carried,191024,person
+06,Ankara,District Transit Corridor: Kahramankazan-Ankara,2025,passengers_carried,700310,person
+06,Ankara,District Transit Corridor: Kalecik-Ankara,2025,passengers_carried,195228,person
+06,Ankara,District Transit Corridor: Lalahan-Ankara,2025,passengers_carried,238615,person
+06,Ankara,District Transit Corridor: Polatlı-Ankara,2025,passengers_carried,336112,person
+06,Ankara,District Transit Corridor: Çubuk-Ankara,2025,passengers_carried,2504130,person
+06,Ankara,"EGO Bus Region 1 (Çankaya, Bala, Haymana, Gölbaşı)",2025,dispatch_hubs_count,7,count
+06,Ankara,"EGO Bus Region 1 (Çankaya, Bala, Haymana, Gölbaşı)",2025,bus_routes_count,73,count
+06,Ankara,"EGO Bus Region 1 (Çankaya, Bala, Haymana, Gölbaşı)",2025,active_buses_count,311,vehicle
+06,Ankara,"EGO Bus Region 1 (Çankaya, Bala, Haymana, Gölbaşı)",2025,inactive_buses_count,4,vehicle
+06,Ankara,"EGO Bus Region 1 (Çankaya, Bala, Haymana, Gölbaşı)",2025,drivers_count,444,person
+06,Ankara,"EGO Bus Region 1 (Çankaya, Bala, Haymana, Gölbaşı)",2025,trips_operated,471181,count
+06,Ankara,"EGO Bus Region 1 (Çankaya, Bala, Haymana, Gölbaşı)",2025,distance_operated_km,20371752,km
+06,Ankara,"EGO Bus Region 2 (Yenimahalle, Keçiören)",2025,dispatch_hubs_count,9,count
+06,Ankara,"EGO Bus Region 2 (Yenimahalle, Keçiören)",2025,bus_routes_count,81,count
+06,Ankara,"EGO Bus Region 2 (Yenimahalle, Keçiören)",2025,active_buses_count,355,vehicle
+06,Ankara,"EGO Bus Region 2 (Yenimahalle, Keçiören)",2025,inactive_buses_count,0,vehicle
+06,Ankara,"EGO Bus Region 2 (Yenimahalle, Keçiören)",2025,drivers_count,564,person
+06,Ankara,"EGO Bus Region 2 (Yenimahalle, Keçiören)",2025,trips_operated,752732,count
+06,Ankara,"EGO Bus Region 2 (Yenimahalle, Keçiören)",2025,distance_operated_km,19383750,km
+06,Ankara,"EGO Bus Region 3 (Mamak, Altındağ, Çankaya, Elmadağ)",2025,dispatch_hubs_count,14,count
+06,Ankara,"EGO Bus Region 3 (Mamak, Altındağ, Çankaya, Elmadağ)",2025,bus_routes_count,77,count
+06,Ankara,"EGO Bus Region 3 (Mamak, Altındağ, Çankaya, Elmadağ)",2025,active_buses_count,422,vehicle
+06,Ankara,"EGO Bus Region 3 (Mamak, Altındağ, Çankaya, Elmadağ)",2025,inactive_buses_count,4,vehicle
+06,Ankara,"EGO Bus Region 3 (Mamak, Altındağ, Çankaya, Elmadağ)",2025,drivers_count,634,person
+06,Ankara,"EGO Bus Region 3 (Mamak, Altındağ, Çankaya, Elmadağ)",2025,trips_operated,586695,count
+06,Ankara,"EGO Bus Region 3 (Mamak, Altındağ, Çankaya, Elmadağ)",2025,distance_operated_km,23898421,km
+06,Ankara,"EGO Bus Region 4 (Keçiören, Altındağ, Çankaya, Çubuk, Akyurt, Pursaklar, Kalecik)",2025,dispatch_hubs_count,14,count
+06,Ankara,"EGO Bus Region 4 (Keçiören, Altındağ, Çankaya, Çubuk, Akyurt, Pursaklar, Kalecik)",2025,bus_routes_count,74,count
+06,Ankara,"EGO Bus Region 4 (Keçiören, Altındağ, Çankaya, Çubuk, Akyurt, Pursaklar, Kalecik)",2025,active_buses_count,346,vehicle
+06,Ankara,"EGO Bus Region 4 (Keçiören, Altındağ, Çankaya, Çubuk, Akyurt, Pursaklar, Kalecik)",2025,inactive_buses_count,34,vehicle
+06,Ankara,"EGO Bus Region 4 (Keçiören, Altındağ, Çankaya, Çubuk, Akyurt, Pursaklar, Kalecik)",2025,drivers_count,584,person
+06,Ankara,"EGO Bus Region 4 (Keçiören, Altındağ, Çankaya, Çubuk, Akyurt, Pursaklar, Kalecik)",2025,trips_operated,565947,count
+06,Ankara,"EGO Bus Region 4 (Keçiören, Altındağ, Çankaya, Çubuk, Akyurt, Pursaklar, Kalecik)",2025,distance_operated_km,23566985,km
+06,Ankara,"EGO Bus Region 5 (Sincan, Etimesgut, Çankaya, Ayaş, Beypazarı, Güdül, Nallıhan, Kızılcahamam, Kahramankazan, Polatlı)",2025,dispatch_hubs_count,8,count
+06,Ankara,"EGO Bus Region 5 (Sincan, Etimesgut, Çankaya, Ayaş, Beypazarı, Güdül, Nallıhan, Kızılcahamam, Kahramankazan, Polatlı)",2025,bus_routes_count,112,count
+06,Ankara,"EGO Bus Region 5 (Sincan, Etimesgut, Çankaya, Ayaş, Beypazarı, Güdül, Nallıhan, Kızılcahamam, Kahramankazan, Polatlı)",2025,active_buses_count,496,vehicle
+06,Ankara,"EGO Bus Region 5 (Sincan, Etimesgut, Çankaya, Ayaş, Beypazarı, Güdül, Nallıhan, Kızılcahamam, Kahramankazan, Polatlı)",2025,inactive_buses_count,5,vehicle
+06,Ankara,"EGO Bus Region 5 (Sincan, Etimesgut, Çankaya, Ayaş, Beypazarı, Güdül, Nallıhan, Kızılcahamam, Kahramankazan, Polatlı)",2025,drivers_count,817,person
+06,Ankara,"EGO Bus Region 5 (Sincan, Etimesgut, Çankaya, Ayaş, Beypazarı, Güdül, Nallıhan, Kızılcahamam, Kahramankazan, Polatlı)",2025,trips_operated,730906,count
+06,Ankara,"EGO Bus Region 5 (Sincan, Etimesgut, Çankaya, Ayaş, Beypazarı, Güdül, Nallıhan, Kızılcahamam, Kahramankazan, Polatlı)",2025,distance_operated_km,41208471,km
+06,Ankara,EGO Bus Total (All 5 Regions),2021,passengers_carried,133165314,person
+06,Ankara,EGO Bus Total (All 5 Regions),2022,passengers_carried,232128035,person
+06,Ankara,EGO Bus Total (All 5 Regions),2023,passengers_carried,256270286,person
+06,Ankara,EGO Bus Total (All 5 Regions),2024,passengers_carried,269317331,person
+06,Ankara,EGO Bus Total (All 5 Regions),2025,passengers_carried,264584175,person
+06,Ankara,EGO Bus Total (All 5 Regions),2025,dispatch_hubs_count,52,count
+06,Ankara,EGO Bus Total (All 5 Regions),2025,bus_routes_count,417,count
+06,Ankara,EGO Bus Total (All 5 Regions),2025,active_buses_count,1930,vehicle
+06,Ankara,EGO Bus Total (All 5 Regions),2025,inactive_buses_count,47,vehicle
+06,Ankara,EGO Bus Total (All 5 Regions),2025,drivers_count,3043,person
+06,Ankara,EGO Bus Total (All 5 Regions),2025,trips_operated,3107461,count
+06,Ankara,EGO Bus Total (All 5 Regions),2025,distance_operated_km,128429379,km
+06,Ankara,EGO Bus Total (All 5 Regions),2025,defined_bus_stops_count,10785,count
+06,Ankara,EGO Rail Total (Ankaray + M1-M4),2022,passengers_carried,142609242,person
+06,Ankara,EGO Rail Total (Ankaray + M1-M4),2023,passengers_carried,158979908,person
+06,Ankara,EGO Rail Total (Ankaray + M1-M4),2024,passengers_carried,172087669,person
+06,Ankara,EGO Rail Total (Ankaray + M1-M4),2025,passengers_carried,173173688,person
+06,Ankara,EGO Rail Total (Ankaray + M1-M4),2025,trips_operated,159248,count
+06,Ankara,EGO Rail Total (Ankaray + M1-M4),2025,energy_consumed_kwh,138506026.05,kwh
+06,Ankara,EGO Rail Total (Ankaray + M1-M4),2025,line_length_m,67658,meter
+06,Ankara,EGO Rail Total (Ankaray + M1-M4),2025,stations_count,57,count
+06,Ankara,EGO Rail Total (Ankaray + M1-M4),2025,rail_vehicles_count,465,vehicle
+06,Ankara,EGO Rail Total (Ankaray + M1-M4),2026-Jan-Aug,passengers_carried,109400396,person
+06,Ankara,EGO Rail Total (Ankaray + M1-M4),2026-Jan-Aug,trips_operated,106556,count
+06,Ankara,EGO Rail Total (Ankaray + M1-M4),2026-Jan-Aug,distance_operated_km,4915337.73,km
+06,Ankara,EGO Rail Total (Ankaray + M1-M4),2026-Jan-Aug,energy_consumed_kwh,92691382.66,kwh
+06,Ankara,EGO Rail Total (Ankaray + M1-M4),2026-Jan-Aug,passengers_full_fare,38084987,person
+06,Ankara,EGO Rail Total (Ankaray + M1-M4),2026-Jan-Aug,passengers_discounted,21807120,person
+06,Ankara,EGO Rail Total (Ankaray + M1-M4),2026-Jan-Aug,passengers_student_subscription,27724058,person
+06,Ankara,EGO Rail Total (Ankaray + M1-M4),2026-Jan-Aug,passengers_mobile_nfc_qr,7886217,person
+06,Ankara,EGO Rail Total (Ankaray + M1-M4),2026-Jan-Aug,passengers_free_pass,13898014,person
+06,Ankara,EGO Rail Total (Ankaray + M1-M4),2026-Jan-Aug,trips_planned,107409,count
+06,Ankara,EGO Rail Total (Ankaray + M1-M4),2026-Jan-Aug,energy_cost_tl,513466753.23,tl
+06,Ankara,Metro M1 (Kızılay-Batıkent),2022,passengers_carried,45569379,person
+06,Ankara,Metro M1 (Kızılay-Batıkent),2023,passengers_carried,50787558,person
+06,Ankara,Metro M1 (Kızılay-Batıkent),2024,passengers_carried,53366318,person
+06,Ankara,Metro M1 (Kızılay-Batıkent),2025,passengers_carried,53393463,person
+06,Ankara,Metro M1 (Kızılay-Batıkent),2025,trips_operated,56136,count
+06,Ankara,Metro M1 (Kızılay-Batıkent),2025,energy_consumed_kwh,37778570.52,kwh
+06,Ankara,Metro M1 (Kızılay-Batıkent),2025,line_length_m,14661,meter
+06,Ankara,Metro M1 (Kızılay-Batıkent),2025,stations_count,12,count
+06,Ankara,Metro M1 (Kızılay-Batıkent),2025,commercial_speed_kmh,38,km_per_hour
+06,Ankara,Metro M1 (Kızılay-Batıkent),2026-Jan-Aug,passengers_carried,33436023,person
+06,Ankara,Metro M1 (Kızılay-Batıkent),2026-Jan-Aug,energy_consumed_kwh,25624617.19,kwh
+06,Ankara,Metro M1 (Kızılay-Batıkent),2026-Jan-Aug,passengers_full_fare,12404660,person
+06,Ankara,Metro M1 (Kızılay-Batıkent),2026-Jan-Aug,passengers_discounted,6284870,person
+06,Ankara,Metro M1 (Kızılay-Batıkent),2026-Jan-Aug,passengers_student_subscription,7674465,person
+06,Ankara,Metro M1 (Kızılay-Batıkent),2026-Jan-Aug,passengers_mobile_nfc_qr,2050204,person
+06,Ankara,Metro M1 (Kızılay-Batıkent),2026-Jan-Aug,passengers_free_pass,5021825,person
+06,Ankara,Metro M1 (Kızılay-Batıkent),2026-Jan-Aug,energy_cost_tl,142629107.79,tl
+06,Ankara,Metro M1-M2-M3 Combined (Koru-Batıkent-OSB/Törekent),2026-Jan-Aug,trips_operated,37626,count
+06,Ankara,Metro M1-M2-M3 Combined (Koru-Batıkent-OSB/Törekent),2026-Jan-Aug,distance_operated_km,3527889.01,km
+06,Ankara,Metro M1-M2-M3 Combined (Koru-Batıkent-OSB/Törekent),2026-Jan-Aug,trips_planned,38038,count
+06,Ankara,Metro M2 (Kızılay-Çayyolu),2022,passengers_carried,32516035,person
+06,Ankara,Metro M2 (Kızılay-Çayyolu),2023,passengers_carried,35428052,person
+06,Ankara,Metro M2 (Kızılay-Çayyolu),2024,passengers_carried,38711580,person
+06,Ankara,Metro M2 (Kızılay-Çayyolu),2025,passengers_carried,39351288,person
+06,Ankara,Metro M2 (Kızılay-Çayyolu),2025,trips_operated,56136,count
+06,Ankara,Metro M2 (Kızılay-Çayyolu),2025,energy_consumed_kwh,30252111.87,kwh
+06,Ankara,Metro M2 (Kızılay-Çayyolu),2025,line_length_m,16590,meter
+06,Ankara,Metro M2 (Kızılay-Çayyolu),2025,stations_count,11,count
+06,Ankara,Metro M2 (Kızılay-Çayyolu),2025,commercial_speed_kmh,38,km_per_hour
+06,Ankara,Metro M2 (Kızılay-Çayyolu),2026-Jan-Aug,passengers_carried,24964548,person
+06,Ankara,Metro M2 (Kızılay-Çayyolu),2026-Jan-Aug,energy_consumed_kwh,20130198.77,kwh
+06,Ankara,Metro M2 (Kızılay-Çayyolu),2026-Jan-Aug,passengers_full_fare,9140117,person
+06,Ankara,Metro M2 (Kızılay-Çayyolu),2026-Jan-Aug,passengers_discounted,5308421,person
+06,Ankara,Metro M2 (Kızılay-Çayyolu),2026-Jan-Aug,passengers_student_subscription,5908677,person
+06,Ankara,Metro M2 (Kızılay-Çayyolu),2026-Jan-Aug,passengers_mobile_nfc_qr,1769820,person
+06,Ankara,Metro M2 (Kızılay-Çayyolu),2026-Jan-Aug,passengers_free_pass,2837513,person
+06,Ankara,Metro M2 (Kızılay-Çayyolu),2026-Jan-Aug,energy_cost_tl,110475753.73,tl
+06,Ankara,Metro M3 (Batıkent-OSB/Törekent),2022,passengers_carried,19872539,person
+06,Ankara,Metro M3 (Batıkent-OSB/Törekent),2023,passengers_carried,23893260,person
+06,Ankara,Metro M3 (Batıkent-OSB/Törekent),2024,passengers_carried,24621735,person
+06,Ankara,Metro M3 (Batıkent-OSB/Törekent),2025,passengers_carried,24508201,person
+06,Ankara,Metro M3 (Batıkent-OSB/Törekent),2025,trips_operated,56136,count
+06,Ankara,Metro M3 (Batıkent-OSB/Törekent),2025,energy_consumed_kwh,27818564.43,kwh
+06,Ankara,Metro M3 (Batıkent-OSB/Törekent),2025,line_length_m,15360,meter
+06,Ankara,Metro M3 (Batıkent-OSB/Törekent),2025,stations_count,11,count
+06,Ankara,Metro M3 (Batıkent-OSB/Törekent),2025,commercial_speed_kmh,38,km_per_hour
+06,Ankara,Metro M3 (Batıkent-OSB/Törekent),2026-Jan-Aug,passengers_carried,15465851,person
+06,Ankara,Metro M3 (Batıkent-OSB/Törekent),2026-Jan-Aug,energy_consumed_kwh,18589675.77,kwh
+06,Ankara,Metro M3 (Batıkent-OSB/Törekent),2026-Jan-Aug,passengers_full_fare,5691873,person
+06,Ankara,Metro M3 (Batıkent-OSB/Törekent),2026-Jan-Aug,passengers_discounted,3309562,person
+06,Ankara,Metro M3 (Batıkent-OSB/Törekent),2026-Jan-Aug,passengers_student_subscription,3233105,person
+06,Ankara,Metro M3 (Batıkent-OSB/Törekent),2026-Jan-Aug,passengers_mobile_nfc_qr,1116685,person
+06,Ankara,Metro M3 (Batıkent-OSB/Törekent),2026-Jan-Aug,passengers_free_pass,2114626,person
+06,Ankara,Metro M3 (Batıkent-OSB/Törekent),2026-Jan-Aug,energy_cost_tl,103667613.29,tl
+06,Ankara,Metro M4 (Keçiören-Kızılay),2022,passengers_carried,9887348,person
+06,Ankara,Metro M4 (Keçiören-Kızılay),2023,passengers_carried,13745343,person
+06,Ankara,Metro M4 (Keçiören-Kızılay),2024,passengers_carried,16831737,person
+06,Ankara,Metro M4 (Keçiören-Kızılay),2025,passengers_carried,17898219,person
+06,Ankara,Metro M4 (Keçiören-Kızılay),2025,trips_operated,38943,count
+06,Ankara,Metro M4 (Keçiören-Kızılay),2025,energy_consumed_kwh,24573529.37,kwh
+06,Ankara,Metro M4 (Keçiören-Kızılay),2025,line_length_m,12520,meter
+06,Ankara,Metro M4 (Keçiören-Kızılay),2025,stations_count,12,count
+06,Ankara,Metro M4 (Keçiören-Kızılay),2025,commercial_speed_kmh,40,km_per_hour
+06,Ankara,Metro M4 (Keçiören-Kızılay),2026-Jan-Aug,passengers_carried,12083279,person
+06,Ankara,Metro M4 (Keçiören-Kızılay),2026-Jan-Aug,trips_operated,26536,count
+06,Ankara,Metro M4 (Keçiören-Kızılay),2026-Jan-Aug,distance_operated_km,664461.44,km
+06,Ankara,Metro M4 (Keçiören-Kızılay),2026-Jan-Aug,energy_consumed_kwh,16403205.88,kwh
+06,Ankara,Metro M4 (Keçiören-Kızılay),2026-Jan-Aug,passengers_full_fare,4250105,person
+06,Ankara,Metro M4 (Keçiören-Kızılay),2026-Jan-Aug,passengers_discounted,2345905,person
+06,Ankara,Metro M4 (Keçiören-Kızılay),2026-Jan-Aug,passengers_student_subscription,3310089,person
+06,Ankara,Metro M4 (Keçiören-Kızılay),2026-Jan-Aug,passengers_mobile_nfc_qr,708339,person
+06,Ankara,Metro M4 (Keçiören-Kızılay),2026-Jan-Aug,passengers_free_pass,1468840,person
+06,Ankara,Metro M4 (Keçiören-Kızılay),2026-Jan-Aug,trips_planned,26837,count
+06,Ankara,Metro M4 (Keçiören-Kızılay),2026-Jan-Aug,energy_cost_tl,90743820.55,tl
+06,Ankara,Private Public Buses (ÖHO),2025,passengers_carried,68732683,person
+06,Ankara,Private Public Transit Vehicles (ÖTA),2025,passengers_carried,18213400,person
+06,Ankara,TCDD Başkentray Commuter Rail (Kayaş-Sincan),2025,passengers_carried,26097394,person
+06,Ankara,TCDD Başkentray Commuter Rail (Kayaş-Sincan),2025,line_length_m,34796,meter
+06,Ankara,TCDD Başkentray Commuter Rail (Kayaş-Sincan),2025,stations_count,24,count
+06,Ankara,Teleferik (Yenimahalle-Şentepe Cable Car),2026-Jan-Aug,energy_consumed_kwh,166152.3,kwh
+06,Ankara,Teleferik (Yenimahalle-Şentepe Cable Car),2026-Jan-Aug,energy_cost_tl,1060737.39,tl
