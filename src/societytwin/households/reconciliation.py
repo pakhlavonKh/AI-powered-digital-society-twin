@@ -10,6 +10,8 @@ Resident universe metadata is optional, explicit ``manifest['population_universe
 The institutional count is required only for all-resident universes, and must
 cover the same geography/year. Unknown definitions are never inferred from prose.
 This is an input contract, not a change to generated manifests.
+``reconcile_population(population, households)`` adapts generated or loaded
+national objects without rewriting their records, manifests or fingerprints.
 """
 from collections.abc import Mapping
 from copy import deepcopy
@@ -29,6 +31,26 @@ def _number(value, *, positive=False):
                 and (value > 0 if positive else value >= 0))
     except OverflowError:
         return False
+
+
+def reconcile_population(population, households):
+    """Adapt GeneratedPopulation or LoadedPopulation to the aggregate gate.
+
+    Universe evidence is read only from the existing manifest contract. Neither
+    table names nor generic source prose establish institutional inclusion.
+    Loaded Arrow values are converted without rounding or selecting residents.
+    """
+    from societytwin.national.generator import GeneratedPopulation
+    from societytwin.national.store import LoadedPopulation
+
+    if isinstance(population, GeneratedPopulation):
+        columns = population.columns
+    elif isinstance(population, LoadedPopulation):
+        columns = population.table.select(
+            ['population_weight', 'province_code', 'reference_year']).to_pydict()
+    else:
+        raise TypeError('Expected GeneratedPopulation or LoadedPopulation')
+    return reconcile(columns, population.manifest, households)
 
 
 def reconcile(columns, manifest, households):
@@ -57,6 +79,8 @@ def reconcile(columns, manifest, households):
         return math.isclose(a, b, rel_tol=1e-10, abs_tol=1e-6)
 
     provenance = {'population_id': manifest.get('population_id'),
+                  'resident_content_sha256': manifest.get('content_sha256'),
+                  'household_content_sha256': hm.get('content_sha256'),
                   'household_population_id': hm.get('household_population_id'),
                   'resident_sources': deepcopy(manifest.get('source_versions')),
                   'household_source': deepcopy(source),

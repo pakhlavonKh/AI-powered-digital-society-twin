@@ -210,6 +210,9 @@ def test_relocatable_package_layout_without_checkout_or_catalog(persona, tmp_pat
 UPSTREAM_PROBE = r'''
 import hashlib,json,os,socket,sys,tempfile
 from pathlib import Path
+sys.stdin.reconfigure(encoding='utf-8')
+sys.stdout.reconfigure(encoding='utf-8')
+sys.stderr.reconfigure(encoding='utf-8')
 root=Path(sys.argv[1]).resolve()
 def deny(*args,**kwargs):
     raise RuntimeError('Network is forbidden in the projection contract probe')
@@ -271,12 +274,11 @@ def test_actual_upstream_schema_loading_and_intended_templates(persona):
     sidecar['model_visible'] = {'degurba_class': sidecar_text}
     sidecar['model_visible_fields'] = ['degurba_class']
     docs.append(matraix_persona(sidecar))
-    args = [python, '-I', '-B', '-c', UPSTREAM_PROBE, root]
+    args = [python, '-I', '-B', '-X', 'utf8', '-c', UPSTREAM_PROBE, root]
     if distro:
         args = ['wsl', '-d', distro, '--', 'env', '-i', 'PATH=/usr/bin:/bin',
                 'LANG=C.UTF-8', 'LC_ALL=C.UTF-8', *args]
-    env = {k: v for k, v in os.environ.items()
-           if k.upper() in {'PATH', 'SYSTEMROOT', 'WINDIR', 'TEMP', 'TMP', 'USERPROFILE', 'LOCALAPPDATA'}}
+    env = probe_environment()
     run = subprocess.run(args, input=json.dumps(docs, ensure_ascii=False), capture_output=True,
                          text=True, encoding='utf-8', env=env, timeout=60)
     assert run.returncode == 0, run.stderr
@@ -299,3 +301,35 @@ def test_actual_upstream_schema_loading_and_intended_templates(persona):
     assert 'highest_education' not in output['results'][4]['dimensions']
     assert output['results'][5]['dimensions'] == {}
     assert sidecar_text in output['results'][6]['system']
+
+
+def probe_environment():
+    # -I ignores PYTHON* variables; the probe must also configure its streams.
+    env = {k: v for k, v in os.environ.items()
+           if k.upper() in {'PATH', 'SYSTEMROOT', 'WINDIR', 'TEMP', 'TMP', 'USERPROFILE', 'LOCALAPPDATA'}}
+    env['PYTHONUTF8'] = '1'
+    return env
+
+
+def test_probe_unicode_and_environment_isolation(monkeypatch, tmp_path):
+    monkeypatch.setenv('PYTHONPATH', 'untrusted-host-path')
+    monkeypatch.setenv('PROVIDER_API_KEY', 'secret')
+    env = probe_environment()
+    assert 'PYTHONPATH' not in env and 'PROVIDER_API_KEY' not in env
+    assert env['PYTHONUTF8'] == '1'
+    # Execute the actual probe's stream setup without importing upstream.
+    setup = UPSTREAM_PROBE.split('root=Path')[0]
+    script = setup + '''
+assert sys.flags.isolated and sys.flags.utf8_mode
+value = json.load(sys.stdin)
+with tempfile.TemporaryDirectory() as directory:
+    path = Path(directory) / 'unicode.txt'
+    path.write_text(value, encoding='utf-8')
+    assert path.read_text() == value
+print(json.dumps(value,ensure_ascii=False))
+'''
+    value = 'Şanlıurfa / kırsal / Hiç evlenmedi'
+    run = subprocess.run([sys.executable, '-I', '-B', '-X', 'utf8', '-c', script],
+                         input=json.dumps(value, ensure_ascii=False), encoding='utf-8',
+                         capture_output=True, env=env, cwd=tmp_path, check=True, timeout=30)
+    assert json.loads(run.stdout) == value

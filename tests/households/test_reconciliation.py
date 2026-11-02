@@ -203,3 +203,52 @@ def test_generated_household_interface(registry, evidence):
     assert result['status'] == 'not_assessable'
     assert result['totals']['member_exact'] is None
     assert result['totals']['member_lower_bound'] == pytest.approx(2200)
+
+
+def test_real_generated_and_loaded_populations(store, registry, evidence, tmp_path):
+    from societytwin.national.generator import generate, GenerationConfig
+    from societytwin.national.store import PopulationStore
+    from societytwin.households.generator import generate as generate_households
+    from societytwin.households.model import HouseholdConfig
+    from societytwin.households.store import HouseholdStore
+    from societytwin.households.reconciliation import reconcile_population
+
+    population = generate(store, GenerationConfig(synthetic_size=100, provinces=('06',)))
+    households = generate_households(evidence, HouseholdConfig(), registry)
+    before = deepcopy((population.columns, population.manifest, households))
+    result = reconcile_population(population, households)
+    assert finding(result, 'population_universe') == 'not_assessable'
+    assert result['totals']['private_household_persons'] is None
+    assert result['status'] == 'not_assessable'
+    assert result['provenance']['resident_sources'] == population.manifest['source_versions']
+    assert result['provenance']['resident_content_sha256'] == population.manifest['content_sha256']
+    assert result['provenance']['household_content_sha256'] == households.manifest['content_sha256']
+    residents = PopulationStore(tmp_path/'residents')
+    saved, _ = residents.write(population, {})
+    loaded = residents.load(saved['population_id'])
+    hh_store = HouseholdStore(tmp_path/'households')
+    path = hh_store.write(households)
+    loaded_hh = hh_store.load(path.name)
+    assert reconcile_population(loaded, loaded_hh) == result
+    assert reconcile_population(population, households) == result
+    assert loaded.table.to_pydict() == population.columns
+    assert (population.columns, population.manifest, households) == before
+
+
+def test_verified_fixture_evidence_through_adapter(inputs):
+    from societytwin.national.generator import GeneratedPopulation
+    from societytwin.households.reconciliation import reconcile_population
+    columns, manifest, households = inputs
+    population = GeneratedPopulation(columns, manifest, manifest['profiles'])
+    assert reconcile_population(population, households)['status'] == 'compatible'
+    manifest.pop('population_universe')
+    assert reconcile_population(population, households)['status'] == 'not_assessable'
+
+
+def test_open_tail_tolerance(inputs):
+    columns, manifest, hh = inputs
+    columns['population_weight'] = [25, 25 - 1e-8]
+    manifest['represented_population'] = sum(columns['population_weight'])
+    hh = replace(hh, records=(replace(hh.records[0], household_size_class='10+', household_size=None,
+        household_size_lower=10, household_size_upper=None, household_size_open_ended=True),))
+    assert finding(reconcile(columns, manifest, hh), 'member_totals') == 'not_assessable'
