@@ -8,10 +8,12 @@ from societytwin.enrichment.engine import validate
 from societytwin.enrichment.registry import EnrichmentError
 from societytwin.enrichment.store import ExtensionStore
 from societytwin.national.personas import PERSON_FIELDS, build_persona
+from societytwin.national.sidecar_persona_contracts import APPROVED_SIDECAR_ATTRIBUTES
 
-SUPPORTED = frozenset(PERSON_FIELDS) - {'household_size_class', 'household_type'} | {'degurba_class'}
-LIMITATION = ('Synthetic DEGURBA class sampled from province/sex aggregate counts; independence from other '
-              'resident attributes within sex is assumed. Not an observed individual location, address or district.')
+CORE_SUPPORTED = frozenset(PERSON_FIELDS) - {'household_size_class', 'household_type'}
+# Compatibility exports; rendering uses each attribute's approved contract.
+SUPPORTED = CORE_SUPPORTED | frozenset(APPROVED_SIDECAR_ATTRIBUTES)
+LIMITATION = APPROVED_SIDECAR_ATTRIBUTES['degurba_class'].limitation
 
 
 class FieldSelection(BaseModel):
@@ -31,8 +33,9 @@ class FieldSelection(BaseModel):
         for fields in (self.allowlist, selected):
             if len(fields) != len(set(fields)):
                 raise ValueError('Duplicate persona fields')
-            if set(fields) - SUPPORTED:
-                raise ValueError(f'Unsupported persona fields: {sorted(set(fields) - SUPPORTED)}')
+            supported = CORE_SUPPORTED | APPROVED_SIDECAR_ATTRIBUTES.keys()
+            if set(fields) - supported:
+                raise ValueError(f'Unsupported persona fields: {sorted(set(fields) - supported)}')
         if not set(selected) <= set(self.allowlist):
             raise ValueError('Selected fields must belong to the experiment allowlist')
         if len(selected) > self.max_attributes:
@@ -45,6 +48,7 @@ class FieldSelection(BaseModel):
 class PersonaResolver:
     """Validate once per sample, then resolve exact resident IDs without altering membership."""
     def __init__(self, core, selection: FieldSelection, extension=None):
+        selection = FieldSelection.model_validate(selection.model_dump())
         self.core, self.selection = core, selection
         self.rows = {r['synthetic_id']: r for r in core.table.to_pylist()}
         if len(self.rows) != core.table.num_rows or any(not i for i in self.rows):
@@ -54,9 +58,16 @@ class PersonaResolver:
         self.extension = extension
         self.values = {}
         if extension is not None:
+            if ('membership_contract_version' in extension.manifest
+                    or extension.manifest.get('purpose') == 'synthetic_fixture_only'):
+                raise EnrichmentError('Fixture relationships cannot be demographic persona sidecars')
             validate(extension, core)
             m = extension.manifest
             for name, a in m['registry']['attributes'].items():
+                if name in selected_sidecars(selection):
+                    approved = APPROVED_SIDECAR_ATTRIBUTES[name]
+                    if not approved.accepts(a):
+                        raise EnrichmentError(f'{name}: sidecar does not match approved persona contract')
                 e = m['evidence'].get(name)
                 if e is not None and e['status'] != 'unsupported' and e['source_sha256'] != a['source']['sha256']:
                     raise EnrichmentError('Sidecar source version mismatch')
@@ -74,6 +85,7 @@ class PersonaResolver:
             if field in PERSON_FIELDS:
                 entry = next(a for a in persona['attributes'] if a['field'] == field)
             else:
+                approved = APPROVED_SIDECAR_ATTRIBUTES[field]
                 value = self.values.get(synthetic_id, {}).get(field)
                 status = value.status if value else 'unavailable'
                 evidence = {}
@@ -85,14 +97,14 @@ class PersonaResolver:
                                 'registry_version': m['registry']['registry_version'],
                                 'artifact_id': m['artifact_id'], 'provenance_profile': value.provenance_profile}
                 available = status in ('assigned', 'published_unknown')
-                text = f'{value.value.replace("_", " ")}. {LIMITATION}' if available else None
-                entry = {'field': field, 'label': 'DEGURBA class', 'value': value.value if value else None,
+                text = approved.display(value.value) if available else None
+                entry = {'field': field, 'label': approved.label, 'value': value.value if value else None,
                          'display': text, 'status': status, 'evidence': evidence}
                 persona['attributes'].append(entry)
                 if available:
                     persona['model_visible'][field] = text
-                    persona['persona_card'] += f'\n- DEGURBA class: {text}'
-                    persona['limitations'].append(LIMITATION)
+                    persona['persona_card'] += f'\n- {approved.label}: {text}'
+                    persona['limitations'].append(approved.limitation)
             available = entry['status'] in ('visible', 'assigned', 'published_unknown')
             if not available and (field in s.required or s.missingness == 'error'):
                 raise EnrichmentError(f'{field}: required selected attribute unavailable ({entry["status"]})')
@@ -103,6 +115,10 @@ class PersonaResolver:
         persona['persona_id'] = 'per-' + canonical_hash({'base': persona['persona_id'],
             'selection': persona['field_selection'], 'card': persona['persona_card_sha256']})[:16]
         return persona
+
+
+def selected_sidecars(selection):
+    return set(selection.required + selection.optional) - set(PERSON_FIELDS)
 
 
 def experiment_persona_builder(core, policy):

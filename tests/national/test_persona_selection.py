@@ -175,3 +175,69 @@ def test_real_sidecar_exports(size, tmp_path):
     bad.manifest['schema_version'] = 'future'
     with pytest.raises(EnrichmentError, match='version'):
         PersonaResolver(core, s, bad)
+
+
+@pytest.mark.parametrize('field', ['household_id', 'family_role', 'dst_household_id', 'unapproved_attribute'])
+def test_relationship_and_unapproved_selection_rejected(core, field):
+    with pytest.raises(ValidationError, match='Unsupported'):
+        FieldSelection(allowlist=[field], optional=[field])
+    # Bypassing the initial Pydantic constructor is rechecked by the resolver.
+    bad = selection().model_copy(update={'allowlist': [field], 'required': [], 'optional': [field]})
+    with pytest.raises(ValidationError, match='Unsupported'):
+        PersonaResolver(core, bad)
+
+
+def test_attribute_specific_approved_contract_and_independent_projection_gate(core, tmp_path, monkeypatch):
+    """A test-only approval demonstrates dispatch without approving a real field."""
+    from collections import Counter
+    import societytwin.national.persona_selection as module
+    from societytwin.national.sidecar_persona_contracts import SidecarPersonaContract
+    from societytwin.enrichment.registry import ExtensionRegistry
+    from societytwin.common import sha256_bytes
+    from societytwin.national.matraix_projection import ProjectionError
+
+    name = 'fixture_indicator'
+    approved = SidecarPersonaContract('Fixture indicator', 'Invented test indicator only.',
+                                     frozenset({'dense_urban', 'intermediate_urban', 'rural'}))
+    monkeypatch.setattr(module, 'APPROVED_SIDECAR_ATTRIBUTES',
+                        {**module.APPROVED_SIDECAR_ATTRIBUTES, name: approved})
+    rows = [dict(r, population_weight=1.) for r in core.table.to_pylist() if r['province_code'] == '06']
+    core = replace(core, table=pa.Table.from_pylist(rows))
+    raw = 'province_code,year,sex,category,count,value_status\n'
+    for sex, count in Counter(r['sex'] for r in rows).items():
+        for category in ('dense_urban', 'intermediate_urban', 'rural'):
+            raw += f'06,2025,{sex},{category},{count if category == "rural" else 0},OBSERVED\n'
+    (tmp_path/'fixture.csv').write_bytes(raw.encode())
+    payload = load_registry().activated().model_dump(mode='json')
+    attribute = payload['attributes'].pop('degurba_class')
+    attribute['source'].update(path='fixture.csv', sha256=sha256_bytes(raw.encode()))
+    payload['attributes'][name] = attribute
+    extension = generate(core, ExtensionRegistry.model_validate(payload), root=tmp_path)
+    before = deepcopy((core.manifest, core.table.to_pydict(), extension))
+    s = FieldSelection(allowlist=[name], optional=[name])
+    p = PersonaResolver(core, s, extension).build(rows[0]['synthetic_id'])
+    entry = next(a for a in p['attributes'] if a['field'] == name)
+    assert entry['label'] == approved.label
+    assert entry['display'] == 'rural. Invented test indicator only.'
+    assert p['limitations'] == [approved.limitation]
+    assert 'DEGURBA' not in p['persona_card']
+    assert (core.manifest, core.table.to_pydict(), extension) == before
+    with pytest.raises(ProjectionError, match='Unregistered'):
+        matraix_persona(p)
+    monkeypatch.setattr(module, 'APPROVED_SIDECAR_ATTRIBUTES', {})
+    with pytest.raises(ValidationError, match='Unsupported'):
+        PersonaResolver(core, s, extension)
+
+
+def test_selected_sidecar_must_match_approved_categories(core, tmp_path):
+    from societytwin.enrichment.registry import ExtensionRegistry
+    rows = [r for r in core.table.to_pylist() if r['province_code'] == '06']
+    core = replace(core, table=pa.Table.from_pylist(rows))
+    payload = load_registry().activated().model_dump(mode='json')
+    attribute = payload['attributes']['degurba_class']
+    attribute['missing_source'] = 'unavailable'
+    attribute['source']['path'] = 'absent.csv'
+    attribute['categories'][0]['code'] = 'unapproved_category'
+    extension = generate(core, ExtensionRegistry.model_validate(payload), root=tmp_path)
+    with pytest.raises(EnrichmentError, match='approved persona contract'):
+        PersonaResolver(core, selection(), extension)

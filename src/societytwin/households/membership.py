@@ -1,8 +1,8 @@
 """Experimental unit-fixture membership sidecars; no production linker or I/O.
 
 Uses the existing ResidentExtension / ExtensionRecord / AttributeValue shape.
-The registry-driven ExtensionStore does not yet accept this experimental method;
-no alternate store or automatic persistence is provided here.
+The categorical ExtensionStore does not accept relationships. Explicit fixture
+persistence is provided separately by households.membership_store.
 """
 from collections import Counter
 from collections.abc import Mapping
