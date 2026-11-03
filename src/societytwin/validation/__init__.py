@@ -1,4 +1,4 @@
-"""SocietyTwin Validation Layer (K3/K4/K5/K6) — ``src/societytwin/validation``."""
+"""SocietyTwin Validation Layer (K3/K4/K5/K6/K7 + Acceptance Policies) — ``src/societytwin/validation``."""
 
 from societytwin.validation.behavioral import (
     BENCHMARK_SCHEMA_VERSION,
@@ -11,26 +11,6 @@ from societytwin.validation.behavioral import (
     MeasurementDefinition,
     get_ankara_transit_fare_bundle,
 )
-from societytwin.validation.reports import (
-    COMBINED_REPORT_SCHEMA_VERSION,
-    EVALUATOR_VERSION,
-    BenchmarkComparisonResult,
-    CombinedQualityReport,
-    EvidenceStatus,
-    FailureAuditSummary,
-    InterventionBaselineDelta,
-    PersonaExecutionRecord,
-    QuestionChoiceMetric,
-    QuestionDistributionSummary,
-    ResultStatus,
-    SimulationEvaluationReport,
-    SimulationResultsAdapter,
-    SubgroupComparisonMetric,
-    UnifiedCheckRecord,
-    ValidationGapRecord,
-    evaluate_simulation,
-    generate_combined_quality_report,
-)
 from societytwin.validation.dependencies import (
     EDUCATION_MIN_COMPLETION_AGES,
     NATIONAL_HOUSEHOLD_TYPE_SIZE_2025,
@@ -42,6 +22,15 @@ from societytwin.validation.dependencies import (
     JointCheckResult,
     ReferenceAvailabilityScope,
     validate_dependencies,
+)
+from societytwin.validation.policies import (
+    POLICY_ENGINE_VERSION,
+    PolicyDecision,
+    PolicyDecisionStatus,
+    evaluate_acceptance_policy,
+    evaluate_policy_a_demographic_survey,
+    evaluate_policy_b_household_simulation,
+    evaluate_policy_c_matraix_persona_projection,
 )
 from societytwin.validation.population import (
     DEFAULT_REFERENCE_PACKAGE_DIR,
@@ -63,6 +52,26 @@ from societytwin.validation.population import (
     generate_ankara_sample_population,
     load_reference_bundle,
     validate_population,
+)
+from societytwin.validation.reports import (
+    COMBINED_REPORT_SCHEMA_VERSION,
+    EVALUATOR_VERSION,
+    BenchmarkComparisonResult,
+    CombinedQualityReport,
+    EvidenceStatus,
+    FailureAuditSummary,
+    InterventionBaselineDelta,
+    PersonaExecutionRecord,
+    QuestionChoiceMetric,
+    QuestionDistributionSummary,
+    ResultStatus,
+    SimulationEvaluationReport,
+    SimulationResultsAdapter,
+    SubgroupComparisonMetric,
+    UnifiedCheckRecord,
+    ValidationGapRecord,
+    evaluate_simulation,
+    generate_combined_quality_report,
 )
 
 __all__ = [
@@ -97,7 +106,10 @@ __all__ = [
     "NATIONAL_HOUSEHOLD_TYPE_SIZE_2025",
     "NATIONAL_MARITAL_BROAD_AGE_SEX_2025",
     "NATIONAL_MARITAL_BROAD_AGE_TOTAL_2025",
+    "POLICY_ENGINE_VERSION",
     "PersonaExecutionRecord",
+    "PolicyDecision",
+    "PolicyDecisionStatus",
     "PopulationMarginCheck",
     "PopulationValidationReport",
     "QuestionChoiceMetric",
@@ -114,6 +126,10 @@ __all__ = [
     "ValidationGapRecord",
     "VALIDATOR_VERSION",
     "build_ankara_control_store_from_bundle",
+    "evaluate_acceptance_policy",
+    "evaluate_policy_a_demographic_survey",
+    "evaluate_policy_b_household_simulation",
+    "evaluate_policy_c_matraix_persona_projection",
     "evaluate_simulation",
     "generate_ankara_sample_population",
     "generate_combined_quality_report",
