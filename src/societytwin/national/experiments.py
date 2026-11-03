@@ -156,7 +156,7 @@ class ScenarioReference(BaseModel):
     scenario_id: str = Field(pattern=r"^[a-z][a-z0-9_]{1,63}$")
     scenario_version: str = Field(pattern=r"^\d+\.\d+\.\d+$")
     question_id: str = Field(pattern=r"^[a-z][a-z0-9_]{1,63}$")
-    question_type: str = Field(default="single_choice", pattern="^single_choice$")
+    question_type: str = Field(default="single_choice", pattern="^(single_choice|free_text)$")
     province_codes: list[str] | None = Field(default=None, max_length=81,
                                              description="Provinces the scenario applies to; None = no restriction.")
     minimum_age: int | None = Field(default=None, ge=0, le=120)

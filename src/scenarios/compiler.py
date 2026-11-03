@@ -221,7 +221,12 @@ def synthesize_questions(
     """Generate balanced, relevant survey questions and options based on policy context."""
     is_pure_text_prompt = _has_keyword(
         prompt,
-        ("only text", "text only", "no options", "pure text", "open ended question", "sadece metin", "açık uçlu"),
+        (
+            "only text", "text only", "no options", "pure text", "open ended question",
+            "sadece metin", "açık uçlu", "free text", "free-text", "open-ended",
+            "open ended", "open response", "in your own words", "qualitative",
+            "kendi cümlelerinizle",
+        ),
     )
     if is_pure_text_prompt:
         clean_prompt = prompt.strip().rstrip("?.")

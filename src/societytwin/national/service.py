@@ -767,7 +767,7 @@ class NationalService:
         run = self.db.run(run_id)
         if run is None:
             raise not_found("unknown_run", f"No run {run_id}")
-        exp, _ = self._definition(run["experiment_id"])
+        exp, d = self._definition(run["experiment_id"])
         rows = self.db.responses(run_id, final_only=True)
         agg = None
         try:
@@ -775,7 +775,9 @@ class NationalService:
         except Exception:
             pass
         from scenarios.summary import generate_result_text_summary
-        return generate_result_text_summary(exp["definition"], rows, agg)
+        is_live_exp = d.model.transport == "live" and d.model.backend == "matraix"
+        allow_llm = bool(self.settings.live_execution_enabled and is_live_exp)
+        return generate_result_text_summary(exp["definition"], rows, agg, allow_llm=allow_llm)
 
     def run_aggregate(self, run_id: str, group_by: list[str], min_group: int) -> dict:
         run = self.db.run(run_id)

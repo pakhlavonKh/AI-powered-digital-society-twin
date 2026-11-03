@@ -74,14 +74,22 @@ class StubBackend:
 
     def run(self, requests: list[CallRequest]) -> list[CallResult]:
         ids = [o.id for o in self.definition.task.options]
+        is_free_text = self.definition.task.response_type == "free_text" or not ids
         out = []
         for r in requests:
             started = time.perf_counter()
-            digest = hashlib.sha256(f"{r.system}\0{r.user}\0{r.sample_index}\0{self.definition.model.seed}".encode()).digest()
-            choice = ids[int.from_bytes(digest[:8], "big") % len(ids)]
-            payload = {"choice": choice, "rationale": "Stub placeholder; not produced by a model."}
-            if choice == "other" and self.definition.task.allow_other_text:
-                payload["other_text"] = "Stub placeholder."
+            if is_free_text:
+                prov = r.persona.get("province_name") or r.persona.get("province_code") or "TR"
+                payload = {
+                    "answer": f"Synthetic resident perspective on {self.definition.scenario.title} as a resident of {prov}.",
+                    "rationale": "Stub placeholder; not produced by a model.",
+                }
+            else:
+                digest = hashlib.sha256(f"{r.system}\0{r.user}\0{r.sample_index}\0{self.definition.model.seed}".encode()).digest()
+                choice = ids[int.from_bytes(digest[:8], "big") % len(ids)]
+                payload = {"choice": choice, "rationale": "Stub placeholder; not produced by a model."}
+                if choice == "other" and self.definition.task.allow_other_text:
+                    payload["other_text"] = "Stub placeholder."
             out.append(CallResult(json.dumps(payload), provider_call=False, latency_ms=round((time.perf_counter() - started) * 1000, 3),
                                   input_tokens=None, output_tokens=None, cost_usd=0.0))
         return out

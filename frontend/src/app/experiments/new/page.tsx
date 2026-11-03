@@ -215,7 +215,7 @@ function Builder({ populationId }: { populationId: string }) {
     }
   };
 
-  const loadPolicyScenario = async (scenarioId: string, qId?: string) => {
+  const loadPolicyScenario = async (scenarioId: string, qId?: string, syncPrompt: boolean = true) => {
     const baseCohortId = d.cohort.cohort_id || valid.find((c) => !c.minors)?.cohort_id || valid[0]?.cohort_id || "";
     const query: Record<string, string> = {};
     if (baseCohortId) query.cohort_id = baseCohortId;
@@ -254,6 +254,12 @@ function Builder({ populationId }: { populationId: string }) {
         persona: { visible_fields: null },
       };
     });
+    if (syncPrompt) {
+      const scenarioPrompt = ex.scenario.description
+        ? ex.scenario.description.trim()
+        : `${ex.scenario.title}. ${ex.task.instruction.trim()}`;
+      setPromptText(scenarioPrompt);
+    }
   };
 
   const handleCompilePrompt = async (customPrompt?: string) => {
@@ -269,7 +275,7 @@ function Builder({ populationId }: { populationId: string }) {
       await scenarios.reload();
       setSelectedScenarioId(res.scenario_id);
       setSelectedQuestionId("");
-      await loadPolicyScenario(res.scenario_id);
+      await loadPolicyScenario(res.scenario_id, undefined, false);
       setShowCustomize(true);
       setPromptFeedback(
         `Compiled "${res.name}" (${res.location.province_name}). You can review or edit the question and options below before running.`,
@@ -677,9 +683,11 @@ function Builder({ populationId }: { populationId: string }) {
                 id="scenario-select"
                 className="small"
                 value={activeScenario?.scenario_id ?? selectedScenarioId}
-                onChange={(e) => {
-                  setSelectedScenarioId(e.target.value);
+                onChange={async (e) => {
+                  const newId = e.target.value;
+                  setSelectedScenarioId(newId);
                   setSelectedQuestionId("");
+                  await loadPolicyScenario(newId, undefined, true);
                 }}
               >
                 {scenarios.data?.items.map((s) => (

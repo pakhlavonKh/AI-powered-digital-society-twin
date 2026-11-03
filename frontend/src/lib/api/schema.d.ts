@@ -1058,6 +1058,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/runs/{run_id}/text-summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Run Text Summary
+         * @description Retrieve an executive textual summary of the simulation run results.
+         */
+        get: operations["run_text_summary_api_v2_runs__run_id__text_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/runs/{run_id}/aggregate": {
         parameters: {
             query?: never;
@@ -2461,11 +2481,8 @@ export interface components {
              * @default TL
              */
             currency: string;
-            /**
-             * Fare Category
-             * @default full_adult_standard
-             */
-            fare_category: string | null;
+            /** Fare Category */
+            fare_category?: string | null;
             /** Effective Date */
             effective_date?: string | null;
             /** Subsidized Exemptions Note */
@@ -2734,12 +2751,23 @@ export interface components {
              * @default single_choice
              * @enum {string}
              */
-            type: "single_choice" | "multiple_choice";
+            type: "single_choice" | "multiple_choice" | "free_text";
             /**
              * Options
-             * @description Permitted answer options
+             * @description Permitted answer options (required for choice questions; empty for free_text)
              */
-            options: components["schemas"]["QuestionOption"][];
+            options?: components["schemas"]["QuestionOption"][];
+            /**
+             * Min Length
+             * @description Minimum characters required for free_text
+             */
+            min_length?: number | null;
+            /**
+             * Max Length
+             * @description Maximum characters allowed for free_text
+             * @default 2000
+             */
+            max_length: number | null;
             /**
              * Allow Other
              * @description Whether free-text input is allowed for an 'other' option
@@ -3524,7 +3552,7 @@ export interface components {
              */
             response_type: string;
             /** Options */
-            options: components["schemas"]["TaskOption"][];
+            options?: components["schemas"]["TaskOption"][];
             /**
              * Allow Other Text
              * @default false
@@ -6430,6 +6458,37 @@ export interface operations {
                 offset?: number;
                 limit?: number;
             };
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    run_text_summary_api_v2_runs__run_id__text_summary_get: {
+        parameters: {
+            query?: never;
             header?: never;
             path: {
                 run_id: string;

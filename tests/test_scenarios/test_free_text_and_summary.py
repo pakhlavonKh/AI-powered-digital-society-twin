@@ -145,7 +145,8 @@ def test_render_scenario_prompt_with_free_text():
     }
     sys_p, user_p = render_scenario_prompt(sc, persona)
 
-    assert "RES_999" in sys_p
+    assert "RES_999" not in sys_p
+    assert "Profile Identifier" not in sys_p
     assert "Age: 28" in sys_p
     assert "[q1_support]" in user_p
     assert "[q2_reasons]" in user_p
@@ -397,12 +398,30 @@ def test_generate_result_text_summary_with_mocked_llm(monkeypatch):
 
     definition = {
         "title": "Ankara Cafe Feasibility",
+        "model": {"backend": "matraix", "transport": "live"},
         "task": {"instruction": "Where to open cafe?", "response_type": "free_text", "options": []},
     }
     responses = [{"synthetic_id": "RES_1", "status": "valid", "choice": "Tunali is best."}]
 
-    summary = generate_result_text_summary(definition, responses)
+    summary = generate_result_text_summary(definition, responses, allow_llm=True)
     assert summary["generated_by"] == "llm"
     assert "Tunali Hilmi" in summary["headline"]
     assert summary["valid_responses"] == 1
 
+
+
+def test_summary_never_calls_provider_in_fake_or_offline_mode(monkeypatch):
+    """Audit P0-2: Fake or offline experiments must NEVER call LLM summarization even if OPENAI_API_KEY is configured."""
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-proj-dummy-secret-key-that-should-never-be-used")
+    called = []
+    monkeypatch.setattr("scenarios.summary._generate_llm_result_summary", lambda **kwargs: called.append(True))
+
+    definition = {
+        "title": "Offline Fare Test",
+        "model": {"backend": "stub", "transport": "fake"},
+        "task": {"instruction": "What transit choice?", "response_type": "single_choice", "options": [{"id": "a", "label": "A"}, {"id": "b", "label": "B"}]},
+    }
+    responses = [{"synthetic_id": "ST1", "status": "ok", "choice": "a"}]
+    summary = generate_result_text_summary(definition, responses)
+    assert len(called) == 0, "Provider call was unexpectedly initiated during offline experiment summary!"
+    assert summary["generated_by"] == "deterministic"

@@ -10,7 +10,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from societytwin.common import sha256_bytes, sha256_file
+from societytwin.common import lf_variant_sha256, sha256_bytes, sha256_file
 from societytwin.experiments.evidence_files import ARTIFACT_MEDIA_TYPES, MAX_ARTIFACT_BYTES, RunFiles
 from societytwin.experiments.questionnaire import label_for, parse_questionnaire
 
@@ -85,6 +85,7 @@ def _summarize_persona_snapshot(files: RunFiles, rel: str) -> dict | None:
     dimensions = payload.get("dimensions") if isinstance(payload.get("dimensions"), dict) else {}
     return {
         "sha256": sha256_bytes(data),
+        "lf_sha256": lf_variant_sha256(data),
         "parse_error": False,
         "persona_id": payload.get("persona_id"),
         "dimensions": {str(k): str(v) for k, v in dimensions.items()},
@@ -312,10 +313,14 @@ def parse_run(run_dir: Path, experiment_id: str, origin: str = "imported") -> di
     for t in trials:
         snap = t["persona_snapshot"] or {}
         if t["preflight_persona_sha256"] and snap.get("sha256"):
+            hash_matches = (
+                snap["sha256"] == t["preflight_persona_sha256"]
+                or snap.get("lf_sha256") == t["preflight_persona_sha256"]
+            )
             checks.append({"name": f"trial_{t['label']}_snapshot_matches_preflight_hash",
-                           "passed": snap["sha256"] == t["preflight_persona_sha256"],
+                           "passed": hash_matches,
                            "detail": "Saved persona snapshot bytes hash to the persona hash recorded in the preflight plan."
-                           if snap["sha256"] == t["preflight_persona_sha256"] else "Snapshot hash differs from the preflight plan."})
+                           if hash_matches else "Snapshot hash differs from the preflight plan."})
 
     meta_source = comparison if isinstance(comparison, dict) else preflight if isinstance(preflight, dict) else {}
     model = meta_source.get("model") if isinstance(meta_source, dict) else None

@@ -124,6 +124,8 @@ def generate_result_text_summary(
     definition: dict[str, Any],
     responses: list[dict[str, Any]],
     agg: dict[str, Any] | None = None,
+    *,
+    allow_llm: bool = False,
 ) -> dict[str, Any]:
     """Generate a comprehensive executive result text summary from simulation data.
 
@@ -216,21 +218,29 @@ def generate_result_text_summary(
             for opt_id, cnt in option_counts.items():
                 shares_dict[opt_id] = round((cnt / denom) * 100.0, 1)
 
-    llm_res = _generate_llm_result_summary(
-        definition=definition,
-        valid_responses=valid_responses,
-        is_free_text=is_free_text,
-        options=options,
-        option_counts=option_counts,
-        shares_dict=shares_dict,
-    )
-    if llm_res:
-        llm_res.update({
-            "is_free_text": is_free_text,
-            "total_responses": total_responses,
-            "valid_responses": total_valid,
-        })
-        return llm_res
+    model_cfg = definition.get("model", {})
+    transport = model_cfg.get("transport")
+    backend = model_cfg.get("backend")
+    # Strict execution-control gate: fake/stub runs never make external provider requests
+    is_live = transport == "live" and backend != "stub"
+    opt_in = os.environ.get("SOCIETYTWIN_ALLOW_LLM_SUMMARY", "0") in ("1", "true", "True")
+
+    if is_live and (allow_llm or opt_in):
+        llm_res = _generate_llm_result_summary(
+            definition=definition,
+            valid_responses=valid_responses,
+            is_free_text=is_free_text,
+            options=options,
+            option_counts=option_counts,
+            shares_dict=shares_dict,
+        )
+        if llm_res:
+            llm_res.update({
+                "is_free_text": is_free_text,
+                "total_responses": total_responses,
+                "valid_responses": total_valid,
+            })
+            return llm_res
 
     # 3. Deterministic template fallback
     key_findings: list[str] = []

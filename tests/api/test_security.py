@@ -24,8 +24,13 @@ def test_artifacts_resolve_only_server_ids(client):
 def test_symlink_escape_never_listed(client, settings, tmp_path):
     secret = tmp_path / "outside.md"
     secret.write_text("outside report")
-    os.symlink(secret, settings.import_runs_root / "ab_complete" / "escape_report.md")
-    os.symlink(tmp_path, settings.import_runs_root / "ab_complete" / "linked_dir")
+    try:
+        os.symlink(secret, settings.import_runs_root / "ab_complete" / "escape_report.md")
+        os.symlink(tmp_path, settings.import_runs_root / "ab_complete" / "linked_dir")
+    except OSError as exc:
+        if getattr(exc, "winerror", None) == 1314 or "privilege" in str(exc).lower():
+            pytest.skip("Creating symlinks on Windows requires Developer Mode or elevated privileges")
+        raise
     res = client.get(f"{V1}/experiments/imp_ab_complete/results").json()
     assert all("escape" not in a["relpath"] and "linked_dir" not in a["relpath"] for a in res["artifacts"])
     os.symlink(tmp_path, settings.import_runs_root / "linked_run")

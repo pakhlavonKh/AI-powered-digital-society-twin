@@ -218,6 +218,11 @@ def scenario_to_experiment_definition(
 
     # Build task options
     options = [{"id": opt.id, "label": opt.label} for opt in target_q.options]
+    allow_other_text = False
+    if target_q.type == "single_choice" and target_q.allow_other:
+        if not any(opt["id"] == "other" for opt in options):
+            options.append({"id": "other", "label": "Other"})
+        allow_other_text = True
 
     tp = scenario.target_population
     unenforced = sorted(
@@ -240,7 +245,7 @@ def scenario_to_experiment_definition(
             "instruction": target_q.text,
             "response_type": target_q.type,
             "options": options,
-            "allow_other_text": target_q.allow_other,
+            "allow_other_text": allow_other_text,
             "ask_rationale": target_q.ask_rationale,
             "adult_only": tp.adult_only,
         },

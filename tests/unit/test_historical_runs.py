@@ -107,7 +107,12 @@ def test_snake_case_answers_are_accepted(settings):
 def test_symlinks_and_unsafe_paths_are_ignored(settings, tmp_path):
     outside = tmp_path / "secret.json"
     outside.write_text('{"secret": true}')
-    os.symlink(outside, settings.import_runs_root / "ab_complete" / "leak.json")
+    try:
+        os.symlink(outside, settings.import_runs_root / "ab_complete" / "leak.json")
+    except OSError as exc:
+        if getattr(exc, "winerror", None) == 1314 or "privilege" in str(exc).lower():
+            pytest.skip("Creating symlinks on Windows requires Developer Mode or elevated privileges")
+        raise
     r = run(settings, "ab_complete")
     assert all(a["relpath"] != "leak.json" for a in r["artifacts"])
     files = RunFiles(settings.import_runs_root / "ab_complete")

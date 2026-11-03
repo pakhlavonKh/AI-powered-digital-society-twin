@@ -23,7 +23,9 @@ def test_render_scenario_prompt():
     system_prompt, user_prompt = render_scenario_prompt(scenario, resident)
 
     # 1. System prompt assertions
-    assert "ANK_TEST_001" in system_prompt
+    # Audit P0-3: Internal identifiers must NOT be exposed in agent-facing natural language prompts
+    assert "ANK_TEST_001" not in system_prompt
+    assert "Profile Identifier" not in system_prompt
     assert "Ankara" in system_prompt
     assert "28" in system_prompt
     assert "female" in system_prompt

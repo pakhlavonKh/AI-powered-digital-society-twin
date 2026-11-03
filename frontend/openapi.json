@@ -4551,6 +4551,47 @@
         }
       }
     },
+    "/api/v2/runs/{run_id}/text-summary": {
+      "get": {
+        "tags": [
+          "results"
+        ],
+        "summary": "Run Text Summary",
+        "description": "Retrieve an executive textual summary of the simulation run results.",
+        "operationId": "run_text_summary_api_v2_runs__run_id__text_summary_get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v2/runs/{run_id}/aggregate": {
       "get": {
         "tags": [
@@ -8758,8 +8799,7 @@
                 "type": "null"
               }
             ],
-            "title": "Fare Category",
-            "default": "full_adult_standard"
+            "title": "Fare Category"
           },
           "effective_date": {
             "anyOf": [
@@ -9723,7 +9763,8 @@
             "type": "string",
             "enum": [
               "single_choice",
-              "multiple_choice"
+              "multiple_choice",
+              "free_text"
             ],
             "title": "Type",
             "default": "single_choice"
@@ -9734,9 +9775,37 @@
             },
             "type": "array",
             "maxItems": 20,
-            "minItems": 2,
             "title": "Options",
-            "description": "Permitted answer options"
+            "description": "Permitted answer options (required for choice questions; empty for free_text)"
+          },
+          "min_length": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 5000.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Length",
+            "description": "Minimum characters required for free_text"
+          },
+          "max_length": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 10000.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Length",
+            "description": "Maximum characters allowed for free_text",
+            "default": 2000
           },
           "allow_other": {
             "type": "boolean",
@@ -9755,8 +9824,7 @@
         "type": "object",
         "required": [
           "id",
-          "text",
-          "options"
+          "text"
         ],
         "title": "QuestionConfig",
         "description": "Specification of an individual question presented to an AI persona."
@@ -10869,7 +10937,7 @@
           },
           "question_type": {
             "type": "string",
-            "pattern": "^single_choice$",
+            "pattern": "^(single_choice|free_text)$",
             "title": "Question Type",
             "default": "single_choice"
           },
@@ -12189,7 +12257,7 @@
           },
           "response_type": {
             "type": "string",
-            "pattern": "^single_choice$",
+            "pattern": "^(single_choice|free_text)$",
             "title": "Response Type",
             "default": "single_choice"
           },
@@ -12199,7 +12267,6 @@
             },
             "type": "array",
             "maxItems": 12,
-            "minItems": 2,
             "title": "Options"
           },
           "allow_other_text": {
@@ -12227,8 +12294,7 @@
         "additionalProperties": false,
         "type": "object",
         "required": [
-          "instruction",
-          "options"
+          "instruction"
         ],
         "title": "TaskSpec"
       }

@@ -35,7 +35,6 @@ def render_scenario_prompt(
 
     system_lines = [
         f"You are a synthetic resident representing a real-world demographic profile in Türkiye.",
-        f"Profile Identifier: {persona_id}",
         f"Location: {province}, Türkiye",
         f"Age: {age}",
         f"Sex: {sex}",
@@ -94,7 +93,6 @@ def render_scenario_prompt(
 
     output_schema_example = {
         "scenario_id": scenario.scenario_id,
-        "resident_id": persona_id,
         "answers": expected_answers_template,
         "rationale": "<brief 1-2 sentence explanation of your decision>",
     }
