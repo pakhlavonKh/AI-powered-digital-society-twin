@@ -169,6 +169,13 @@ class MatraixRuntime:
             "PYTHONDONTWRITEBYTECODE": "1",
             "MATRAIX_ROOT": str(root),
         }
+        if os.name == "nt":
+            # Windows ignores HOME for expanduser; keep caches/temp files managed.
+            env.update(USERPROFILE=str(self.settings.runtime_home),
+                       TEMP=str(self.settings.runtime_home), TMP=str(self.settings.runtime_home))
+            if "SystemRoot" in os.environ:
+                # Required for Winsock/asyncio even in an offline child.
+                env["SystemRoot"] = os.environ["SystemRoot"]
         if not allow_network:
             for name in ("HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "http_proxy", "https_proxy", "all_proxy"):
                 env[name] = CLOSED_PROXY
@@ -199,13 +206,14 @@ class MatraixRuntime:
         if python is None:
             python, _ = self._require_ready_files()
         log_path.parent.mkdir(parents=True, exist_ok=True)
-        argv = [str(python), "-I", "-B", *args]
+        # -I ignores PYTHONUTF8; pass the flag explicitly for UTF-8 persona files.
+        argv = [str(python), "-I", "-B", "-X", "utf8", *args]
         started = time.monotonic()
         timed_out = False
         try:
             completed = subprocess.run(  # noqa: S603 - argv is fully server-controlled, no shell
                 argv, cwd=self.settings.repo_root, env=self._env(allow_network=allow_network, extra=extra_env),
-                stdin=subprocess.DEVNULL, capture_output=True, text=True,
+                stdin=subprocess.DEVNULL, capture_output=True, text=True, encoding="utf-8",
                 timeout=timeout or self.settings.subprocess_timeout_seconds, check=False)
             returncode, stdout, stderr = completed.returncode, completed.stdout, completed.stderr
         except subprocess.TimeoutExpired as exc:

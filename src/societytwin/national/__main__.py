@@ -11,9 +11,13 @@ from __future__ import annotations
 
 import argparse
 import json
-import resource
 import sys
 import time
+
+try:
+    import resource
+except ModuleNotFoundError:
+    resource = None  # Unix-only; used for benchmark telemetry, not safety limits.
 
 from societytwin.config import load_settings
 
@@ -87,6 +91,14 @@ def main(argv: list[str] | None = None) -> int:
     return 1
 
 
+def _peak_memory() -> dict:
+    if resource is None:
+        return {"peak_rss": None, "peak_rss_unit": None,
+                "peak_rss_note": "Peak RSS measurement is unavailable: this platform has no resource module."}
+    return {"peak_rss": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,
+            "peak_rss_unit": "bytes" if sys.platform == "darwin" else "kilobytes"}
+
+
 def _benchmark(service, args) -> int:
     import dataclasses
 
@@ -123,8 +135,7 @@ def _benchmark(service, args) -> int:
                      "load_s": round(t4 - t3, 3), "filter_and_3_distributions_s": round(t5 - t4, 3), "sorted_page_s": round(t6 - t5, 3),
                      "pps_sample_100_s": round(t7 - t6, 3), "parquet_bytes": size_bytes, "population_id": manifest["population_id"],
                      "constraint_violations": report["constraint_violations"]})
-    peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-    print(json.dumps({"rows": rows, "peak_rss": peak, "peak_rss_unit": "bytes" if sys.platform == "darwin" else "kilobytes",
+    print(json.dumps({"rows": rows, **_peak_memory(),
                       "python": sys.version.split()[0]}, indent=2))
     return 0
 

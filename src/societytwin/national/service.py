@@ -492,8 +492,14 @@ class NationalService:
         for field, count in sorted(unavailable_counts.items()):
             warnings.append(f"{field} has no source for {count} of {n} personas; it is not shown to the model for them.")
         profiles = loaded.manifest["profiles"]
-        if any(p["fields"].get("marital_status", {}).get("evidence") == Evidence.MARGINAL_INFERENCE for p in profiles.values()):
-            warnings.append("Marital status is inferred conditional on sex only (its relationship with age is not observed).")
+        for method in sorted({p["fields"].get("marital_status", {}).get("method", "") for p in profiles.values()
+                              if p["fields"].get("marital_status", {}).get("evidence") == Evidence.MARGINAL_INFERENCE}):
+            if method == "national_age_marital_seed_v1":
+                warnings.append("Experimental marital model: national broad-age (15-24 / 25+) associations are transferred "
+                                "to Ankara and fitted to official margins. Finer age relationships and Ankara joint realism "
+                                "are unverified; nearest-tenth rounding is assumed, not confirmed.")
+            else:
+                warnings.append("Marital status is inferred conditional on sex only (its relationship with age is not observed).")
         if d.execution.repetitions > 1 and d.model.temperature == 0:
             warnings.append("Repetitions at temperature 0 may return identical answers; repetition variance is not informative then.")
         warnings.extend(ctx_notes)
