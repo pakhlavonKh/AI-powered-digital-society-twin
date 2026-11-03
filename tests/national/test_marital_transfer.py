@@ -248,3 +248,11 @@ def test_opt_in_uses_existing_api_persona_and_cohort_contracts(national_settings
         sample = client.post(f'/api/v2/cohorts/{cid}/samples', json={'size': 10, 'method': 'weighted', 'seed': 4})
         assert sample.status_code == 201, sample.text
         assert sample.json()['selected'] == 10
+        from societytwin.national.experiments import example_fare_definition
+        definition = example_fare_definition(cid)
+        exp = client.post('/api/v2/experiments', json=definition).json()
+        plan = client.post(f"/api/v2/experiments/{exp['experiment_id']}/plan").json()
+        warning = next(w for w in plan['warnings'] if 'Experimental marital model' in w)
+        assert '15-24 / 25+' in warning and 'transferred to Ankara' in warning
+        assert 'rounding is assumed' in warning and 'joint realism' in warning
+        assert not any('conditional on sex only' in w for w in plan['warnings'])

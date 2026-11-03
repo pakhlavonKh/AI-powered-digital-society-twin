@@ -1,0 +1,144 @@
+# Declarations bound to local normalized files; not independent source authentication.
+# Paths resolve only against an explicit caller-supplied source root. Phase 6A found
+# matching files in C:/Users/Lenovo/Desktop/Digital-Society-Twin-Population.
+schema_version: household-linkage-evidence-1
+registry_version: ankara-linkage-readiness-1
+geography: '06'
+reference_year: 2025
+sources:
+  ankara_composition_2025:
+    source_id: ankara_composition_2025
+    path: data/raw/tuik_package/households_size_and_types.csv
+    sha256: cf4e83f5a2266e7e84f247d81eb8232241b7cdfa35d08f73ec816bc1f3de01ae
+    title: Ankara household composition, selected 2025 observations
+    reference: 'TÜİK DF_ADNKS_T06_V1.1 and DF_ADNKS_T08_V1.1; data/raw/tuik_package/variable_metadata.csv; https://veriportali.tuik.gov.tr/tr/data-table/6781?pressId=58074'
+    acquisition: 'Province package retrieved 2026-10-18; retain original labels and nested categories. Archived portal evidence: data/results/phase2a/raw/nip-ankara-household-type.html.'
+    geography: '06'
+    observation_year: 2025
+    reference_year: 2025
+    unit: household
+    universe: ADNKS_private_households
+    universe_note: 'Private-household scope follows the existing household registry; a reviewed resident/institutional bridge is still missing.'
+    dimensions: [province_code, year, household_composition]
+    precision: {kind: exact_integer_counts, note: 'Selected household counts are published integer cells, not percentages.'}
+  ankara_size_2025:
+    source_id: ankara_size_2025
+    path: data/raw/ankara_household_size_2025.csv
+    sha256: 1aed9e3fb1b65ab6ab4a880247b5b4b662cd980b6dfee5cedd3d904dedc2471b
+    title: Ankara households by household size, 2025
+    reference: 'https://nip.tuik.gov.tr/?value=HanehalkiBuyukluguneGoreHs; data/household_registry.yaml'
+    acquisition: 'Phase 2A normalized observations; original XLSX SHA256 f062073d8c01c252ed041658c5cfbb4068ec16dae56ee9f3e2448cafe56ce2c6, archived HTML SHA256 73c6c7dca23f8de59b56c97f436a378d2e2f0e34dd6becf839dcd8d05dc18ba5.'
+    geography: '06'
+    observation_year: 2025
+    reference_year: 2025
+    unit: household
+    universe: ADNKS_private_households
+    universe_note: 'Existing source contract: Turkish citizens and foreign nationals at private-household addresses; collective accommodation excluded.'
+    dimensions: [province_code, reference_year, household_size_class]
+    precision: {kind: exact_integer_counts, note: 'Exact household counts by published size class; not exact membership in 10+.'}
+  ankara_residents_2025:
+    source_id: ankara_residents_2025
+    path: data/raw/tuik_package/population_by_age_sex.csv
+    sha256: edbde119e93691d2a9dbe28a7fe5e9989569af5611a2572cbfe29958d1bb4ace
+    title: Ankara registered residents by age group and sex, 2025
+    reference: 'TÜİK DF_ADNKS_T16; data/tuik_package_mapping.yaml'
+    acquisition: 'Province package retrieved 2026-10-18; source declaration does not identify private-household members.'
+    geography: '06'
+    observation_year: 2025
+    reference_year: 2025
+    unit: person
+    universe: ADNKS_residents
+    universe_note: 'All registered residents; private/institutional partition not supplied.'
+    dimensions: [province_code, year, age_group, sex]
+    precision: {kind: exact_integer_counts, note: 'Published age-band counts; exact synthetic ages remain modeled.'}
+household_total:
+  status: observed
+  source_id: ankara_composition_2025
+  value: 1987216
+  note: 'Disjoint household total, excluding nested subtotals.'
+composition:
+  - category: one_person
+    status: observed
+    source_id: ankara_composition_2025
+    value: 400484
+    source_indicator: households_one_person
+    source_label: Tek kişilik hanehalkı sayısı
+    definition: 'One-person households; no inferred relationships.'
+    note: 'DF_ADNKS_T06_V1.1'
+  - category: couple_only
+    status: observed
+    source_id: ankara_composition_2025
+    value: 292350
+    source_indicator: households_nuclear_couple_only
+    source_label: Sadece eşlerden oluşan çekirdek aile sayısı
+    definition: 'Couple-only nuclear households without resident children; no synthetic spouse identities.'
+    note: 'DF_ADNKS_T08_V1.1'
+  - category: couple_with_children
+    status: observed
+    source_id: ankara_composition_2025
+    value: 785228
+    source_indicator: households_nuclear_couple_with_children
+    source_label: Eşler ve çocuklardan oluşan çekirdek aile sayısı
+    definition: 'Couple with resident children; child is a relationship category and may be an adult.'
+    note: 'DF_ADNKS_T08_V1.1'
+  - category: lone_father
+    status: observed
+    source_id: ankara_composition_2025
+    value: 50178
+    source_indicator: households_nuclear_father_with_children
+    source_label: Baba ve çocuklardan oluşan çekirdek aile sayısı
+    definition: 'Lone-father nuclear households; no parent/child pointers inferred.'
+    note: 'DF_ADNKS_T08_V1.1; nested under lone-parent and nuclear totals.'
+  - category: lone_mother
+    status: observed
+    source_id: ankara_composition_2025
+    value: 184664
+    source_indicator: households_nuclear_mother_with_children
+    source_label: Anne ve çocuklardan oluşan çekirdek aile sayısı
+    definition: 'Lone-mother nuclear households; no parent/child pointers inferred.'
+    note: 'DF_ADNKS_T08_V1.1; nested under lone-parent and nuclear totals.'
+  - category: extended
+    status: observed
+    source_id: ankara_composition_2025
+    value: 205415
+    source_indicator: households_extended_family
+    source_label: En az bir çekirdek aile ve diğer kişilerden oluşan hanehalkı sayısı
+    definition: 'At least one nuclear family and other persons; exact kinship structure is not observed.'
+    note: 'DF_ADNKS_T06_V1.1'
+  - category: without_nuclear_family
+    status: observed
+    source_id: ankara_composition_2025
+    value: 68897
+    source_indicator: households_multi_person_no_family
+    source_label: Çekirdek aile bulunmayan birden fazla kişiden oluşan hanehalkı sayısı
+    definition: 'Multiple persons without a nuclear family; members need not all be unrelated.'
+    note: 'DF_ADNKS_T06_V1.1'
+sizes:
+  - {category: '1', status: observed, source_id: ankara_size_2025, value: 400484, note: 'Closed size.'}
+  - {category: '2', status: observed, source_id: ankara_size_2025, value: 490015, note: 'Closed size.'}
+  - {category: '3', status: observed, source_id: ankara_size_2025, value: 458663, note: 'Closed size.'}
+  - {category: '4', status: observed, source_id: ankara_size_2025, value: 396788, note: 'Closed size.'}
+  - {category: '5', status: observed, source_id: ankara_size_2025, value: 158021, note: 'Closed size.'}
+  - {category: '6', status: observed, source_id: ankara_size_2025, value: 52038, note: 'Closed size.'}
+  - {category: '7', status: observed, source_id: ankara_size_2025, value: 18249, note: 'Closed size.'}
+  - {category: '8', status: observed, source_id: ankara_size_2025, value: 7053, note: 'Closed size.'}
+  - {category: '9', status: observed, source_id: ankara_size_2025, value: 2905, note: 'Closed size.'}
+  - {category: '10+', status: observed, source_id: ankara_size_2025, value: 3000, note: 'Open size; not ten exact members.'}
+tail:
+  lower_size: 10
+  upper_status: unknown
+  upper_size: null
+  members: {status: unknown, note: 'No evidenced exact number of persons in 10+ households.'}
+  note: 'Only a lower bound is available. The published mean does not identify individual tail sizes.'
+coverage:
+  private_persons: {status: unknown, note: 'Mean 2.86361774462363 times households suggests about 5690627 persons; precision and numerator contract unresolved. Diagnostic only.'}
+  institutional_persons: {status: unknown, note: 'The 219693-person residual from the all-resident root is not an observed institutional count.'}
+  eligibility_status: missing
+  note: 'Same-scope private/institutional population bridge and individual eligibility evidence are not acquired.'
+relationships:
+  status: unavailable
+  note: 'HLFS 2025 codebook documents roster/spouse/parent pointers, but no corresponding microdata observations were acquired. Marginal family counts identify no pairs.'
+assumptions:
+  - 'Household composition and size marginals do not observe their Ankara joint.'
+  - 'Any future national type-size transfer requires an explicit model policy and sensitivity assessment.'
+  - 'No relationship, biological-age constraint or co-resident spouse identity is inferred.'
