@@ -129,7 +129,8 @@ class MatraixBackend:
         return f"MatrAIx PersonaJsonSurvey with live model {self.definition.model.model}."
 
     def _task_dir(self, persona: dict, user_prompt: str) -> Path:
-        task = self.run_dir / "matraix_task"
+        context = user_prompt.split("\nTask:")[0].strip()
+        task = self.run_dir / "matraix_tasks" / sha256_bytes(context.encode())
         if (task / "task.toml").is_file():
             return task
         d = self.definition
@@ -140,7 +141,6 @@ class MatraixBackend:
             '[environment]\ndefinition = "application/shared-survey-form"\n', encoding="utf-8")
         (task / "instruction.md").write_text(
             f"# {d.title}\n\nRead the context, then answer the question with one of the listed option ids.\n", encoding="utf-8")
-        context = user_prompt.split("\nTask:")[0].strip()
         (task / "input" / "context.md").write_text(context + "\n", encoding="utf-8")
         # MatrAIx renders the questionnaire description as the prompt's context, so it carries the full context text.
         questionnaire = {"schemaVersion": "1.0", "id": "societytwin_task", "title": d.title, "description": context,
@@ -158,15 +158,15 @@ class MatraixBackend:
             return []
         self.batches += 1
         batch = self.run_dir / f"matraix_batch_{self.batches}"
-        task = self._task_dir(requests[0].persona, requests[0].user)
         trials = []
         for i, r in enumerate(requests):
             trial = batch / f"trial_{i:04d}"
             trial.mkdir(parents=True, exist_ok=True)
             persona_path = trial / "persona.yaml"
             persona_path.write_text(yaml.safe_dump(matraix_persona(r.persona), allow_unicode=True, sort_keys=False), encoding="utf-8")
-            trials.append({"trial_id": r.key, "persona_path": str(persona_path), "output_dir": str(trial)})
-        job = {"matraix_root": str(self.runtime.matraix_root()[0]), "task_dir": str(task), "transport": self.definition.model.transport,
+            trials.append({"task_dir": str(self._task_dir(r.persona, r.user)), "trial_id": r.key,
+                           "persona_path": str(persona_path), "output_dir": str(trial)})
+        job = {"matraix_root": str(self.runtime.matraix_root()[0]), "transport": self.definition.model.transport,
                "model": self.definition.model.model, "temperature": self.definition.model.temperature,
                "max_output_tokens": self.definition.model.max_output_tokens, "max_calls": len(requests),
                "trials": trials, "report_path": str(batch / "batch_report.json")}
@@ -186,11 +186,16 @@ class MatraixBackend:
             rec = json.loads(path.read_text(encoding="utf-8"))
             answer = next((a for a in rec.get("answers") or [] if a.get("questionId") == "q_choice"), None)
             text = json.dumps({"choice": answer.get("value"), "rationale": answer.get("rationale") or None}) if answer else None
+            if rec.get("error_kind") == "invalid_output":
+                text = json.dumps(rec.get("response"), ensure_ascii=False)
             usage = rec.get("usage") or {}
+
+            def token_count(*keys):
+                return next((usage[k] for k in keys if usage.get(k) is not None), None)
             out.append(CallResult(text, provider_call=bool(rec.get("provider_call")), latency_ms=rec.get("latency_ms"),
-                                  input_tokens=usage.get("input_tokens") or usage.get("prompt_tokens"),
-                                  output_tokens=usage.get("output_tokens") or usage.get("completion_tokens"),
-                                  cost_usd=0.0 if self.definition.model.transport == "fake" else None,
+                                  input_tokens=token_count("n_input_tokens", "input_tokens", "prompt_tokens"),
+                                  output_tokens=token_count("n_output_tokens", "output_tokens", "completion_tokens"),
+                                  cost_usd=0.0 if self.definition.model.transport == "fake" else usage.get("cost_usd"),
                                   error=None if rec.get("ok") else redact(rec.get("error"), max_length=500),
                                   error_kind=None if rec.get("ok") else rec.get("error_kind", "backend"),
                                   boundary_system=rec.get("system"), boundary_user=rec.get("user"),
@@ -259,7 +264,7 @@ def execute(definition: ExperimentDefinition, requests: list[CallRequest], backe
                 res.cost_usd = price_call(prices, definition.model.model, res.input_tokens, res.output_tokens)
             spent += res.cost_usd or 0.0
             if res.error:
-                status = "cache_miss" if res.error_kind == "cache_miss" else "backend_error"
+                status = res.error_kind if res.error_kind in ("cache_miss", "invalid_output") else "backend_error"
                 outcome.responses.append(_row(definition, r, attempt, status, None, res, res.error))
                 if res.error_kind not in ("cache_miss", "budget"):
                     retry.append(r)
