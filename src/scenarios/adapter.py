@@ -28,7 +28,7 @@ _DEFAULT_REL_DIRS = (
 DEFAULT_SCENARIOS_DIRS = list(_DEFAULT_REL_DIRS)
 
 # Question types the national experiment runtime (TaskSpec) can execute.
-EXECUTABLE_QUESTION_TYPES = frozenset({"single_choice"})
+EXECUTABLE_QUESTION_TYPES = frozenset({"single_choice", "free_text"})
 # PopulationFilterConfig fields enforced by the runtime through ExperimentDefinition.scenario_ref.
 _ENFORCED_FILTERS = {"minimum_age", "maximum_age", "province_codes", "adult_only", "required_attributes"}
 
@@ -238,6 +238,7 @@ def scenario_to_experiment_definition(
         },
         "task": {
             "instruction": target_q.text,
+            "response_type": target_q.type,
             "options": options,
             "allow_other_text": target_q.allow_other,
             "ask_rationale": target_q.ask_rationale,

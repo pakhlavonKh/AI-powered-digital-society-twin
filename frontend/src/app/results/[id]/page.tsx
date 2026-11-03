@@ -11,7 +11,7 @@ import { ErrorState, Loading } from "@/components/States";
 import { StatTile } from "@/components/StatTile";
 import { Badge, RunStateBadge } from "@/components/StatusBadge";
 import { toApiError, type ApiError } from "@/lib/api/client";
-import { v2, type Aggregate, type ResponsesPage, type RunDetail, type RunView } from "@/lib/api/v2";
+import { v2, type Aggregate, type ResponsesPage, type ResultTextSummary, type RunDetail, type RunView } from "@/lib/api/v2";
 import { fmtInt, fmtUsd } from "@/lib/format";
 import { useLinkPop, withPop } from "@/lib/population";
 import { useApi } from "@/lib/useApi";
@@ -36,6 +36,12 @@ export default function RunPage() {
   const done = state !== undefined && ["completed", "completed_with_errors", "failed", "budget_stopped"].includes(state);
   const agg = useApi(historical || !done ? null : `v2:agg:${runId}:${group}:${minGroup}`, (signal) => v2<Aggregate>(`/runs/${runId}/aggregate`, { query: { group_by: [group], min_group: minGroup }, signal }));
   const responses = useApi(historical || !done ? null : `v2:resp:${runId}:${page}`, (signal) => v2<ResponsesPage>(`/runs/${runId}/responses`, { query: { offset: page * 20, limit: 20 }, signal }));
+  const textSummary = useApi(
+    historical || !done ? null : `v2:text-summary:${runId}`,
+    (signal) => v2<ResultTextSummary>(`/runs/${runId}/text-summary`, { signal })
+  );
+  const [showFullReport, setShowFullReport] = useState(false);
+  const [copiedSummary, setCopiedSummary] = useState(false);
   useEffect(() => { if (historical) router.replace(`/historical/results/${encodeURIComponent(runId)}`); }, [historical, router, runId]);
   useEffect(() => {  // queued or running MatrAIx runs are executed by the local worker; poll until they finish
     if (!state || done) return;
@@ -48,6 +54,7 @@ export default function RunPage() {
   if (!done) return <><PageHeader title={detail.data.title} /><div className="row"><RunStateBadge state={detail.data.run.state} />
     <span className="small muted">Waiting for the local worker; this page refreshes automatically.</span></div></>;
   const { run, definition, plan, manifest, cohort } = detail.data;
+  const isFreeText = definition.task.response_type === "free_text" || definition.task.options.length === 0;
   const optionLabels = Object.fromEntries(definition.task.options.map((o) => [o.id, o.label]));
   const terminal = done;
   return (
@@ -73,21 +80,201 @@ export default function RunPage() {
         <dt>Model</dt><dd>{definition.model.backend} / {definition.model.transport}{definition.model.model ? ` / ${definition.model.model}` : ""} · temperature {definition.model.temperature} · seed {definition.model.seed ?? "none"}</dd>
         <dt>Cohort</dt><dd>{cohort?.name ?? definition.cohort.cohort_id} · sample {definition.cohort.sample_size} ({definition.cohort.sampling_method}, seed {definition.cohort.seed})</dd>
         <dt>Scenario</dt><dd>{definition.scenario.title}{definition.scenario.hypothetical ? " (hypothetical)" : ""}</dd>
+        <dt>Task Format</dt><dd>{isFreeText ? "Free-Text (Open-ended textual answers in citizen's own words)" : "Single Choice (Closed options)"}</dd>
         <dt>Task</dt><dd>{definition.task.instruction}</dd>
       </dl>
 
-      <section className="card stack" aria-labelledby="dist-h">
-        <h2 id="dist-h">Response distribution (weighted)</h2>
-        {agg.error ? <ErrorState error={agg.error} /> : null}
-        {agg.data ? (
+      {/* EXECUTIVE RESULT TEXT SUMMARY CARD */}
+      <section
+        className="card stack"
+        aria-labelledby="exec-summary-h"
+        style={{
+          borderLeft: "4px solid var(--accent, #3b82f6)",
+          background: "var(--surface-1)",
+          padding: "18px 22px",
+          gap: 14,
+        }}
+      >
+        <div className="row" style={{ justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
+          <div className="row" style={{ alignItems: "center", gap: 8 }}>
+            <h2 id="exec-summary-h" style={{ margin: 0, fontSize: "1.12rem" }}>
+              Executive Result Summary
+            </h2>
+            <Badge tone="info">Simulation Findings</Badge>
+          </div>
+          <button
+            type="button"
+            className="button small"
+            onClick={() => {
+              if (textSummary.data?.summary_markdown) {
+                navigator.clipboard.writeText(textSummary.data.summary_markdown);
+                setCopiedSummary(true);
+                setTimeout(() => setCopiedSummary(false), 2000);
+              }
+            }}
+          >
+            {copiedSummary ? "✓ Copied to Clipboard" : "Copy Result Summary"}
+          </button>
+        </div>
+
+        {textSummary.loading && !textSummary.data ? (
+          <p className="small muted">Synthesizing result summary from citizen agent responses…</p>
+        ) : textSummary.data ? (
           <>
-            {agg.data.overall.responses === 0 ? <p className="muted">No valid responses.</p> :
-              <ShareBars options={agg.data.overall.options} labels={optionLabels} caption="Overall response distribution" />}
-            <p className="small muted">{fmtInt(agg.data.overall.responses)} valid responses from {fmtInt(agg.data.overall.personas)} personas · Kish effective n {agg.data.overall.effective_n.toFixed(1)}. {agg.data.weighting}</p>
-            <p className="small">{agg.data.inference_note}</p>
+            <div
+              style={{
+                fontSize: "1.02rem",
+                fontWeight: 500,
+                lineHeight: 1.5,
+                color: "var(--text-primary)",
+                background: "var(--surface-2)",
+                padding: "12px 16px",
+                borderRadius: "6px",
+                border: "1px solid var(--border)",
+              }}
+            >
+              {textSummary.data.headline}
+            </div>
+
+            {textSummary.data.key_findings.length > 0 ? (
+              <div>
+                <strong className="small" style={{ textTransform: "uppercase", letterSpacing: "0.5px", color: "var(--text-secondary)" }}>
+                  Key Behavioral Findings:
+                </strong>
+                <ul style={{ margin: "6px 0 0 18px", padding: 0, fontSize: "0.9rem", lineHeight: 1.5 }}>
+                  {textSummary.data.key_findings.map((finding, idx) => (
+                    <li key={idx} style={{ marginBottom: 4 }}>
+                      {finding}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
+            {/* Collapsible Full Narrative Report */}
+            <div style={{ marginTop: 4 }}>
+              <button
+                type="button"
+                className="button small"
+                onClick={() => setShowFullReport((prev) => !prev)}
+                style={{ fontSize: "0.78rem" }}
+              >
+                {showFullReport ? "▲ Hide Full Narrative Report" : "▼ View Full Analytical Report (Markdown)"}
+              </button>
+
+              {showFullReport ? (
+                <div
+                  style={{
+                    marginTop: 10,
+                    background: "var(--surface-2)",
+                    padding: "14px 18px",
+                    borderRadius: "6px",
+                    border: "1px solid var(--border)",
+                  }}
+                >
+                  <pre
+                    style={{
+                      margin: 0,
+                      whiteSpace: "pre-wrap",
+                      fontFamily: "monospace",
+                      fontSize: "0.82rem",
+                      lineHeight: 1.5,
+                      maxHeight: "380px",
+                      overflowY: "auto",
+                      color: "var(--text-primary)",
+                    }}
+                  >
+                    {textSummary.data.summary_markdown}
+                  </pre>
+                </div>
+              ) : null}
+            </div>
           </>
-        ) : <Loading what="aggregates" />}
+        ) : null}
       </section>
+
+      {isFreeText ? (
+        <section className="card stack" aria-labelledby="free-text-h">
+          <div className="card-head">
+            <h2 id="free-text-h">Citizen Free-Text Responses (Qualitative Findings)</h2>
+            <span className="small muted">{fmtInt(responses.data?.total ?? 0)} recorded text responses</span>
+          </div>
+          <p className="small muted" style={{ margin: "0 0 10px 0" }}>
+            Below are open-ended answers and rationales provided by synthetic citizen personas in their own words.
+          </p>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
+              gap: 14,
+            }}
+          >
+            {responses.data?.items
+              .filter((r) => r.choice || r.raw_response || r.rationale)
+              .map((r) => (
+                <div
+                  key={r.request_key}
+                  className="card"
+                  style={{
+                    background: "var(--surface-2)",
+                    padding: 14,
+                    borderRadius: 8,
+                    borderLeft: "4px solid var(--accent, #3b82f6)",
+                  }}
+                >
+                  <div className="row" style={{ justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                    <Link href={withPop(`/personas/${r.synthetic_id}`, pop)}>
+                      <code>{r.synthetic_id}</code>
+                    </Link>
+                    <span className="status-pill">{r.status}</span>
+                  </div>
+                  {(() => {
+                    const quoteText =
+                      r.choice && r.choice !== "open_response"
+                        ? r.choice
+                        : (r.rationale || r.raw_response || r.choice || "");
+                    const showReasoning = r.rationale && r.rationale !== quoteText && r.choice !== "open_response";
+                    return (
+                      <>
+                        <blockquote
+                          style={{
+                            margin: "8px 0",
+                            fontSize: "0.92rem",
+                            lineHeight: 1.45,
+                            fontStyle: "italic",
+                            color: "var(--text-primary)",
+                            whiteSpace: "pre-wrap",
+                          }}
+                        >
+                          "{quoteText}"
+                        </blockquote>
+                        {showReasoning ? (
+                          <p className="small muted" style={{ margin: "8px 0 0 0" }}>
+                            <strong>Reasoning:</strong> {r.rationale}
+                          </p>
+                        ) : null}
+                      </>
+                    );
+                  })()}
+                </div>
+              ))}
+          </div>
+        </section>
+      ) : (
+        <section className="card stack" aria-labelledby="dist-h">
+          <h2 id="dist-h">Response distribution (weighted)</h2>
+          {agg.error ? <ErrorState error={agg.error} /> : null}
+          {agg.data ? (
+            <>
+              {agg.data.overall.responses === 0 ? <p className="muted">No valid responses.</p> :
+                <ShareBars options={agg.data.overall.options} labels={optionLabels} caption="Overall response distribution" />}
+              <p className="small muted">{fmtInt(agg.data.overall.responses)} valid responses from {fmtInt(agg.data.overall.personas)} personas · Kish effective n {agg.data.overall.effective_n.toFixed(1)}. {agg.data.weighting}</p>
+              <p className="small">{agg.data.inference_note}</p>
+            </>
+          ) : <Loading what="aggregates" />}
+        </section>
+      )}
 
       <section className="card stack" aria-labelledby="sub-h">
         <div className="card-head"><h2 id="sub-h">Subgroup comparison</h2>
@@ -114,10 +301,22 @@ export default function RunPage() {
         {responses.data ? (
           <>
             <div className="table-wrap"><table><caption>{fmtInt(responses.data.total)} final responses</caption>
-              <thead><tr><th>Synthetic ID</th><th>Status</th><th>Choice</th><th>Rationale</th><th className="num">Attempt</th><th>Prompt source</th></tr></thead>
+              <thead><tr><th>Synthetic ID</th><th>Status</th><th>{isFreeText ? "Free-Text Answer" : "Choice"}</th><th>Rationale</th><th className="num">Attempt</th><th>Prompt source</th></tr></thead>
               <tbody>{responses.data.items.map((r) => (
                 <tr key={r.request_key}><th><Link href={withPop(`/personas/${r.synthetic_id}`, pop)}><code>{r.synthetic_id}</code></Link></th>
-                  <td className="status-pill">{r.status}</td><td>{r.choice ? optionLabels[r.choice] ?? r.choice : <span className="muted">{r.error}</span>}{r.other_text ? ` — ${r.other_text}` : ""}</td>
+                  <td className="status-pill">{r.status}</td>
+                  <td>
+                    {isFreeText ? (
+                      <div style={{ maxWidth: 440, whiteSpace: "pre-wrap", fontWeight: 500 }}>
+                        {r.choice ? `"${r.choice}"` : <span className="muted">{r.error ?? "–"}</span>}
+                      </div>
+                    ) : (
+                      <>
+                        {r.choice ? optionLabels[r.choice] ?? r.choice : <span className="muted">{r.error}</span>}
+                        {r.other_text ? ` — ${r.other_text}` : ""}
+                      </>
+                    )}
+                  </td>
                   <td className="small">{r.rationale ?? "–"}</td><td className="num">{r.attempt}</td><td className="small">{r.prompt_source.replaceAll("_", " ")}</td></tr>))}</tbody></table></div>
             <div className="row" style={{ justifyContent: "flex-end", marginTop: 8 }}>
               <button type="button" className="button small" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>Previous</button>

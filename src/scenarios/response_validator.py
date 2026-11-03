@@ -150,7 +150,29 @@ def validate_agent_response(
             errors.append(f"Answer for question '{qid}' is null")
             continue
 
-        if question.type == "multiple_choice":
+        if question.type == "free_text":
+            if isinstance(chosen_val, (list, tuple, dict)):
+                errors.append(f"Answer for free_text question '{qid}' must be a text string, not {type(chosen_val).__name__}")
+                continue
+            chosen_str = str(chosen_val).strip()
+            if chosen_str.lower() in ("refused", "refuse", "declined"):
+                parsed_answers[qid] = "refused"
+                refused = True
+                continue
+            if not chosen_str:
+                errors.append(f"Answer for free_text question '{qid}' cannot be empty")
+                continue
+            min_len = getattr(question, "min_length", None)
+            max_len = getattr(question, "max_length", None)
+            if min_len is not None and len(chosen_str) < min_len:
+                errors.append(f"Answer for question '{qid}' has {len(chosen_str)} characters; minimum required is {min_len}")
+                continue
+            if max_len is not None and len(chosen_str) > max_len:
+                errors.append(f"Answer for question '{qid}' exceeds maximum length of {max_len} characters")
+                continue
+            parsed_answers[qid] = chosen_str
+
+        elif question.type == "multiple_choice":
             if isinstance(chosen_val, (list, tuple, set)):
                 items = [str(x).strip() for x in chosen_val]
             elif isinstance(chosen_val, str) and chosen_val.strip().lower() in ("refused", "refuse", "declined"):

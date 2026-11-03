@@ -343,7 +343,7 @@ export type CreateScenarioPayload = {
   questions: {
     id: string;
     text: string;
-    type?: "single_choice" | "multiple_choice";
+    type?: "single_choice" | "multiple_choice" | "free_text";
     options: { id: string; label: string }[];
     allow_other?: boolean;
     ask_rationale?: boolean;
@@ -357,4 +357,21 @@ export type ScenarioPromptRequest = {
 };
 
 export type CompiledScenarioResponse = CreateScenarioPayload;
+
+export type ResultTextSummary = {
+  title: string;
+  headline: string;
+  key_findings: string[];
+  summary_markdown: string;
+  representative_quotes: {
+    synthetic_id: string;
+    province_code: string;
+    choice?: string;
+    quote: string;
+    rationale?: string | null;
+  }[];
+  is_free_text: boolean;
+  total_responses: number;
+  valid_responses: number;
+};
 

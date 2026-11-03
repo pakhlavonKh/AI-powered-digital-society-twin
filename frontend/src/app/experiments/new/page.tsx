@@ -318,6 +318,7 @@ function Builder({ populationId }: { populationId: string }) {
         scenario: {
           ...d.scenario,
           title: d.scenario.title.trim() || d.title.trim() || "Custom Policy Scenario",
+          description: d.scenario.description.trim() || d.task.instruction.trim() || "Custom Policy Simulation",
         },
         cohort: {
           ...d.cohort,
@@ -633,7 +634,13 @@ function Builder({ populationId }: { populationId: string }) {
           <button
             type="button"
             className="button small"
-            onClick={() => setShowCustomize((cur) => !cur)}
+            onClick={() => {
+              if (!showCustomize && promptText.trim().length >= 3 && !d.task.instruction.trim()) {
+                handleCompilePrompt();
+              } else {
+                setShowCustomize((cur) => !cur);
+              }
+            }}
             style={{ fontWeight: 600 }}
           >
             {showCustomize ? "▲ Hide Question & Templates" : "▼ Customize Question & Templates"}
@@ -730,53 +737,100 @@ function Builder({ populationId }: { populationId: string }) {
             />
           </div>
 
-          <fieldset>
-            <legend>Answer Choices</legend>
-            {d.task.options.map((o, i) => (
-              <div className="option-row" key={i} style={{ marginBottom: 6 }}>
+          {/* Question Format Toggle */}
+          <div className="field">
+            <label style={{ fontWeight: 600 }}>Question Response Format</label>
+            <div className="row" style={{ gap: 20, marginTop: 4 }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: "0.88rem" }}>
                 <input
-                  aria-label={`Option ${i + 1} id`}
-                  type="text"
-                  value={o.id}
-                  onChange={(e) =>
+                  type="radio"
+                  name="task_response_type"
+                  value="single_choice"
+                  checked={d.task.response_type !== "free_text"}
+                  onChange={() => {
                     patch("task", {
-                      options: d.task.options.map((q, j) => (j === i ? { ...q, id: e.target.value } : q)),
-                    })
-                  }
+                      response_type: "single_choice",
+                      options: d.task.options.length >= 2 ? d.task.options : [
+                        { id: "support", label: "Support the policy" },
+                        { id: "oppose", label: "Oppose the policy" },
+                      ],
+                    });
+                  }}
                 />
+                <span><strong>Single Choice</strong> (Categorical options)</span>
+              </label>
+
+              <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: "0.88rem" }}>
                 <input
-                  aria-label={`Option ${i + 1} label`}
-                  type="text"
-                  value={o.label}
-                  onChange={(e) =>
+                  type="radio"
+                  name="task_response_type"
+                  value="free_text"
+                  checked={d.task.response_type === "free_text"}
+                  onChange={() => {
                     patch("task", {
-                      options: d.task.options.map((q, j) => (j === i ? { ...q, label: e.target.value } : q)),
-                    })
-                  }
+                      response_type: "free_text",
+                      options: [],
+                    });
+                  }}
                 />
-                <button
-                  type="button"
-                  className="button small"
-                  disabled={d.task.options.length <= 2}
-                  onClick={() => patch("task", { options: d.task.options.filter((_, j) => j !== i) })}
-                >
-                  Remove
-                </button>
-              </div>
-            ))}
-            <button
-              type="button"
-              className="button small"
-              disabled={d.task.options.length >= 8}
-              onClick={() =>
-                patch("task", {
-                  options: [...d.task.options, { id: `option_${d.task.options.length + 1}`, label: "" }],
-                })
-              }
-            >
-              + Add Option
-            </button>
-          </fieldset>
+                <span><strong>Free-Text Answer</strong> (Open-ended text in citizen's own words)</span>
+              </label>
+            </div>
+          </div>
+
+          {d.task.response_type === "free_text" ? (
+            <div className="notice info" style={{ padding: "12px 16px", fontSize: "0.86rem" }}>
+              <strong>Free-Text Question Mode Active:</strong> Synthetic citizen agents will answer with open-ended textual explanations and perspectives in their own words. Full text responses and qualitative quotes will appear directly on the results page.
+            </div>
+          ) : (
+            <fieldset>
+              <legend>Answer Choices</legend>
+              {d.task.options.map((o, i) => (
+                <div className="option-row" key={i} style={{ marginBottom: 6 }}>
+                  <input
+                    aria-label={`Option ${i + 1} id`}
+                    type="text"
+                    value={o.id}
+                    onChange={(e) =>
+                      patch("task", {
+                        options: d.task.options.map((q, j) => (j === i ? { ...q, id: e.target.value } : q)),
+                      })
+                    }
+                  />
+                  <input
+                    aria-label={`Option ${i + 1} label`}
+                    type="text"
+                    value={o.label}
+                    onChange={(e) =>
+                      patch("task", {
+                        options: d.task.options.map((q, j) => (j === i ? { ...q, label: e.target.value } : q)),
+                      })
+                    }
+                  />
+                  <button
+                    type="button"
+                    className="button small"
+                    disabled={d.task.options.length <= 2}
+                    onClick={() => patch("task", { options: d.task.options.filter((_, j) => j !== i) })}
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                className="button small"
+                disabled={d.task.options.length >= 8}
+                onClick={() =>
+                  patch("task", {
+                    options: [...d.task.options, { id: `option_${d.task.options.length + 1}`, label: "" }],
+                  })
+                }
+              >
+                + Add Option
+              </button>
+            </fieldset>
+          )}
 
           <div className="row" style={{ justifyContent: "flex-end", gap: 10 }}>
             <button
@@ -784,9 +838,9 @@ function Builder({ populationId }: { populationId: string }) {
               className="button primary"
               disabled={
                 compilingPrompt ||
-                !d.scenario.description.trim() ||
                 !d.task.instruction.trim() ||
-                d.task.options.some((o) => !o.id.trim() || !o.label.trim())
+                (d.task.response_type !== "free_text" &&
+                  (d.task.options.length < 2 || d.task.options.some((o) => !o.id.trim() || !o.label.trim())))
               }
               onClick={handleRunCustomized}
             >

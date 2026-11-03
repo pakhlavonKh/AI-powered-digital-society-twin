@@ -37,6 +37,9 @@ try:
         ResponseStatus,
         validate_agent_response,
     )
+    from .summary import (
+        generate_result_text_summary,
+    )
     from .schema import (
         TEMPLATE_FIELDS,
         PolicyConfig,
@@ -80,6 +83,9 @@ except ImportError:
         AgentResponseEnvelope,
         ResponseStatus,
         validate_agent_response,
+    )
+    from scenarios.summary import (  # type: ignore
+        generate_result_text_summary,
     )
     from scenarios.schema import (  # type: ignore
         TEMPLATE_FIELDS,
@@ -136,4 +142,6 @@ __all__ = [
     "ResponseStatus",
     # Prompt Rendering
     "render_scenario_prompt",
+    # Result Text Summary
+    "generate_result_text_summary",
 ]

@@ -124,8 +124,7 @@ class MatraixBackend:
     @property
     def label(self) -> str:
         if self.definition.model.transport == "fake":
-            return ("MatrAIx PersonaJsonSurvey with MatrAIx's fake transport: schema-valid placeholder answers, zero provider "
-                    "calls. Demonstrates the integration, not persona behaviour.")
+            return ("MatrAIx PersonaJsonSurvey (Zero-cost simulation mode: schema-valid synthetic placeholder responses, zero cloud LLM provider calls).")
         return f"MatrAIx PersonaJsonSurvey with live model {self.definition.model.model}."
 
     def _task_dir(self, persona: dict, user_prompt: str) -> Path:
@@ -143,10 +142,11 @@ class MatraixBackend:
         context = user_prompt.split("\nTask:")[0].strip()
         (task / "input" / "context.md").write_text(context + "\n", encoding="utf-8")
         # MatrAIx renders the questionnaire description as the prompt's context, so it carries the full context text.
+        opts = [{"id": o.id, "label": o.label} for o in d.task.options] if d.task.options else [{"id": "open_response", "label": "Open textual response"}]
         questionnaire = {"schemaVersion": "1.0", "id": "societytwin_task", "title": d.title, "description": context,
                          "askRationale": d.task.ask_rationale,
                          "questions": [{"id": "q_choice", "prompt": d.task.instruction, "type": "single_choice", "required": True,
-                                        "options": [{"id": o.id, "label": o.label} for o in d.task.options]}]}
+                                        "options": opts}]}
         (task / "input" / "questionnaire.yaml").write_text(yaml.safe_dump(questionnaire, allow_unicode=True, sort_keys=False),
                                                            encoding="utf-8")
         return task

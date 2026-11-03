@@ -87,7 +87,7 @@ class PolicyParameters(BaseModel):
         description="Percentage change in tariff (e.g. 20.0 for +20%; negative for a reduction)",
     )
     currency: str = Field(default="TL", max_length=10)
-    fare_category: str | None = Field(default="full_adult_standard", max_length=64)
+    fare_category: str | None = Field(default=None, max_length=64)
     effective_date: str | None = Field(default=None, max_length=32)
     subsidized_exemptions_note: str | None = Field(default=None, max_length=1000)
     policy_summary: str | None = Field(default=None, max_length=2000, description="Summary or rationale of the policy intervention")
@@ -174,19 +174,35 @@ class QuestionConfig(BaseModel):
 
     id: str = Field(pattern=ID_PATTERN, description="Unique alphanumeric identifier for the question")
     text: str = Field(min_length=3, max_length=2000, description="The prompt/question text")
-    type: Literal["single_choice", "multiple_choice"] = Field(default="single_choice")
-    options: list[QuestionOption] = Field(min_length=2, max_length=20, description="Permitted answer options")
+    type: Literal["single_choice", "multiple_choice", "free_text"] = Field(default="single_choice")
+    options: list[QuestionOption] = Field(
+        default_factory=list,
+        max_length=20,
+        description="Permitted answer options (required for choice questions; empty for free_text)",
+    )
+    min_length: int | None = Field(default=None, ge=1, le=5000, description="Minimum characters required for free_text")
+    max_length: int | None = Field(default=2000, ge=1, le=10000, description="Maximum characters allowed for free_text")
     allow_other: bool = Field(default=False, description="Whether free-text input is allowed for an 'other' option")
     ask_rationale: bool = Field(default=True, description="Whether the agent is asked to supply a 1-2 sentence reason")
 
     @model_validator(mode="after")
     def _validate_unique_options(self) -> QuestionConfig:
-        option_ids = [opt.id for opt in self.options]
-        if len(option_ids) != len(set(option_ids)):
-            duplicates = [oid for oid in option_ids if option_ids.count(oid) > 1]
-            raise ValueError(f"Question '{self.id}' contains duplicate option IDs: {set(duplicates)}")
-        if self.allow_other and "other" not in option_ids:
-            raise ValueError(f"Question '{self.id}' specifies allow_other=True but has no option with id 'other'")
+        if self.type in ("single_choice", "multiple_choice"):
+            if len(self.options) < 2:
+                raise ValueError(
+                    f"Question '{self.id}' of type '{self.type}' must have at least 2 options, found {len(self.options)}"
+                )
+            option_ids = [opt.id for opt in self.options]
+            if len(option_ids) != len(set(option_ids)):
+                duplicates = [oid for oid in option_ids if option_ids.count(oid) > 1]
+                raise ValueError(f"Question '{self.id}' contains duplicate option IDs: {set(duplicates)}")
+            if self.allow_other and "other" not in option_ids:
+                raise ValueError(f"Question '{self.id}' specifies allow_other=True but has no option with id 'other'")
+        elif self.type == "free_text":
+            if self.allow_other:
+                raise ValueError(f"Question '{self.id}' of type 'free_text' cannot specify allow_other=True")
+            if self.min_length is not None and self.max_length is not None and self.min_length > self.max_length:
+                raise ValueError(f"min_length ({self.min_length}) cannot exceed max_length ({self.max_length})")
         return self
 
 

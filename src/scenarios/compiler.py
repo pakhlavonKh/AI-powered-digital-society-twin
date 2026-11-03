@@ -219,10 +219,25 @@ def synthesize_questions(
     pct: float | None,
 ) -> list[QuestionConfig]:
     """Generate balanced, relevant survey questions and options based on policy context."""
+    is_pure_text_prompt = _has_keyword(
+        prompt,
+        ("only text", "text only", "no options", "pure text", "open ended question", "sadece metin", "açık uçlu"),
+    )
+    if is_pure_text_prompt:
+        clean_prompt = prompt.strip().rstrip("?.")
+        return [
+            QuestionConfig(
+                id="q1_text_response",
+                text=f"Regarding the policy situation: '{clean_prompt}', please provide your detailed thoughts and perspective in your own words.",
+                type="free_text",
+                options=[],
+                ask_rationale=False,
+            )
+        ]
     if domain == "transportation":
         action = "decrease" if (pct is not None and pct < 0) else "increase"
         pct_text = f" by {abs(pct):.0f}%" if pct is not None else ""
-        return [
+        questions = [
             QuestionConfig(
                 id="q1_usage_change",
                 text=f"If public transit fares in {province_name} {action}{pct_text}, how would your daily travel habits most likely change?",
@@ -253,8 +268,8 @@ def synthesize_questions(
             ),
         ]
 
-    if domain == "housing":
-        return [
+    elif domain == "housing":
+        questions = [
             QuestionConfig(
                 id="q1_housing_impact",
                 text=f"How would this municipal housing policy in {province_name} impact your household budget?",
@@ -284,37 +299,54 @@ def synthesize_questions(
             ),
         ]
 
-    # Default / general public policy
-    clean_prompt = prompt.strip().rstrip("?.")
-    return [
-        QuestionConfig(
-            id="q1_behavioral_response",
-            text=f"Regarding the policy situation: '{clean_prompt}', how would you personally respond?",
-            type="single_choice",
-            options=[
-                QuestionOption(id="adapt_positively", label="Adapt positively and make use of the policy change"),
-                QuestionOption(id="no_change", label="Maintain current routine without change"),
-                QuestionOption(id="financially_strained", label="Feel financially strained or inconvenienced"),
-                QuestionOption(id="seek_alternatives", label="Actively look for alternative solutions or services"),
-            ],
-            allow_other=False,
-            ask_rationale=True,
-        ),
-        QuestionConfig(
-            id="q2_policy_support",
-            text=f"Overall, do you support or oppose this policy in {province_name}?",
-            type="single_choice",
-            options=[
-                QuestionOption(id="strongly_support", label="Strongly support"),
-                QuestionOption(id="somewhat_support", label="Somewhat support"),
-                QuestionOption(id="neutral", label="Neutral / Undecided"),
-                QuestionOption(id="somewhat_oppose", label="Somewhat oppose"),
-                QuestionOption(id="strongly_oppose", label="Strongly oppose"),
-            ],
-            allow_other=False,
-            ask_rationale=True,
-        ),
-    ]
+    else:
+        # Default / general public policy
+        clean_prompt = prompt.strip().rstrip("?.")
+        questions = [
+            QuestionConfig(
+                id="q1_behavioral_response",
+                text=f"Regarding the policy situation: '{clean_prompt}', how would you personally respond?",
+                type="single_choice",
+                options=[
+                    QuestionOption(id="adapt_positively", label="Adapt positively and make use of the policy change"),
+                    QuestionOption(id="no_change", label="Maintain current routine without change"),
+                    QuestionOption(id="financially_strained", label="Feel financially strained or inconvenienced"),
+                    QuestionOption(id="seek_alternatives", label="Actively look for alternative solutions or services"),
+                ],
+                allow_other=False,
+                ask_rationale=True,
+            ),
+            QuestionConfig(
+                id="q2_policy_support",
+                text=f"Overall, do you support or oppose this policy in {province_name}?",
+                type="single_choice",
+                options=[
+                    QuestionOption(id="strongly_support", label="Strongly support"),
+                    QuestionOption(id="somewhat_support", label="Somewhat support"),
+                    QuestionOption(id="neutral", label="Neutral / Undecided"),
+                    QuestionOption(id="somewhat_oppose", label="Somewhat oppose"),
+                    QuestionOption(id="strongly_oppose", label="Strongly oppose"),
+                ],
+                allow_other=False,
+                ask_rationale=True,
+            ),
+        ]
+
+    has_text_request = _has_keyword(
+        prompt,
+        ("free text", "text answer", "open ended", "in your own words", "describe", "explain", "thoughts", "opinion", "feedback", "kendi cümlelerinizle", "yorum", "görüş")
+    )
+    if has_text_request:
+        questions.append(
+            QuestionConfig(
+                id="q_qualitative_feedback",
+                text=f"In your own words, what is your primary personal view, concern, or suggestion regarding this policy in {province_name}?",
+                type="free_text",
+                options=[],
+                ask_rationale=False,
+            )
+        )
+    return questions
 
 
 def compile_scenario_from_prompt_heuristic(prompt: str) -> ScenarioConfig:

@@ -297,6 +297,11 @@ def build_router() -> APIRouter:
                       limit: Annotated[int, Query(ge=1, le=MAX_PAGE)] = 50):
         return s.run_responses(run_id, final_only, offset, limit)
 
+    @r.get("/runs/{run_id}/text-summary", tags=["results"],
+           description="Retrieve an executive textual summary of the simulation run results.")
+    def run_text_summary(run_id: str, s: S):
+        return s.run_text_summary(run_id)
+
     @r.get("/runs/{run_id}/aggregate", tags=["results"])
     def run_aggregate(run_id: str, s: S, group_by: Annotated[list[str] | None, Query()] = None,
                       min_group: Annotated[int, Query(ge=1, le=1000)] = 10):

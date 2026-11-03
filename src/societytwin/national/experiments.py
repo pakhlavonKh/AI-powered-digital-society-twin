@@ -67,8 +67,8 @@ class TaskOption(BaseModel):
 class TaskSpec(BaseModel):
     model_config = ConfigDict(extra="forbid")
     instruction: str = Field(min_length=1, max_length=2000)
-    response_type: str = Field(default="single_choice", pattern="^single_choice$")
-    options: list[TaskOption] = Field(min_length=2, max_length=12)
+    response_type: str = Field(default="single_choice", pattern="^(single_choice|free_text)$")
+    options: list[TaskOption] = Field(default_factory=list, max_length=12)
     allow_other_text: bool = False
     ask_rationale: bool = True
     adult_only: bool = True
@@ -76,11 +76,17 @@ class TaskSpec(BaseModel):
 
     @model_validator(mode="after")
     def _options(self):
-        ids = [o.id for o in self.options]
-        if len(ids) != len(set(ids)):
-            raise ValueError("Option ids must be unique")
-        if self.allow_other_text and "other" not in ids:
-            raise ValueError("allow_other_text requires an option with id 'other'")
+        if self.response_type == "single_choice":
+            if len(self.options) < 2:
+                raise ValueError("single_choice requires at least 2 options")
+            ids = [o.id for o in self.options]
+            if len(ids) != len(set(ids)):
+                raise ValueError("Option ids must be unique")
+            if self.allow_other_text and "other" not in ids:
+                raise ValueError("allow_other_text requires an option with id 'other'")
+        elif self.response_type == "free_text":
+            if self.allow_other_text:
+                raise ValueError("free_text cannot specify allow_other_text=True")
         return self
 
 
@@ -304,13 +310,19 @@ def render_prompts(definition: ExperimentDefinition, persona: dict, context: lis
             lines.append(f"- {p.label}: {_with_unit(p.value, p.unit)}")
     if scenario.hypothetical:
         lines.append("These values are hypothetical and set for this experiment; they are not a statement of current policy.")
-    lines += ["", f"Task: {task.instruction.strip()}", "Options:"]
-    lines += [f"- {o.id}: {o.label}" for o in task.options]
-    shape = {"choice": "<one option id from the list>"}
-    if task.allow_other_text:
-        shape["other_text"] = "<only if choice is other>"
-    if task.ask_rationale:
-        shape["rationale"] = "<one or two sentences>"
+    lines += ["", f"Task: {task.instruction.strip()}"]
+    if task.response_type == "free_text":
+        shape = {"answer": "<your open-ended textual answer>"}
+        if task.ask_rationale:
+            shape["rationale"] = "<one or two sentences explanation>"
+    else:
+        lines += ["Options:"]
+        lines += [f"- {o.id}: {o.label}" for o in task.options]
+        shape = {"choice": "<one option id from the list>"}
+        if task.allow_other_text:
+            shape["other_text"] = "<only if choice is other>"
+        if task.ask_rationale:
+            shape["rationale"] = "<one or two sentences>"
     lines += ["", "Respond with a single JSON object and nothing else, in this shape:", json.dumps(shape, ensure_ascii=False)]
     return persona["persona_card"], "\n".join(lines)
 
@@ -335,6 +347,16 @@ def parse_response(text: str | None, task: TaskSpec) -> dict:
             return {"valid": False, "error": "response is not valid JSON"}
     if not isinstance(payload, dict):
         return {"valid": False, "error": "response JSON is not an object"}
+    if task.response_type == "free_text":
+        answer = payload.get("answer") or payload.get("text") or payload.get("response")
+        if not answer or answer == "open_response":
+            answer = payload.get("rationale") or payload.get("choice")
+        if not isinstance(answer, str) or not answer.strip():
+            return {"valid": False, "error": "answer must be a non-empty string"}
+        rationale = payload.get("rationale")
+        return {"valid": True, "answer": answer.strip(), "choice": answer.strip(),
+                "rationale": rationale if isinstance(rationale, str) else None}
+
     choice = payload.get("choice")
     ids = [o.id for o in task.options]
     if choice not in ids:

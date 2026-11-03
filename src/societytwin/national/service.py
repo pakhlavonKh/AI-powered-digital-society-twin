@@ -763,6 +763,20 @@ class NationalService:
         rows = self.db.responses(run_id, final_only)
         return {"run_id": run_id, "total": len(rows), "offset": offset, "limit": limit, "items": rows[offset:offset + limit]}
 
+    def run_text_summary(self, run_id: str) -> dict:
+        run = self.db.run(run_id)
+        if run is None:
+            raise not_found("unknown_run", f"No run {run_id}")
+        exp, _ = self._definition(run["experiment_id"])
+        rows = self.db.responses(run_id, final_only=True)
+        agg = None
+        try:
+            agg = self.run_aggregate(run_id, [], 10)
+        except Exception:
+            pass
+        from scenarios.summary import generate_result_text_summary
+        return generate_result_text_summary(exp["definition"], rows, agg)
+
     def run_aggregate(self, run_id: str, group_by: list[str], min_group: int) -> dict:
         run = self.db.run(run_id)
         if run is None:
