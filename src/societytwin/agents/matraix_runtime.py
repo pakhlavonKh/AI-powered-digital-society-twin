@@ -30,7 +30,7 @@ INSTRUMENT_ID = "product_feedback_v1"
 PERSON_ID = re.compile(r"^[A-Za-z0-9_]{1,64}$")
 MODEL = re.compile(r"^[a-z0-9]{2,32}/[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 CLOSED_PROXY = "http://127.0.0.1:9"
-PROBE_CODE = """
+PROBE_CODE = r"""
 import os, sys, json
 if sys.platform == "win32":
     os.environ.setdefault("SYSTEMROOT", r"C:\Windows")
