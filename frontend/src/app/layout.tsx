@@ -14,8 +14,8 @@ export const viewport: Viewport = { width: "device-width", initialScale: 1 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body>
+    <html lang="en" suppressHydrationWarning>
+      <body suppressHydrationWarning>
         <Suspense fallback={<p className="muted" style={{ padding: 24 }}>Loading workbench…</p>}>
           <PopulationProvider>
             <BuildProvider>

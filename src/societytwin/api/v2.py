@@ -8,10 +8,11 @@ from __future__ import annotations
 
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Body, Depends, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 
-from societytwin.errors import WorkbenchError
+from scenarios.schema import ScenarioConfig
+from societytwin.errors import WorkbenchError, conflict, invalid, not_found
 from societytwin.national.cohorts import CohortDefinitionRequest, CohortSampleRequest
 from societytwin.national.experiments import ExperimentDefinition, example_fare_definition
 from societytwin.national.generator import MAX_SIZE, GenerationConfig
@@ -46,6 +47,13 @@ class RunRequest(BaseModel):
 class ReplayRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     idempotency_key: str = Field(min_length=8, max_length=128, pattern=r"^[A-Za-z0-9_-]+$")
+
+
+class ScenarioPromptRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    prompt: str = Field(min_length=3, max_length=4000, description="Natural language prompt describing the policy scenario")
+    model: str | None = Field(default=None, max_length=128, description="Optional LLM model identifier")
+    save: bool = Field(default=True, description="Whether to register and save the generated scenario to catalog")
 
 
 def _filters(
@@ -180,10 +188,79 @@ def build_router() -> APIRouter:
                         visible_fields: Annotated[list[str] | None, Query()] = None):
         return s.sample_personas(sample_id, offset, limit, visible_fields)
 
+    @r.get("/scenarios", tags=["experiments"],
+           description="List all available policy scenarios from registered scenario directories.")
+    def list_scenarios(
+        category: Annotated[str | None, Query(description="Filter scenarios by policy category")] = None,
+        province: Annotated[str | None, Query(description="Filter scenarios by province code or name")] = None,
+    ):
+        from scenarios.adapter import list_available_scenarios
+        return {"items": list_available_scenarios(category=category, province=province)}
+
+    @r.get("/scenarios/{scenario_id}", tags=["experiments"],
+           description="Retrieve full scenario configuration by scenario_id.")
+    def get_scenario_detail(scenario_id: str):
+        from scenarios.adapter import get_scenario
+        try:
+            return get_scenario(scenario_id).model_dump(mode="json")
+        except KeyError as exc:
+            raise not_found("scenario_not_found", str(exc))
+
+    @r.get("/scenarios/{scenario_id}/experiment-definition", tags=["experiments"],
+           description="Transform a scenario into an experiment definition for a given cohort.")
+    def get_scenario_experiment_definition(
+        scenario_id: str,
+        cohort_id: Annotated[str | None, Query()] = None,
+        question_id: Annotated[str | None, Query()] = None,
+        seed: Annotated[int, Query()] = 7,
+    ):
+        from scenarios.adapter import get_scenario, scenario_to_experiment_definition, UnsupportedQuestionTypeError
+        from scenarios.schema import UnknownQuestionError
+        try:
+            scenario = get_scenario(scenario_id)
+            return scenario_to_experiment_definition(scenario, cohort_id or "", question_id, seed)
+        except KeyError as exc:
+            raise not_found("scenario_not_found", str(exc))
+        except UnknownQuestionError as exc:
+            raise not_found("question_not_found", str(exc))
+        except UnsupportedQuestionTypeError as exc:
+            raise invalid("unsupported_question_type", str(exc))
+
+    @r.post("/scenarios", status_code=201, tags=["experiments"],
+           description="Create and register a custom policy scenario definition.")
+    def create_scenario(body: ScenarioConfig):
+        from scenarios.adapter import save_custom_scenario, ScenarioConflictError
+        try:
+            saved = save_custom_scenario(body)
+            return saved.model_dump(mode="json")
+        except ScenarioConflictError as exc:
+            raise conflict("scenario_conflict", str(exc))
+        except (ValueError, KeyError) as exc:
+            raise invalid("scenario_invalid", str(exc))
+
+    @r.post("/scenarios/from-prompt", status_code=201, tags=["experiments"],
+           description="Compile a natural language prompt into a validated policy scenario.")
+    def create_scenario_from_prompt(body: ScenarioPromptRequest):
+        from scenarios.compiler import compile_scenario_from_prompt
+        from scenarios.adapter import save_custom_scenario
+        try:
+            scenario = compile_scenario_from_prompt(body.prompt, model=body.model)
+            if body.save:
+                saved = save_custom_scenario(scenario)
+                return saved.model_dump(mode="json")
+            return scenario.model_dump(mode="json")
+        except Exception as exc:
+            raise invalid("scenario_compilation_failed", str(exc))
+
     @r.get("/examples/fare-experiment", tags=["experiments"],
            description="The demonstration design with explicitly HYPOTHETICAL fare parameters.")
     def example(cohort_id: str):
-        return example_fare_definition(cohort_id)
+        try:
+            from scenarios.adapter import get_scenario, scenario_to_experiment_definition
+            scenario = get_scenario("transport_fare_001")
+            return scenario_to_experiment_definition(scenario, cohort_id)
+        except KeyError:
+            return example_fare_definition(cohort_id)
 
     @r.post("/experiments", status_code=201, tags=["experiments"], description="Saves a definition. Nothing runs.")
     def experiment_create(body: ExperimentDefinition, s: S):

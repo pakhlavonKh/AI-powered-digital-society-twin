@@ -164,6 +164,17 @@ export type ExperimentDefinition = {
   model: { backend: "stub" | "matraix"; transport: "fake" | "live"; model?: string | null; temperature: number; seed?: number | null; max_output_tokens?: number };
   execution: { repetitions: number; max_attempts: number; max_calls: number; max_cost_usd?: number | null };
   persona?: { visible_fields: string[] | null };
+  scenario_ref?: {
+    scenario_id: string;
+    scenario_version: string;
+    question_id: string;
+    question_type?: string;
+    province_codes?: string[] | null;
+    minimum_age?: number | null;
+    maximum_age?: number | null;
+    required_attributes?: string[];
+    unenforced_filters?: string[];
+  } | null;
 };
 export type Blocker = { code: string; message: string };
 export type Plan = {
@@ -290,3 +301,60 @@ export type Capabilities = {
   vocabularies: Record<string, { attribute: string; note: string; categories: { code: string; label_en: string; label_tr: string | null }[] }>;
   evidence_levels: Record<string, string>; persona_fields: { all: string[]; default_visible: string[] }; groupable: string[];
 };
+
+export type ScenarioListItem = {
+  scenario_id: string;
+  version: string;
+  name: string;
+  description: string;
+  category: string;
+  type: string;
+  location: { province_code: string; province_name: string };
+  questions_count: number;
+  questions: { id: string; text: string }[];
+};
+export type ScenarioList = { items: ScenarioListItem[] };
+
+export type CreateScenarioPayload = {
+  scenario_id: string;
+  version?: string;
+  name: string;
+  description: string;
+  location: { province_code: string; province_name: string };
+  metadata?: { hypothetical?: boolean; source_note?: string | null };
+  policy: {
+    category: string;
+    type: string;
+    parameters: {
+      baseline_fare?: number;
+      new_fare?: number;
+      increase_percentage?: number;
+      currency?: string;
+      fare_category?: string;
+    };
+  };
+  target_population?: {
+    minimum_age?: number;
+    maximum_age?: number | null;
+    province_codes?: string[] | null;
+    adult_only?: boolean;
+    required_attributes?: string[];
+  };
+  questions: {
+    id: string;
+    text: string;
+    type?: "single_choice" | "multiple_choice";
+    options: { id: string; label: string }[];
+    allow_other?: boolean;
+    ask_rationale?: boolean;
+  }[];
+};
+
+export type ScenarioPromptRequest = {
+  prompt: string;
+  model?: string | null;
+  save?: boolean;
+};
+
+export type CompiledScenarioResponse = CreateScenarioPayload;
+

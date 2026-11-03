@@ -1,0 +1,75 @@
+scenario_id: energy_subsidy_001
+version: "1.0.0"
+name: Ankara Residential Electricity Tariff Subsidy
+description: >-
+  A hypothetical municipal social support policy subsidising monthly residential electricity
+  consumption (up to 240 kWh/month) for households in {province_name}: the low-tier tariff changes by
+  {increase_percentage}% (from {baseline_fare} {currency} to {new_fare} {currency}).
+location:
+  province_code: "06"
+  province_name: Ankara
+  nuts2_code: TR51
+
+metadata:
+  hypothetical: true
+  source_note: >-
+    Derived from Energy Market Regulatory Authority (EPDK) residential low-consumption
+    tariff benchmarks (approx. 2.07 TL/kWh). The subsidy percentage (policy.parameters.increase_percentage)
+    is a controlled simulation experiment parameter; the subsidised tariff is derived from it.
+  author: SocietyTwin Scenario Engine Module
+  reference_year: 2024
+
+policy:
+  category: energy
+  type: subsidy
+  parameters:
+    baseline_fare: 2.07
+    # new_fare is derived (2.07 * 0.75 = 1.55)
+    increase_percentage: -25.0
+    currency: TL/kWh
+    fare_category: residential_low_tier
+    effective_date: "2024-10-01"
+    subsidized_exemptions_note: >-
+      Applies to residential single-phase meters up to monthly statutory consumption limits.
+
+target_population:
+  minimum_age: 18
+  maximum_age: null
+  province_codes:
+    - "06"
+  adult_only: true
+  required_attributes:
+    - age
+    - province_code
+    - sex
+
+questions:
+  - id: q1_financial_relief
+    text: "How significantly would a municipal electricity subsidy lowering the tariff from {baseline_fare} to {new_fare} {currency} affect your household's monthly finances?"
+    type: single_choice
+    options:
+      - id: major_relief
+        label: "Major relief (significantly eases monthly essential expenses)"
+      - id: moderate_relief
+        label: "Moderate relief (helpful, but only minor financial difference)"
+      - id: minimal_impact
+        label: "Minimal or unnoticeable impact on overall budget"
+      - id: unsure
+        label: "Unsure / Depends on seasonal electricity usage"
+    allow_other: false
+    ask_rationale: true
+
+  - id: q2_subsidy_support
+    text: "Do you support allocating municipal budget reserves toward residential electricity tariff subsidies?"
+    type: single_choice
+    options:
+      - id: strongly_support
+        label: "Strongly support"
+      - id: support
+        label: "Support"
+      - id: neutral
+        label: "Neutral / Indifferent"
+      - id: oppose
+        label: "Oppose (funds should prioritize other public infrastructure)"
+    allow_other: false
+    ask_rationale: true

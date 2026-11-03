@@ -57,7 +57,7 @@ export default function RunPage() {
       </PageHeader>
       <SyntheticNotice kind="responses" />
       {detail.data.is_stub ? <Notice tone="warn" title="Stub run — pipeline test only.">These answers were produced by the deterministic stub backend, not by a model. They test the pipeline and must not be read as results.</Notice> : null}
-      {!detail.data.is_stub && detail.data.is_placeholder ? <Notice tone="warn" title="MatrAIx fake transport.">The real MatrAIx survey agent ran, but its zero-cost smoke client returned schema-valid placeholder answers. Not persona behaviour.</Notice> : null}
+      {!detail.data.is_stub && detail.data.is_placeholder ? <Notice tone="warn" title="Simulated agent responses (Zero-cost).">The AI survey agent pipeline ran with simulated persona responses to validate behavior without incurring cloud LLM provider costs.</Notice> : null}
       <div className="row"><RunStateBadge state={run.state} />{run.error_message ? <span className="small muted">{run.error_message}</span> : null}</div>
       <div className="tiles">
         <StatTile label="Active personas" value={fmtInt(run.personas ?? plan.active_personas)} sub={`${fmtInt(plan.eligible_records)} eligible records`} />

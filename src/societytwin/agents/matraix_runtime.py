@@ -11,10 +11,12 @@ Rules enforced here:
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import os
 import re
 import subprocess
+import sys
 import threading
 import time
 from dataclasses import dataclass
@@ -29,7 +31,12 @@ PERSON_ID = re.compile(r"^[A-Za-z0-9_]{1,64}$")
 MODEL = re.compile(r"^[a-z0-9]{2,32}/[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 CLOSED_PROXY = "http://127.0.0.1:9"
 PROBE_CODE = """
-import json, sys
+import os, sys, json
+if sys.platform == "win32":
+    os.environ.setdefault("SYSTEMROOT", r"C:\Windows")
+    os.environ.setdefault("WINDIR", r"C:\Windows")
+    if os.environ.get("HOME"):
+        os.environ.setdefault("USERPROFILE", os.environ["HOME"])
 from pathlib import Path
 repo = Path(sys.argv[1])
 sys.path.insert(0, str(repo / "src"))
@@ -88,6 +95,17 @@ class MatraixRuntime:
         # Same default as the experiment runners: a sibling checkout named MatrAIx-Persona-8B.
         return self.settings.repo_root.parent / "MatrAIx-Persona-8B", "default_sibling_path"
 
+    def runtime_python(self) -> Path | None:
+        if self.settings.runtime_python is not None:
+            return self.settings.runtime_python
+        # Auto-detect the current environment's Python when a valid MatrAIx checkout exists
+        root, _ = self.matraix_root()
+        if root and root.is_dir() and importlib.util.find_spec("matraix") is not None:
+            exe = Path(sys.executable)
+            if exe.is_file() and os.access(exe, os.X_OK):
+                return exe
+        return None
+
     def catalog_path(self) -> Path | None:
         root, _ = self.matraix_root()
         return root / "persona" / "schema" / "dimensions.json" if root else None
@@ -115,7 +133,7 @@ class MatraixRuntime:
 
     def file_status(self) -> dict:
         root, source = self.matraix_root()
-        python = self.settings.runtime_python
+        python = self.runtime_python()
         layout = self.settings.layout
         status = {
             "matraix_root_source": source,
@@ -181,7 +199,7 @@ class MatraixRuntime:
         if not status["files_ready"]:
             raise RuntimeUnavailable("; ".join(status["reasons"]) or "Runtime unavailable")
         root, _ = self.matraix_root()
-        return self.settings.runtime_python, root  # type: ignore[return-value]
+        return self.runtime_python(), root  # type: ignore[return-value]
 
     def fresh_output_dir(self, path: Path) -> Path:
         """The wrapper, not the runner, rejects existing or unmanaged output paths before anything starts."""
@@ -241,7 +259,7 @@ class MatraixRuntime:
         """Readiness for the national MatrAIx backend, which needs only a checkout and a runtime interpreter
         (not the historical experiment's fixed runners)."""
         root, source = self.matraix_root()
-        python = self.settings.runtime_python
+        python = self.runtime_python()
         root_ok = bool(root and root.is_dir() and (root / "packages" / "playground").is_dir() and (root / "src" / "matraix").is_dir())
         python_ok = bool(python and python.is_file() and os.access(python, os.X_OK))
         reasons = []
@@ -259,7 +277,7 @@ class MatraixRuntime:
         if not is_within(log_path, self.settings.state_dir):
             raise UnsafeOutput("Logs must be inside the managed state directory")
         return self._invoke([str(script), *args], log_path=log_path, allow_network=live,
-                            extra_env=credentials if live else None, python=self.settings.runtime_python)
+                            extra_env=credentials if live else None, python=self.runtime_python())
 
     # ------------------------------------------------------------------ actions
     def run_smoke(self, output_dir: Path, log_path: Path) -> ProcessResult:

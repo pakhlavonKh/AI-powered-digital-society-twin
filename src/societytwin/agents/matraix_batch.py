@@ -14,6 +14,15 @@ The prompts are captured at the transport boundary, i.e. exactly what the model 
 
 from __future__ import annotations
 
+import os
+import sys
+
+if sys.platform == "win32":
+    os.environ.setdefault("SYSTEMROOT", r"C:\Windows")
+    os.environ.setdefault("WINDIR", r"C:\Windows")
+    if os.environ.get("HOME"):
+        os.environ.setdefault("USERPROFILE", os.environ["HOME"])
+
 import asyncio
 import json
 import sys

@@ -40,6 +40,10 @@ experiments/outputs/
 experiments/results/
 experiments/matraix_simulation/runs/
 experiments/matraix_simulation/.env
+experiments/policy_scenarios/scenarios/*.yaml
+experiments/policy_scenarios/scenarios/*.yml
+!experiments/policy_scenarios/scenarios/transport_fare_001.yaml
+!experiments/policy_scenarios/scenarios/energy_subsidy_001.yaml
 
 # Databases created by the registry or local analytics
 *.db

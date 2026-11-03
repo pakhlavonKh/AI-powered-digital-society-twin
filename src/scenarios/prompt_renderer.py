@@ -50,32 +50,43 @@ def render_scenario_prompt(
     system_prompt = "\n".join(system_lines)
 
     # 2. User Prompt: Scenario Narrative, Policy Parameters, Questions & Response Schema
+    shown = scenario.rendered()
     user_lines = [
         f"### Policy Scenario: {scenario.name}",
         "",
-        scenario.description.strip(),
+        shown.description.strip(),
         "",
         "#### Policy Parameters:",
     ]
 
     params = scenario.policy.parameters
-    if params.baseline_fare is not None and params.new_fare is not None:
-        user_lines.append(f"- Current Baseline Fare: {params.baseline_fare:.2f} {params.currency}")
-        user_lines.append(f"- Proposed New Fare: {params.new_fare:.2f} {params.currency}")
-    if params.increase_percentage is not None:
-        user_lines.append(f"- Tariff Adjustment: +{params.increase_percentage:.1f}%")
+    fares = params.resolved_fares()
+    if fares["baseline_fare"] is not None and fares["new_fare"] is not None:
+        user_lines.append(f"- Current Baseline Fare: {fares['baseline_fare']:.2f} {params.currency}")
+        user_lines.append(f"- Proposed New Fare: {fares['new_fare']:.2f} {params.currency}")
+    if fares["increase_percentage"] is not None:
+        user_lines.append(f"- Tariff Adjustment: {fares['increase_percentage']:+.1f}%")
+    if params.fare_category:
+        user_lines.append(f"- Applies to Fare Category: {params.fare_category}")
+    if params.effective_date:
+        user_lines.append(f"- Baseline Effective Date: {params.effective_date}")
     if params.subsidized_exemptions_note:
         user_lines.append(f"- Concessions & Subsidies: {params.subsidized_exemptions_note}")
 
     user_lines.append("")
     user_lines.append("#### Questions:")
 
-    expected_answers_template: dict[str, str] = {}
-    for q in scenario.questions:
+    expected_answers_template: dict[str, Any] = {}
+    for q in shown.questions:
         user_lines.append(f"\n[{q.id}] {q.text}")
         for opt in q.options:
             user_lines.append(f"  - {opt.id}: {opt.label}")
-        expected_answers_template[q.id] = f"<one option id from [{', '.join(opt.id for opt in q.options)}]>"
+        ids = ", ".join(opt.id for opt in q.options)
+        if q.type == "multiple_choice":
+            user_lines.append("  (Select one or more options.)")
+            expected_answers_template[q.id] = [f"<one or more distinct option ids from [{ids}]>"]
+        else:
+            expected_answers_template[q.id] = f"<one option id from [{ids}]>"
 
     output_schema_example = {
         "scenario_id": scenario.scenario_id,

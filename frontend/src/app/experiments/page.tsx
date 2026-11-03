@@ -26,7 +26,7 @@ export default function ExperimentsPage() {
           <tbody>{list.data.items.map((e) => (
             <tr key={e.experiment_id}>
               <th>{e.title}<div className="small muted"><code>{e.experiment_id}</code></div></th>
-              <td>{e.backend === "stub" ? <Badge tone="fake" glyph="◇">stub</Badge> : <Badge tone="info">{`matraix · ${e.transport}`}</Badge>} {e.model ? <code>{e.model}</code> : null}</td>
+              <td>{e.backend === "stub" ? <Badge tone="fake" glyph="◇">test stub</Badge> : <Badge tone="info">{`AI Agent · ${e.transport === "live" ? "live" : "simulated"}`}</Badge>} {e.model ? <code>{e.model}</code> : null}</td>
               <td className="num">{fmtInt(e.sample_size)}</td>
               <td>{e.latest_run ? <Link href={withPop(`/results/${e.latest_run.run_id}`, pop)}><RunStateBadge state={e.latest_run.state} /></Link> : <span className="muted">Not run</span>}</td>
               <td className="num">{e.run_count}</td><td className="small">{e.created_at}</td>

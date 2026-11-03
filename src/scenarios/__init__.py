@@ -7,6 +7,14 @@ Provides comprehensive support for:
 """
 
 try:
+    from .adapter import (
+        ScenarioConflictError,
+        UnsupportedQuestionTypeError,
+        get_scenario,
+        list_available_scenarios,
+        save_custom_scenario,
+        scenario_to_experiment_definition,
+    )
     from .eligibility import (
         EligibilityStatus,
         PopulationFilterResult,
@@ -22,6 +30,7 @@ try:
         load_scenario,
         save_scenario,
     )
+    from .compiler import compile_scenario_from_prompt
     from .prompt_renderer import render_scenario_prompt
     from .response_validator import (
         AgentResponseEnvelope,
@@ -29,6 +38,7 @@ try:
         validate_agent_response,
     )
     from .schema import (
+        TEMPLATE_FIELDS,
         PolicyConfig,
         PolicyParameters,
         PopulationFilterConfig,
@@ -37,8 +47,18 @@ try:
         ScenarioConfig,
         ScenarioLocation,
         ScenarioMetadata,
+        UnknownQuestionError,
+        template_fields,
     )
 except ImportError:
+    from scenarios.adapter import (  # type: ignore
+        ScenarioConflictError,
+        UnsupportedQuestionTypeError,
+        get_scenario,
+        list_available_scenarios,
+        save_custom_scenario,
+        scenario_to_experiment_definition,
+    )
     from scenarios.eligibility import (  # type: ignore
         EligibilityStatus,
         PopulationFilterResult,
@@ -54,6 +74,7 @@ except ImportError:
         load_scenario,
         save_scenario,
     )
+    from scenarios.compiler import compile_scenario_from_prompt  # type: ignore
     from scenarios.prompt_renderer import render_scenario_prompt  # type: ignore
     from scenarios.response_validator import (  # type: ignore
         AgentResponseEnvelope,
@@ -61,6 +82,7 @@ except ImportError:
         validate_agent_response,
     )
     from scenarios.schema import (  # type: ignore
+        TEMPLATE_FIELDS,
         PolicyConfig,
         PolicyParameters,
         PopulationFilterConfig,
@@ -69,6 +91,8 @@ except ImportError:
         ScenarioConfig,
         ScenarioLocation,
         ScenarioMetadata,
+        UnknownQuestionError,
+        template_fields,
     )
 
 __all__ = [
@@ -81,6 +105,9 @@ __all__ = [
     "QuestionOption",
     "ScenarioLocation",
     "ScenarioMetadata",
+    "UnknownQuestionError",
+    "template_fields",
+    "TEMPLATE_FIELDS",
     # Loader
     "load_scenario",
     "save_scenario",
@@ -88,6 +115,15 @@ __all__ = [
     "ScenarioNotFoundError",
     "ScenarioParseError",
     "ScenarioValidationError",
+    # Adapter
+    "list_available_scenarios",
+    "get_scenario",
+    "save_custom_scenario",
+    "scenario_to_experiment_definition",
+    "UnsupportedQuestionTypeError",
+    "ScenarioConflictError",
+    # Compiler
+    "compile_scenario_from_prompt",
     # Eligibility
     "evaluate_resident",
     "filter_population",
