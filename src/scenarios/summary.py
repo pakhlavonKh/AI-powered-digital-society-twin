@@ -381,3 +381,121 @@ def generate_result_text_summary(
         "valid_responses": total_valid,
         "generated_by": "deterministic",
     }
+
+
+def summarize_placement_result(result: Any) -> dict[str, Any]:
+    """Generate a deterministic executive Markdown summary for an offline placement run."""
+    m = result.aggregate_metrics
+    manifest = result.manifest
+    placed = m["placed_count"]
+    total = m["total_candidates"]
+    unplaced = m["unplaced_count"]
+    rate_pct = round(float(m["placement_rate"]) * 100.0, 1)
+    first_pct = round(float(m["first_choice_rate"]) * 100.0, 1)
+    util_pct = round(float(m["seat_utilization_rate"]) * 100.0, 1)
+
+    headline = (
+        f"Offline placement placed {placed} of {total} synthetic candidates ({rate_pct}%), "
+        f"with {first_pct}% of placed candidates receiving their 1st preference and "
+        f"{util_pct}% general-quota seat utilization."
+    )
+
+    key_findings = [
+        f"Rule fidelity: {manifest.rule_fidelity} (osym_verified={manifest.osym_verified}).",
+        f"Eligible candidates: {m['eligible_candidates']} | Excluded: {m['excluded_candidates']} | Cannot evaluate: {m['cannot_evaluate_candidates']}.",
+        f"Unplaced eligible candidates: {unplaced} (reasons: {m['unplaced_reasons_breakdown'] or 'none'}).",
+        f"Boundary ties resolved deterministically: {m['tie_break_count']}.",
+        f"Net tuition revenue: {m['total_net_tuition_revenue']:,.2f} TL | Need-based aid disbursed: {m['total_need_aid_disbursed']:,.2f} TL.",
+    ]
+
+    md_lines = [
+        f"# Offline University Placement Summary ({manifest.scenario_id or 'baseline'})",
+        "",
+        f"> **Disclaimer:** {manifest.disclaimer}",
+        "",
+        "## 1. Executive Headline",
+        headline,
+        "",
+        "## 2. Key Metrics",
+        *[f"- {item}" for item in key_findings],
+        "",
+        "## 3. Program Outcomes & Cutoffs (General Quotas)",
+        "| Program ID | Score Type | Capacity | Filled | Cutoff Score | 1st Choice Demand |",
+        "| :--- | :--- | ---: | ---: | ---: | ---: |",
+    ]
+    for po in result.program_outcomes:
+        cutoff_str = f"{po.cutoff_score:.3f}" if po.cutoff_score is not None else "—"
+        md_lines.append(
+            f"| `{po.program_id}` | {po.score_type} | {po.effective_capacity} | {po.filled} | {cutoff_str} | {po.first_choice_count} |"
+        )
+    md_lines.extend([
+        "",
+        f"**Canonical Result SHA-256:** `{manifest.result_sha256}`",
+    ])
+
+    return {
+        "title": f"Placement Summary: {manifest.scenario_id or 'baseline'}",
+        "headline": headline,
+        "key_findings": key_findings,
+        "summary_markdown": "\n".join(md_lines),
+        "osym_verified": manifest.osym_verified,
+        "rule_fidelity": manifest.rule_fidelity,
+        "disclaimer": manifest.disclaimer,
+        "result_sha256": manifest.result_sha256,
+        "generated_by": "deterministic",
+    }
+
+
+def summarize_placement_comparison(report: Any) -> dict[str, Any]:
+    """Generate a deterministic Markdown report for a baseline-vs-policy comparison."""
+    tr = report.transitions
+    placed_delta = report.metric_deltas["placed_count"]["delta"]
+    rate_delta_pp = round(float(report.metric_deltas["placement_rate"]["delta"] or 0.0) * 100.0, 2)
+    net_rev_delta = report.metric_deltas["total_net_tuition_revenue"]["delta"]
+
+    headline = (
+        f"Counterfactual comparison ({report.baseline_scenario_id or 'baseline'} -> "
+        f"{report.policy_scenario_id or 'policy'}): placed candidates changed by {placed_delta:+d} "
+        f"({rate_delta_pp:+.2f} pp); {tr.newly_placed} newly placed, {tr.displaced_to_unplaced} displaced to unplaced."
+    )
+
+    key_findings = [
+        f"Unchanged placements: {tr.same_program} | Improved preference: {tr.improved_preference} | Worsened preference: {tr.worsened_preference}.",
+        f"Newly placed: {tr.newly_placed} | Displaced to unplaced: {tr.displaced_to_unplaced} | Remained unplaced: {tr.remained_unplaced}.",
+        f"Eligibility transitions: {tr.eligibility_changed}.",
+        f"Net tuition revenue delta: {float(net_rev_delta or 0.0):+,.2f} TL.",
+    ]
+
+    md_lines = [
+        "# Counterfactual Placement Comparison Report",
+        "",
+        f"> **Disclaimer:** {report.disclaimer}",
+        "",
+        "## 1. Executive Headline",
+        headline,
+        "",
+        "## 2. Candidate Migration Summary",
+        *[f"- {item}" for item in key_findings],
+        "",
+        "## 3. Program Capacity & Cutoff Shifts",
+        "| Program ID | Cap Δ | Filled Δ | Baseline Cutoff | Policy Cutoff | Cutoff Δ |",
+        "| :--- | ---: | ---: | ---: | ---: | ---: |",
+    ]
+    for pd in report.program_deltas:
+        b_cut = f"{pd.baseline_cutoff_score:.3f}" if pd.baseline_cutoff_score is not None else "—"
+        p_cut = f"{pd.policy_cutoff_score:.3f}" if pd.policy_cutoff_score is not None else "—"
+        c_delta = f"{pd.cutoff_score_delta:+.3f}" if pd.cutoff_score_delta is not None else "—"
+        md_lines.append(
+            f"| `{pd.program_id}` | {pd.capacity_delta:+d} | {pd.filled_delta:+d} | {b_cut} | {p_cut} | {c_delta} |"
+        )
+
+    return {
+        "title": "Counterfactual Placement Comparison",
+        "headline": headline,
+        "key_findings": key_findings,
+        "summary_markdown": "\n".join(md_lines),
+        "osym_verified": report.osym_verified,
+        "rule_fidelity": report.rule_fidelity,
+        "disclaimer": report.disclaimer,
+        "generated_by": "deterministic",
+    }

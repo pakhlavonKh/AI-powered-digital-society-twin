@@ -10,10 +10,13 @@ try:
     from .adapter import (
         ScenarioConflictError,
         UnsupportedQuestionTypeError,
+        execute_placement_scenario,
         get_scenario,
         list_available_scenarios,
+        placement_result_to_student_cohort,
         save_custom_scenario,
         scenario_to_experiment_definition,
+        scenario_to_placement_spec,
     )
     from .eligibility import (
         EligibilityStatus,
@@ -39,9 +42,12 @@ try:
     )
     from .summary import (
         generate_result_text_summary,
+        summarize_placement_comparison,
+        summarize_placement_result,
     )
     from .schema import (
         TEMPLATE_FIELDS,
+        PlacementScenarioConfig,
         PolicyConfig,
         PolicyParameters,
         PopulationFilterConfig,
@@ -50,6 +56,7 @@ try:
         ScenarioConfig,
         ScenarioLocation,
         ScenarioMetadata,
+        UniversityPolicyIntervention,
         UnknownQuestionError,
         template_fields,
     )
@@ -57,10 +64,13 @@ except ImportError:
     from scenarios.adapter import (  # type: ignore
         ScenarioConflictError,
         UnsupportedQuestionTypeError,
+        execute_placement_scenario,
         get_scenario,
         list_available_scenarios,
+        placement_result_to_student_cohort,
         save_custom_scenario,
         scenario_to_experiment_definition,
+        scenario_to_placement_spec,
     )
     from scenarios.eligibility import (  # type: ignore
         EligibilityStatus,
@@ -86,9 +96,12 @@ except ImportError:
     )
     from scenarios.summary import (  # type: ignore
         generate_result_text_summary,
+        summarize_placement_comparison,
+        summarize_placement_result,
     )
     from scenarios.schema import (  # type: ignore
         TEMPLATE_FIELDS,
+        PlacementScenarioConfig,
         PolicyConfig,
         PolicyParameters,
         PopulationFilterConfig,
@@ -97,6 +110,7 @@ except ImportError:
         ScenarioConfig,
         ScenarioLocation,
         ScenarioMetadata,
+        UniversityPolicyIntervention,
         UnknownQuestionError,
         template_fields,
     )
@@ -104,6 +118,8 @@ except ImportError:
 __all__ = [
     # Schema
     "ScenarioConfig",
+    "PlacementScenarioConfig",
+    "UniversityPolicyIntervention",
     "PolicyConfig",
     "PolicyParameters",
     "PopulationFilterConfig",
@@ -126,6 +142,9 @@ __all__ = [
     "get_scenario",
     "save_custom_scenario",
     "scenario_to_experiment_definition",
+    "scenario_to_placement_spec",
+    "execute_placement_scenario",
+    "placement_result_to_student_cohort",
     "UnsupportedQuestionTypeError",
     "ScenarioConflictError",
     # Compiler
@@ -144,4 +163,6 @@ __all__ = [
     "render_scenario_prompt",
     # Result Text Summary
     "generate_result_text_summary",
+    "summarize_placement_result",
+    "summarize_placement_comparison",
 ]

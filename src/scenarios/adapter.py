@@ -13,10 +13,10 @@ from typing import Any
 
 try:
     from .loader import load_scenario
-    from .schema import ScenarioConfig, UnknownQuestionError
+    from .schema import PlacementScenarioConfig, ScenarioConfig, UnknownQuestionError
 except ImportError:
     from scenarios.loader import load_scenario
-    from scenarios.schema import ScenarioConfig, UnknownQuestionError
+    from scenarios.schema import PlacementScenarioConfig, ScenarioConfig, UnknownQuestionError
 
 logger = logging.getLogger(__name__)
 
@@ -338,4 +338,144 @@ def save_custom_scenario(
         yaml.safe_dump(dump_dict, f, sort_keys=False, allow_unicode=True)
 
     return config
+
+
+def scenario_to_placement_spec(
+    scenario: ScenarioConfig | PlacementScenarioConfig,
+    candidates: Any = None,
+    programs: list[Any] | None = None,
+    ruleset: Any = None,
+    seed: int = 42,
+) -> dict[str, Any]:
+    """Transform a university ScenarioConfig or PlacementScenarioConfig into an offline placement input bundle."""
+    try:
+        from .placement.cohort_synth import build_standalone_demo_programs, build_standalone_test_cohort
+        from .placement.models import CandidateCohort, PlacementRuleset
+    except ImportError:
+        from scenarios.placement.cohort_synth import (  # type: ignore
+            build_standalone_demo_programs,
+            build_standalone_test_cohort,
+        )
+        from scenarios.placement.models import CandidateCohort, PlacementRuleset  # type: ignore
+
+    if isinstance(scenario, PlacementScenarioConfig):
+        sim_mode = scenario.simulation_mode
+        intervention = scenario.university_intervention
+    else:
+        sim_mode = scenario.effective_simulation_mode
+        intervention = scenario.university_intervention
+
+    if sim_mode not in ("university_placement", "university_decision_hybrid") and intervention is None:
+        raise ValueError(
+            f"Scenario '{scenario.scenario_id}' has simulation_mode='{sim_mode}' and no university_intervention; "
+            "cannot convert to a placement specification."
+        )
+
+    resolved_programs = list(programs) if programs is not None else build_standalone_demo_programs()
+    if candidates is None:
+        cohort = build_standalone_test_cohort(resolved_programs, seed=seed)
+        resolved_candidates = cohort.candidates
+    elif isinstance(candidates, CandidateCohort):
+        resolved_candidates = candidates.candidates
+    else:
+        resolved_candidates = list(candidates)
+
+    resolved_ruleset = ruleset if ruleset is not None else PlacementRuleset()
+    if intervention is not None and intervention.ruleset_id:
+        resolved_ruleset = resolved_ruleset.model_copy(update={"ruleset_id": intervention.ruleset_id})
+
+    return {
+        "scenario": scenario,
+        "simulation_mode": sim_mode,
+        "candidates": resolved_candidates,
+        "programs": resolved_programs,
+        "ruleset": resolved_ruleset,
+        "intervention": intervention,
+        "seed": seed,
+        "osym_verified": resolved_ruleset.osym_verified,
+        "rule_fidelity": resolved_ruleset.rule_fidelity,
+        "disclaimer": resolved_ruleset.disclosure_banner(),
+    }
+
+
+def execute_placement_scenario(
+    scenario: ScenarioConfig | PlacementScenarioConfig,
+    candidates: Any = None,
+    programs: list[Any] | None = None,
+    ruleset: Any = None,
+    seed: int = 42,
+    min_group: int = 1,
+) -> Any:
+    """Resolve scenario parameters and execute the offline deterministic placement engine."""
+    try:
+        from .placement.engine import run_placement
+    except ImportError:
+        from scenarios.placement.engine import run_placement  # type: ignore
+
+    spec = scenario_to_placement_spec(
+        scenario=scenario,
+        candidates=candidates,
+        programs=programs,
+        ruleset=ruleset,
+        seed=seed,
+    )
+    return run_placement(
+        candidates=spec["candidates"],
+        programs=spec["programs"],
+        ruleset=spec["ruleset"],
+        intervention=spec["intervention"],
+        scenario=scenario,
+        seed=seed,
+        min_group=min_group,
+    )
+
+
+def placement_result_to_student_cohort(
+    result: Any,
+    candidates: Any,
+    programs: list[Any],
+) -> dict[str, Any]:
+    """Handoff contract converting placed candidates into post-admission student cohort records (Milestone 2)."""
+    try:
+        from .placement.models import CandidateCohort
+    except ImportError:
+        from scenarios.placement.models import CandidateCohort  # type: ignore
+
+    cand_list = candidates.candidates if isinstance(candidates, CandidateCohort) else list(candidates)
+    cand_map = {c.candidate_id: c for c in cand_list}
+    prog_map = {p.program_id: p for p in programs}
+
+    admitted_students: list[dict[str, Any]] = []
+    for outcome in result.candidate_outcomes:
+        if outcome.placement_status != "placed" or outcome.assigned_program_id is None:
+            continue
+        cand = cand_map.get(outcome.candidate_id)
+        prog = prog_map.get(outcome.assigned_program_id)
+        admitted_students.append({
+            "student_id": outcome.candidate_id,
+            "source_synthetic_id": outcome.source_synthetic_id,
+            "province_code": cand.province_code if cand else (prog.province_code if prog else None),
+            "age": cand.age if cand else None,
+            "sex": cand.sex if cand else None,
+            "income_band": cand.income_band if cand else None,
+            "liquid_budget": cand.liquid_budget if cand else None,
+            "program_id": outcome.assigned_program_id,
+            "university_name": prog.university_name if prog else None,
+            "department_name": prog.department_name if prog else None,
+            "score_type_used": outcome.score_type_used,
+            "admission_score": outcome.effective_score,
+            "financials": outcome.financials.model_dump(mode="json") if outcome.financials else None,
+            "semester_state": "admitted_term_1",
+        })
+
+    return {
+        "handoff_version": "placement-to-university-1.0",
+        "source_result_sha256": result.manifest.result_sha256,
+        "scenario_id": result.manifest.scenario_id,
+        "osym_verified": result.manifest.osym_verified,
+        "rule_fidelity": result.manifest.rule_fidelity,
+        "disclaimer": result.manifest.disclaimer,
+        "student_count": len(admitted_students),
+        "students": admitted_students,
+    }
 
