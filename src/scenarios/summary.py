@@ -499,3 +499,127 @@ def summarize_placement_comparison(report: Any) -> dict[str, Any]:
         "disclaimer": report.disclaimer,
         "generated_by": "deterministic",
     }
+
+
+def summarize_university_result(result: Any) -> dict[str, Any]:
+    """Generate a deterministic Markdown report for a single multi-semester university run."""
+    manifest = result.manifest
+    fs = result.final_summary
+    retention_pct = round(float(fs["cumulative_retention_rate"]) * 100.0, 2)
+
+    headline = (
+        f"University simulation ({manifest.scenario_id or 'baseline'}, {manifest.semester_count} semesters): "
+        f"{fs['final_active_students']}/{fs['initial_students']} active "
+        f"({retention_pct:.2f}% cumulative retention), {fs['final_paused_stop_out']} stopped-out, "
+        f"{fs['final_withdrawn_dropout']} withdrawn, {fs['final_graduated']} graduated."
+    )
+
+    key_findings = [
+        (
+            f"Final states — Active: {fs['final_active_students']}, Paused (stop-out): {fs['final_paused_stop_out']}, "
+            f"Withdrawn (dropout): {fs['final_withdrawn_dropout']}, Graduated: {fs['final_graduated']}."
+        ),
+        f"Cumulative retention rate (non-graduating): {retention_pct:.2f}% | Final mean GPA: {fs['final_mean_gpa']:.3f}.",
+        (
+            f"Net tuition revenue: {fs['total_net_tuition_revenue']:,.2f} TL | "
+            f"Aid disbursed: {fs['total_aid_disbursed']:,.2f} TL | "
+            f"Payment defaults: {fs['total_payment_defaults']}."
+        ),
+        f"Total waitlisted course requests across terms: {fs['total_waitlisted_requests']}.",
+    ]
+
+    md_lines = [
+        f"# University Policy Simulation Report ({manifest.scenario_id or 'baseline'})",
+        "",
+        f"> **Disclaimer:** {manifest.disclaimer}",
+        "",
+        "## 1. Executive Headline",
+        headline,
+        "",
+        "## 2. Key Metrics",
+        *[f"- {item}" for item in key_findings],
+        "",
+        "## 3. Semester Trajectory",
+        "| Term | Active | Paused | Transferred | Withdrawn | Graduated | Mean GPA | Pass Rate | Waitlisted | Net Revenue (TL) |",
+        "| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+    ]
+    for sn in result.semester_snapshots:
+        pass_str = f"{sn.course_pass_rate * 100:.1f}%" if sn.course_pass_rate is not None else "—"
+        md_lines.append(
+            f"| {sn.semester} | {sn.active_students} | {sn.paused_stop_out_students} | "
+            f"{sn.transferred_students} | {sn.withdrawn_dropout_students} | {sn.graduated_students} | "
+            f"{sn.mean_gpa:.3f} | {pass_str} | {sn.total_waitlisted_requests} | {sn.total_net_tuition_revenue:,.2f} |"
+        )
+    md_lines.extend([
+        "",
+        f"**Canonical Result SHA-256:** `{manifest.result_sha256}`",
+    ])
+
+    return {
+        "title": f"University Simulation Summary: {manifest.scenario_id or 'baseline'}",
+        "headline": headline,
+        "key_findings": key_findings,
+        "summary_markdown": "\n".join(md_lines),
+        "osym_verified": manifest.osym_verified,
+        "coefficients_calibrated": manifest.coefficients_calibrated,
+        "disclaimer": manifest.disclaimer,
+        "result_sha256": manifest.result_sha256,
+        "generated_by": "deterministic",
+    }
+
+
+def summarize_university_comparison(report: Any) -> dict[str, Any]:
+    """Generate a deterministic Markdown report for a paired CRN university comparison."""
+    pe = report.policy_effects
+    ret = pe["cumulative_retention_rate"]
+    drop = pe["final_withdrawn_dropout"]
+    pause = pe["final_paused_stop_out"]
+    rev = pe["total_net_tuition_revenue"]
+
+    ret_pp = round(ret["mean"] * 100.0, 2)
+    headline = (
+        f"CRN counterfactual ({report.baseline_scenario_id or 'baseline'} -> "
+        f"{report.policy_scenario_id or 'policy'}, {report.replications} replications): "
+        f"retention changed by {ret_pp:+.2f} pp (p05..p95: {ret['p05']*100:+.2f}..{ret['p95']*100:+.2f} pp), "
+        f"dropout {drop['mean']:+.2f}, stop-out {pause['mean']:+.2f}."
+    )
+
+    key_findings = [
+        (
+            f"Cumulative retention: baseline {ret['baseline_mean']*100:.2f}% -> "
+            f"policy {ret['policy_mean']*100:.2f}% ({ret_pp:+.2f} pp)."
+        ),
+        f"Final withdrawn (dropout) delta: {drop['mean']:+.2f} (p05={drop['p05']:+.2f}, p95={drop['p95']:+.2f}).",
+        f"Final paused (stop-out) delta: {pause['mean']:+.2f}.",
+        f"Total net tuition revenue delta: {rev['mean']:+,.2f} TL.",
+    ]
+
+    md_lines = [
+        "# Counterfactual University Policy Comparison (CRN)",
+        "",
+        f"> **Disclaimer:** {report.disclaimer}",
+        "",
+        "## 1. Executive Headline",
+        headline,
+        "",
+        "## 2. Paired Policy Effects (Policy minus Baseline)",
+        "| Metric | Baseline Mean | Policy Mean | Mean Δ | Std | P05 | P50 | P95 |",
+        "| :--- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+    ]
+    for metric, stats in pe.items():
+        md_lines.append(
+            f"| `{metric}` | {stats['baseline_mean']:.4f} | {stats['policy_mean']:.4f} | "
+            f"{stats['mean']:+.4f} | {stats['std']:.4f} | {stats['p05']:+.4f} | "
+            f"{stats['p50']:+.4f} | {stats['p95']:+.4f} |"
+        )
+
+    return {
+        "title": "Counterfactual University Policy Comparison",
+        "headline": headline,
+        "key_findings": key_findings,
+        "summary_markdown": "\n".join(md_lines),
+        "osym_verified": report.osym_verified,
+        "coefficients_calibrated": report.coefficients_calibrated,
+        "disclaimer": report.disclaimer,
+        "generated_by": "deterministic",
+    }

@@ -11,12 +11,14 @@ try:
         ScenarioConflictError,
         UnsupportedQuestionTypeError,
         execute_placement_scenario,
+        execute_university_scenario,
         get_scenario,
         list_available_scenarios,
         placement_result_to_student_cohort,
         save_custom_scenario,
         scenario_to_experiment_definition,
         scenario_to_placement_spec,
+        scenario_to_university_spec,
     )
     from .eligibility import (
         EligibilityStatus,
@@ -44,6 +46,8 @@ try:
         generate_result_text_summary,
         summarize_placement_comparison,
         summarize_placement_result,
+        summarize_university_comparison,
+        summarize_university_result,
     )
     from .schema import (
         TEMPLATE_FIELDS,
@@ -65,12 +69,14 @@ except ImportError:
         ScenarioConflictError,
         UnsupportedQuestionTypeError,
         execute_placement_scenario,
+        execute_university_scenario,
         get_scenario,
         list_available_scenarios,
         placement_result_to_student_cohort,
         save_custom_scenario,
         scenario_to_experiment_definition,
         scenario_to_placement_spec,
+        scenario_to_university_spec,
     )
     from scenarios.eligibility import (  # type: ignore
         EligibilityStatus,
@@ -98,6 +104,8 @@ except ImportError:
         generate_result_text_summary,
         summarize_placement_comparison,
         summarize_placement_result,
+        summarize_university_comparison,
+        summarize_university_result,
     )
     from scenarios.schema import (  # type: ignore
         TEMPLATE_FIELDS,
@@ -143,7 +151,9 @@ __all__ = [
     "save_custom_scenario",
     "scenario_to_experiment_definition",
     "scenario_to_placement_spec",
+    "scenario_to_university_spec",
     "execute_placement_scenario",
+    "execute_university_scenario",
     "placement_result_to_student_cohort",
     "UnsupportedQuestionTypeError",
     "ScenarioConflictError",
@@ -165,4 +175,6 @@ __all__ = [
     "generate_result_text_summary",
     "summarize_placement_result",
     "summarize_placement_comparison",
+    "summarize_university_result",
+    "summarize_university_comparison",
 ]

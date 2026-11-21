@@ -13,10 +13,20 @@ from typing import Any
 
 try:
     from .loader import load_scenario
-    from .schema import PlacementScenarioConfig, ScenarioConfig, UnknownQuestionError
+    from .schema import (
+        PlacementScenarioConfig,
+        ScenarioConfig,
+        UniversityPolicyIntervention,
+        UnknownQuestionError,
+    )
 except ImportError:
     from scenarios.loader import load_scenario
-    from scenarios.schema import PlacementScenarioConfig, ScenarioConfig, UnknownQuestionError
+    from scenarios.schema import (
+        PlacementScenarioConfig,
+        ScenarioConfig,
+        UniversityPolicyIntervention,
+        UnknownQuestionError,
+    )
 
 logger = logging.getLogger(__name__)
 
@@ -477,5 +487,178 @@ def placement_result_to_student_cohort(
         "disclaimer": result.manifest.disclaimer,
         "student_count": len(admitted_students),
         "students": admitted_students,
+    }
+
+
+def _extract_university_mode_and_intervention(
+    scenario: ScenarioConfig | PlacementScenarioConfig,
+) -> tuple[str, Any]:
+    if isinstance(scenario, PlacementScenarioConfig):
+        return scenario.simulation_mode, scenario.university_intervention
+    return scenario.effective_simulation_mode, scenario.university_intervention
+
+
+def scenario_to_university_spec(
+    scenario: ScenarioConfig | PlacementScenarioConfig,
+    *,
+    students: list[Any] | None = None,
+    courses: list[Any] | None = None,
+    ruleset: Any = None,
+    weights: Any = None,
+    semester_count: int | None = None,
+    replications: int | None = None,
+    seed: int = 42,
+    cohort_size: int = 200,
+) -> dict[str, Any]:
+    """Transform a university ScenarioConfig into an offline Milestone 2 simulation specification."""
+    try:
+        from .university.cohort import (
+            build_synthetic_university_cohort,
+            student_cohort_from_placement_handoff,
+        )
+        from .university.models import UniversityRuleset, UtilityWeights
+    except ImportError:
+        from scenarios.university.cohort import (  # type: ignore
+            build_synthetic_university_cohort,
+            student_cohort_from_placement_handoff,
+        )
+        from scenarios.university.models import UniversityRuleset, UtilityWeights  # type: ignore
+
+    sim_mode, intervention = _extract_university_mode_and_intervention(scenario)
+    if sim_mode not in ("university_decision", "university_decision_hybrid") and intervention is None:
+        raise ValueError(
+            f"Scenario '{scenario.scenario_id}' has simulation_mode='{sim_mode}' and no university_intervention; "
+            "cannot convert to a university multi-semester specification."
+        )
+
+    eff_intervention = intervention or UniversityPolicyIntervention()
+    eff_semesters = semester_count if semester_count is not None else eff_intervention.semester_count
+    eff_replications = replications if replications is not None else eff_intervention.replications
+
+    if students is not None and courses is not None:
+        resolved_students, resolved_courses = list(students), list(courses)
+    elif sim_mode == "university_decision_hybrid" and students is None:
+        placement_spec = scenario_to_placement_spec(scenario=scenario, seed=seed)
+        placement_result = execute_placement_scenario(
+            scenario=scenario,
+            candidates=placement_spec["candidates"],
+            programs=placement_spec["programs"],
+            ruleset=placement_spec["ruleset"],
+            seed=seed,
+        )
+        handoff = placement_result_to_student_cohort(
+            placement_result,
+            placement_spec["candidates"],
+            placement_spec["programs"],
+        )
+        resolved_students, resolved_courses = student_cohort_from_placement_handoff(handoff, seed=seed)
+        if courses is not None:
+            resolved_courses = list(courses)
+    else:
+        syn_students, syn_courses = build_synthetic_university_cohort(size=cohort_size, seed=seed)
+        resolved_students = list(students) if students is not None else syn_students
+        resolved_courses = list(courses) if courses is not None else syn_courses
+
+    resolved_ruleset = ruleset if ruleset is not None else UniversityRuleset()
+    resolved_weights = weights if weights is not None else UtilityWeights()
+
+    return {
+        "scenario": scenario,
+        "simulation_mode": sim_mode,
+        "students": resolved_students,
+        "courses": resolved_courses,
+        "ruleset": resolved_ruleset,
+        "weights": resolved_weights,
+        "intervention": eff_intervention,
+        "semester_count": eff_semesters,
+        "replications": eff_replications,
+        "seed": seed,
+        "osym_verified": resolved_ruleset.osym_verified,
+        "coefficients_calibrated": resolved_weights.coefficients_calibrated,
+        "disclaimer": resolved_ruleset.disclosure_banner(),
+    }
+
+
+def execute_university_scenario(
+    scenario: ScenarioConfig | PlacementScenarioConfig,
+    *,
+    students: list[Any] | None = None,
+    courses: list[Any] | None = None,
+    ruleset: Any = None,
+    weights: Any = None,
+    semester_count: int | None = None,
+    replications: int | None = None,
+    seed: int = 42,
+    cohort_size: int = 200,
+    run_comparison: bool | None = None,
+) -> dict[str, Any]:
+    """Resolve and execute a Milestone 2 university scenario (single run or paired CRN comparison)."""
+    try:
+        from .summary import summarize_university_comparison, summarize_university_result
+        from .university.experiments import run_replicated_university_experiment
+        from .university.semester_engine import run_university_simulation
+    except ImportError:
+        from scenarios.summary import (  # type: ignore
+            summarize_university_comparison,
+            summarize_university_result,
+        )
+        from scenarios.university.experiments import run_replicated_university_experiment  # type: ignore
+        from scenarios.university.semester_engine import run_university_simulation  # type: ignore
+
+    spec = scenario_to_university_spec(
+        scenario=scenario,
+        students=students,
+        courses=courses,
+        ruleset=ruleset,
+        weights=weights,
+        semester_count=semester_count,
+        replications=replications,
+        seed=seed,
+        cohort_size=cohort_size,
+    )
+
+    eff_reps = int(spec["replications"])
+    do_compare = run_comparison if run_comparison is not None else (eff_reps > 1)
+
+    single_result = run_university_simulation(
+        students=spec["students"],
+        courses=spec["courses"],
+        ruleset=spec["ruleset"],
+        weights=spec["weights"],
+        intervention=spec["intervention"],
+        scenario_id=scenario.scenario_id,
+        semester_count=spec["semester_count"],
+        seed=seed,
+        record_decisions=(not do_compare),
+    )
+
+    comparison = None
+    if do_compare:
+        comparison = run_replicated_university_experiment(
+            students=spec["students"],
+            courses=spec["courses"],
+            policy_intervention=spec["intervention"],
+            baseline_intervention=UniversityPolicyIntervention(semester_count=spec["semester_count"]),
+            ruleset=spec["ruleset"],
+            weights=spec["weights"],
+            semester_count=spec["semester_count"],
+            replications=eff_reps,
+            base_seed=seed,
+            baseline_scenario_id=f"{scenario.scenario_id}_baseline",
+            policy_scenario_id=scenario.scenario_id,
+        )
+        summary = summarize_university_comparison(comparison)
+    else:
+        summary = summarize_university_result(single_result)
+
+    return {
+        "mode": spec["simulation_mode"],
+        "scenario_id": scenario.scenario_id,
+        "osym_verified": spec["osym_verified"],
+        "coefficients_calibrated": spec["coefficients_calibrated"],
+        "disclaimer": spec["disclaimer"],
+        "result": single_result.model_dump(mode="json"),
+        "comparison": comparison.model_dump(mode="json") if comparison is not None else None,
+        "summary": summary,
     }
 
