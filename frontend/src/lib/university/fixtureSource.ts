@@ -79,7 +79,7 @@ export function computeFixtureRun(config: ScenarioConfig, kind: SimulationRun["k
 
 function listItem(run: SimulationRun): RunListItem {
   return { run_id: run.run_id, status: run.status, origin: run.origin, kind: run.kind, name: run.config.name, preset: run.config.preset,
-    admission_year: run.config.admission_year, cohort_size: run.config.cohort.size, created_at: run.provenance.created_at };
+    admission_year: run.config.admission_year, cohort_id: run.provenance.cohort_id, cohort_size: run.config.cohort.size, created_at: run.provenance.created_at };
 }
 
 export function createFixtureSource(opts: { persist?: boolean } = {}): UniversityDataSource {
@@ -169,6 +169,7 @@ export function createFixtureSource(opts: { persist?: boolean } = {}): Universit
       for (const s of allStored()) add(s.config.cohort.seed, s.config.cohort.size);
       return [...seen.values()];
     }),
+    getCohort: (id) => later(() => cohortOf(id)),
     queryCandidates: (query) => later(() => {
       const cohort = cohortOf(query.cohort_id);
       const run = query.run_id ? findRun(query.run_id) : null;

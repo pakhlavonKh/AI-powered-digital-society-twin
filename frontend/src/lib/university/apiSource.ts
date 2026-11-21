@@ -40,6 +40,7 @@ export function createPendingApiSource(): UniversityDataSource {
     queryPrograms: () => pending("Program registry"),
     getProgram: () => pending("Program details"),
     listCohorts: () => pending("Candidate cohorts"),
+    getCohort: () => pending("Candidate cohort"),
     queryCandidates: () => pending("Synthetic candidates"),
     getCandidate: () => pending("Candidate details"),
     listRuns: () => pending("Simulation runs"),

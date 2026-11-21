@@ -6,6 +6,7 @@ import type {
   CandidateDetail,
   CandidatePage,
   CandidateQuery,
+  Cohort,
   CohortManifest,
   DataOrigin,
   ProgramDetail,
@@ -35,6 +36,8 @@ export interface UniversityDataSource {
   queryPrograms(query: ProgramQuery, signal?: AbortSignal): Promise<ProgramPage>;
   getProgram(snapshotId: string, programCode: string, signal?: AbortSignal): Promise<ProgramDetail>;
   listCohorts(signal?: AbortSignal): Promise<CohortManifest[]>;
+  /** The whole cohort handoff (candidates and preferences), used for cohort-wide quality checks and score types. */
+  getCohort(cohortId: string, signal?: AbortSignal): Promise<Cohort>;
   queryCandidates(query: CandidateQuery, signal?: AbortSignal): Promise<CandidatePage>;
   getCandidate(cohortId: string, candidateId: string, runId: string | null, signal?: AbortSignal): Promise<CandidateDetail>;
   listRuns(signal?: AbortSignal): Promise<RunListItem[]>;

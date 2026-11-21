@@ -388,6 +388,7 @@ export type RunListItem = Pick<SimulationRun, "run_id" | "status" | "origin" | "
   name: string;
   preset: PresetId;
   admission_year: number;
+  cohort_id: string;
   cohort_size: number;
   created_at: string;
 };
