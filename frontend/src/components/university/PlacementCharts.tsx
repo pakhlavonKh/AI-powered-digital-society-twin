@@ -20,7 +20,7 @@ export function PlacementCharts({ s, origin }: { s: RunSummary; origin: DataOrig
 
   return (
     <div className="uni-charts">
-      <ChartPanel title="Placement overview" origin={origin} units="candidates" axes={{ value: "Synthetic candidates", category: "Outcome" }}
+      <ChartPanel title="Placement overview" origin={origin} units="counts" axes={{ value: "Synthetic candidates", category: "Outcome" }}
         empty={s.total === 0} explanation="How many synthetic candidates were placed, eligible but not placed, or ineligible. Ineligible candidates are excluded from the placement rate.">
         <BarChartCard title="Placement overview" subtitle={`${fmtInt(s.total)} candidates`} valueLabel="candidates" format={count} valueAxisLabel="Candidates (count)"
           series={[{ key: "n", label: "Candidates", slot: "series-1" }]}
@@ -31,7 +31,7 @@ export function PlacementCharts({ s, origin }: { s: RunSummary; origin: DataOrig
           ]} />
       </ChartPanel>
 
-      <ChartPanel title="Preference ranking" origin={origin} units="placed candidates" axes={{ value: "Placed candidates", category: "Preference position received" }}
+      <ChartPanel title="Preference ranking" origin={origin} units="counts" axes={{ value: "Placed candidates", category: "Preference position received" }}
         empty={s.placed === 0} emptyText="No candidate was placed, so there is no preference ranking."
         explanation="Which of their ranked choices placed candidates received. Counts sum to the placed total.">
         <BarChartCard title="Preference ranking" subtitle={`${fmtInt(s.placed)} placed`} valueLabel="placed candidates" format={count} valueAxisLabel="Placed candidates (count)"
@@ -70,7 +70,7 @@ export function PlacementCharts({ s, origin }: { s: RunSummary; origin: DataOrig
         {unknown.length ? <p className="small muted" style={{ margin: 0 }}>Capacity unknown (no reported quota for the year), so not charted: {unknown.map((p) => `${p.label} (${p.program_code})`).join("; ")}.</p> : null}
       </ChartPanel>
 
-      <ChartPanel title="Score type distribution" origin={origin} units="candidates" axes={{ value: "Synthetic candidates", category: "Candidate score type" }}
+      <ChartPanel title="Score type distribution" origin={origin} units="counts" axes={{ value: "Synthetic candidates", category: "Candidate score type" }}
         empty={s.by_score_type.length === 0}
         explanation="Eligible candidates and placements by the candidate's score type. Compare the bars to see which score types face the most competition.">
         <BarChartCard title="Placements by score type" valueLabel="candidates" format={count} valueAxisLabel="Candidates (count)"

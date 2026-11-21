@@ -176,7 +176,7 @@ export function ChartPanel({ title, explanation, units, origin, empty, emptyText
         <div className="unavailable-box" role="note"><h3>{title}</h3><p>{emptyText}</p></div>
       ) : children}
       <p className="small muted chart-note">
-        <span className="axis-note">Value axis: {axes.value} ({units}) · Category axis: {axes.category}.</span>{" "}
+        <span className="axis-note">Value axis: {axes.value}, in {units} · Category axis: {axes.category}.</span>{" "}
         {explanation}
       </p>
       <div className="row small"><SourceBadge origin={origin} />{origin === "fixture" ? <span className="muted">Fixture result: illustrative, not a forecast or official outcome.</span> : null}</div>
