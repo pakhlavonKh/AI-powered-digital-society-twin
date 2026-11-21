@@ -35,6 +35,25 @@ def test_placement_and_university_api_persistence_and_handoff(national_settings,
     assert p1_data["result"]["comparison"] is not None
     assert p1_data["result"]["admitted_count"] > 0
 
+    # 2b. Baseline placement run with identical cohort/seed allows 200 OK paired compare
+    p_base = c.post(
+        "/api/v2/placement/runs",
+        json={
+            "cohort_size": 80,
+            "seed": 42,
+            "compare_baseline": False,
+        },
+    )
+    assert p_base.status_code == 201, p_base.text
+    matched_cmp = c.post(
+        "/api/v2/placement/compare",
+        json={"baseline_run_id": p_base.json()["run_id"], "policy_run_id": p1_data["run_id"]},
+    )
+    assert matched_cmp.status_code == 200, matched_cmp.text
+    cmp_body = matched_cmp.json()
+    assert cmp_body["comparison"]["transitions"]["total_candidates"] == 80
+    assert cmp_body["summary"]["osym_verified"] is False
+
     # 3. TÜİK-anchored placement run linked to a persisted synthetic population
     p2 = c.post(
         "/api/v2/placement/runs",
@@ -101,6 +120,18 @@ def test_placement_and_university_api_persistence_and_handoff(national_settings,
         assert u1_data["run_id"] in {item["run_id"] for item in u_list["items"]}
         u_detail = restarted.get(f"/api/v2/university/runs/{u1_data['run_id']}").json()
         assert u_detail["result_sha256"] == u1_data["result_sha256"]
+
+        # 8. Built-in scenario YAML executes directly via /api/v2/university/runs & 404/422 errors are structured
+        u_sc = restarted.post(
+            "/api/v2/university/runs",
+            json={"scenario_id": "uni_tuition_hike_001", "cohort_size": 50, "semester_count": 2, "replications": 2},
+        )
+        assert u_sc.status_code == 201, u_sc.text
+        assert u_sc.json()["scenario_id"] == "uni_tuition_hike_001"
+        assert restarted.get("/api/v2/placement/runs/uplace-nope").status_code == 404
+        assert restarted.get("/api/v2/university/runs/univ-nope").status_code == 404
+        assert restarted.post("/api/v2/placement/runs", json={"scenario_id": "nope_sc"}).status_code == 404
+        assert restarted.post("/api/v2/university/runs", json={"cohort_size": 5}).status_code == 422
 
 
 def test_university_mutations_require_loopback(settings):

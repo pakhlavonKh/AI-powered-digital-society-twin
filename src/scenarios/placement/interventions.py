@@ -193,7 +193,7 @@ def apply_intervention(
     elif intervention.rule_fidelity != "verified_osym":
         rule_updates["rule_fidelity"] = intervention.rule_fidelity
 
-    new_ruleset = ruleset.model_copy(update=rule_updates, deep=True)
+    new_ruleset = PlacementRuleset.model_validate({**ruleset.model_dump(), **rule_updates})
     metadata = {
         "intervention_applied": True,
         "tuition_change_pct": intervention.tuition_change_pct,
