@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { PopulationGate, useCapabilities } from "@/components/national/common";
@@ -719,6 +720,14 @@ function Builder({ populationId }: { populationId: string }) {
               >
                 Load Template
               </button>
+              {activeScenario && activeScenario.category.startsWith("university_") ? (
+                <Link
+                  className="button small"
+                  href={withPop("/university", pop, { scenario: activeScenario.scenario_id })}
+                >
+                  Open in University Sim →
+                </Link>
+              ) : null}
             </div>
           </div>
 

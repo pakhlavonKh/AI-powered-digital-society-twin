@@ -848,6 +848,52 @@ class NationalService:
                 "persona_fields": {"all": list(PERSON_FIELDS), "default_visible": list(DEFAULT_VISIBLE)},
                 "groupable": list(GROUPABLE)}
 
+    # ================================================================ university placement & policy simulations
+    def placement_programs(self) -> dict:
+        from societytwin.national.university_service import placement_programs_catalog
+
+        return placement_programs_catalog()
+
+    def run_placement_simulation(self, req) -> dict:
+        from societytwin.national.university_service import run_placement_workbench
+
+        return run_placement_workbench(self, req)
+
+    def list_placement_runs(self) -> dict:
+        from societytwin.national.university_service import list_placement_runs_workbench
+
+        return list_placement_runs_workbench(self)
+
+    def get_placement_run(self, run_id: str) -> dict:
+        from societytwin.national.university_service import get_placement_run_workbench
+
+        return get_placement_run_workbench(self, run_id)
+
+    def compare_placement_runs(self, req) -> dict:
+        from societytwin.national.university_service import compare_placement_runs_workbench
+
+        return compare_placement_runs_workbench(self, req)
+
+    def run_university_simulation_job(self, req) -> dict:
+        from societytwin.national.university_service import run_university_workbench
+
+        return run_university_workbench(self, req)
+
+    def list_university_runs(self) -> dict:
+        from societytwin.national.university_service import list_university_runs_workbench
+
+        return list_university_runs_workbench(self)
+
+    def get_university_run(self, run_id: str) -> dict:
+        from societytwin.national.university_service import get_university_run_workbench
+
+        return get_university_run_workbench(self, run_id)
+
+    def run_university_sweep(self, req) -> dict:
+        from societytwin.national.university_service import run_university_sweep_workbench
+
+        return run_university_sweep_workbench(self, req)
+
 
 def _sum(values) -> float | None:
     values = list(values)

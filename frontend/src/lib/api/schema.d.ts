@@ -1115,6 +1115,154 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/placement/programs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Placement Programs
+         * @description Default hypothetical general-quota placement program catalog (osym_verified=false).
+         */
+        get: operations["placement_programs_api_v2_placement_programs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/placement/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Placement Runs List
+         * @description List persisted university placement simulation runs.
+         */
+        get: operations["placement_runs_list_api_v2_placement_runs_get"];
+        put?: never;
+        /**
+         * Placement Run Create
+         * @description Execute an offline deterministic university placement run (with optional baseline comparison).
+         */
+        post: operations["placement_run_create_api_v2_placement_runs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/placement/runs/{run_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Placement Run Get
+         * @description Retrieve full persisted placement run outcomes, comparison, and handoff payload.
+         */
+        get: operations["placement_run_get_api_v2_placement_runs__run_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/placement/compare": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Placement Runs Compare
+         * @description Compare two persisted placement runs executed on the identical candidate cohort.
+         */
+        post: operations["placement_runs_compare_api_v2_placement_compare_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/university/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * University Runs List
+         * @description List persisted multi-semester university policy runs.
+         */
+        get: operations["university_runs_list_api_v2_university_runs_get"];
+        put?: never;
+        /**
+         * University Run Create
+         * @description Execute a multi-semester post-admission policy simulation (synthetic/uncalibrated defaults).
+         */
+        post: operations["university_run_create_api_v2_university_runs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/university/runs/{run_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * University Run Get
+         * @description Retrieve a persisted multi-semester university simulation run and CRN comparison.
+         */
+        get: operations["university_run_get_api_v2_university_runs__run_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/university/sweep": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * University Sweep Run
+         * @description Sweep tuition percentage sensitivity curves with paired CRN replications.
+         */
+        post: operations["university_sweep_run_api_v2_university_sweep_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2439,6 +2587,109 @@ export interface components {
             /** Synthetic Label */
             synthetic_label: string;
         };
+        /** PlacementCompareRequest */
+        PlacementCompareRequest: {
+            /** Baseline Run Id */
+            baseline_run_id: string;
+            /** Policy Run Id */
+            policy_run_id: string;
+        };
+        /**
+         * PlacementRuleset
+         * @description Versioned rules governing eligibility, baraj checks, score resolution, and ties.
+         */
+        PlacementRuleset: {
+            /**
+             * Ruleset Id
+             * @default hypothetical_yks_v1
+             */
+            ruleset_id: string;
+            /**
+             * Rule Fidelity
+             * @default hypothetical_simplified
+             * @enum {string}
+             */
+            rule_fidelity: "hypothetical_simplified" | "calibrated_synthetic" | "verified_osym";
+            /**
+             * Osym Verified
+             * @default false
+             */
+            osym_verified: boolean;
+            /**
+             * Max Preferences
+             * @default 24
+             */
+            max_preferences: number;
+            /**
+             * Strict Preference Cap
+             * @default false
+             */
+            strict_preference_cap: boolean;
+            /**
+             * Duplicate Preference Policy
+             * @default deduplicate_keep_first
+             * @enum {string}
+             */
+            duplicate_preference_policy: "deduplicate_keep_first" | "reject_candidate";
+            /**
+             * Require Tyt For Bachelor
+             * @default false
+             */
+            require_tyt_for_bachelor: boolean;
+            /**
+             * Derive Ranks From Cohort
+             * @default true
+             */
+            derive_ranks_from_cohort: boolean;
+            /**
+             * Prior Placement Obp Multiplier
+             * @default 0.5
+             */
+            prior_placement_obp_multiplier: number;
+            /**
+             * Score Precision Decimals
+             * @default 5
+             */
+            score_precision_decimals: number;
+            /**
+             * Rank Thresholds
+             * @description Success-rank ceilings by baraj_group; illustrative placeholders unless osym_verified=True.
+             */
+            rank_thresholds?: {
+                [key: string]: number;
+            };
+            tie_break_policy?: components["schemas"]["TieBreakPolicy"];
+            /** Source Note */
+            source_note?: string | null;
+            /** Osym Kilavuz Year */
+            osym_kilavuz_year?: number | null;
+            /** Source Sha256 */
+            source_sha256?: string | null;
+        };
+        /** PlacementRunRequest */
+        PlacementRunRequest: {
+            /** Scenario Id */
+            scenario_id?: string | null;
+            /** Population Id */
+            population_id?: string | null;
+            /**
+             * Cohort Size
+             * @default 200
+             */
+            cohort_size: number;
+            /**
+             * Seed
+             * @default 42
+             */
+            seed: number;
+            /**
+             * Compare Baseline
+             * @default true
+             */
+            compare_baseline: boolean;
+            intervention?: components["schemas"]["UniversityPolicyIntervention"] | null;
+            ruleset?: components["schemas"]["PlacementRuleset"] | null;
+        };
         /**
          * PolicyConfig
          * @description High-level policy category and configuration.
@@ -3306,6 +3557,44 @@ export interface components {
             /** Content Hash */
             content_hash: string | null;
         };
+        /**
+         * TieBreakPolicy
+         * @description Explicit, total-order tie-breaking policy for boundary candidates.
+         */
+        TieBreakPolicy: {
+            /**
+             * Use Raw Score
+             * @default true
+             */
+            use_raw_score: boolean;
+            /**
+             * Use Obp
+             * @default true
+             */
+            use_obp: boolean;
+            /**
+             * Prefer Earlier Choice
+             * @default false
+             */
+            prefer_earlier_choice: boolean;
+            /**
+             * Age Tie Rule
+             * @default none
+             * @enum {string}
+             */
+            age_tie_rule: "none" | "younger_first" | "older_first";
+            /**
+             * Terminal Tie Breaker
+             * @default canonical_id
+             * @enum {string}
+             */
+            terminal_tie_breaker: "canonical_id" | "seeded_hash";
+            /**
+             * Tie Seed
+             * @default 42
+             */
+            tie_seed: number;
+        };
         /** Trial */
         Trial: {
             /** Label */
@@ -3389,6 +3678,227 @@ export interface components {
             /** Reason */
             reason: string;
         };
+        /**
+         * UniversityPolicyIntervention
+         * @description Economic, capacity, and academic parameters for university placement and policy scenarios.
+         */
+        UniversityPolicyIntervention: {
+            /** Tuition Change Pct */
+            tuition_change_pct?: number | null;
+            /** Tuition Overrides */
+            tuition_overrides?: {
+                [key: string]: number;
+            };
+            /** Aid Budget Change Pct */
+            aid_budget_change_pct?: number | null;
+            /** Base Aid Budget */
+            base_aid_budget?: number | null;
+            /** Aid Income Eligibility Max */
+            aid_income_eligibility_max?: number | null;
+            /** Max Grant Per Student */
+            max_grant_per_student?: number | null;
+            /** Installment Count */
+            installment_count?: number | null;
+            /** Installment Upfront Share */
+            installment_upfront_share?: number | null;
+            /**
+             * Affordability Filter Mode
+             * @default none
+             * @enum {string}
+             */
+            affordability_filter_mode: "none" | "hard_exclude" | "utility_rerank";
+            /** Capacity Change Pct */
+            capacity_change_pct?: number | null;
+            /**
+             * Capacity Rounding
+             * @default floor
+             * @enum {string}
+             */
+            capacity_rounding: "floor" | "nearest" | "largest_remainder";
+            /** Program Capacity Overrides */
+            program_capacity_overrides?: {
+                [key: string]: number;
+            };
+            /** Closed Programs */
+            closed_programs?: string[];
+            /** Rank Threshold Overrides */
+            rank_threshold_overrides?: {
+                [key: string]: number;
+            };
+            /** Min Score Overrides */
+            min_score_overrides?: {
+                [key: string]: number;
+            };
+            /**
+             * Apply Prior Placement Obp Penalty
+             * @default false
+             */
+            apply_prior_placement_obp_penalty: boolean;
+            /** Attendance Min Pct */
+            attendance_min_pct?: number | null;
+            /** Grading Difficulty Shift */
+            grading_difficulty_shift?: number | null;
+            /**
+             * Semester Count
+             * @default 1
+             */
+            semester_count: number;
+            /**
+             * Replications
+             * @default 1
+             */
+            replications: number;
+            /** Ruleset Id */
+            ruleset_id?: string | null;
+            /**
+             * Rule Fidelity
+             * @default hypothetical_simplified
+             * @enum {string}
+             */
+            rule_fidelity: "hypothetical_simplified" | "calibrated_synthetic" | "verified_osym";
+            /**
+             * Osym Verified
+             * @default false
+             */
+            osym_verified: boolean;
+        };
+        /**
+         * UniversityRuleset
+         * @description Academic, attendance, grading, and financial rules for multi-semester execution.
+         */
+        UniversityRuleset: {
+            /**
+             * Ruleset Id
+             * @default hypothetical_uni_rules_v1
+             */
+            ruleset_id: string;
+            /**
+             * Degree Credits Required
+             * @default 120
+             */
+            degree_credits_required: number;
+            /**
+             * Credits Per Course
+             * @default 6
+             */
+            credits_per_course: number;
+            /**
+             * Full Load Courses
+             * @default 5
+             */
+            full_load_courses: number;
+            /**
+             * Reduced Load Courses
+             * @default 3
+             */
+            reduced_load_courses: number;
+            /**
+             * Attendance Min Pct
+             * @default 70
+             */
+            attendance_min_pct: number;
+            /**
+             * Passing Grade Min
+             * @default 2
+             */
+            passing_grade_min: number;
+            /**
+             * Min Graduation Gpa
+             * @default 2
+             */
+            min_graduation_gpa: number;
+            /**
+             * Repeat Policy
+             * @default replace_highest
+             * @enum {string}
+             */
+            repeat_policy: "replace_highest" | "average_all";
+            /**
+             * Max Stop Out Semesters
+             * @default 2
+             */
+            max_stop_out_semesters: number;
+            /**
+             * Transfer Tuition Discount Pct
+             * @default 50
+             */
+            transfer_tuition_discount_pct: number;
+            /**
+             * Default Hold Threshold
+             * @default 5000
+             */
+            default_hold_threshold: number;
+            /**
+             * Osym Verified
+             * @default false
+             */
+            osym_verified: boolean;
+            /**
+             * Coefficients Calibrated
+             * @default false
+             */
+            coefficients_calibrated: boolean;
+            /** Source Note */
+            source_note?: string | null;
+        };
+        /** UniversityRunRequest */
+        UniversityRunRequest: {
+            /** Scenario Id */
+            scenario_id?: string | null;
+            /** Placement Run Id */
+            placement_run_id?: string | null;
+            /**
+             * Cohort Size
+             * @default 200
+             */
+            cohort_size: number;
+            /** Semester Count */
+            semester_count?: number | null;
+            /** Replications */
+            replications?: number | null;
+            /**
+             * Seed
+             * @default 42
+             */
+            seed: number;
+            /**
+             * Compare Baseline
+             * @default true
+             */
+            compare_baseline: boolean;
+            intervention?: components["schemas"]["UniversityPolicyIntervention"] | null;
+            ruleset?: components["schemas"]["UniversityRuleset"] | null;
+            weights?: components["schemas"]["UtilityWeights"] | null;
+        };
+        /** UniversitySweepRequest */
+        UniversitySweepRequest: {
+            /** Placement Run Id */
+            placement_run_id?: string | null;
+            /**
+             * Cohort Size
+             * @default 160
+             */
+            cohort_size: number;
+            /**
+             * Semester Count
+             * @default 4
+             */
+            semester_count: number;
+            /**
+             * Replications
+             * @default 5
+             */
+            replications: number;
+            /**
+             * Seed
+             * @default 42
+             */
+            seed: number;
+            /** Tuition Pcts */
+            tuition_pcts?: number[];
+            /** Aid Budget Pct */
+            aid_budget_pct?: number | null;
+        };
         /** Usage */
         Usage: {
             /** N Input Tokens */
@@ -3409,6 +3919,51 @@ export interface components {
             request_id: string | null;
             /** Billed Cost Usd */
             billed_cost_usd: number | null;
+        };
+        /**
+         * UtilityWeights
+         * @description Random-utility multinomial logit coefficients (uncalibrated defaults unless stated).
+         */
+        UtilityWeights: {
+            /** Beta Intercepts */
+            beta_intercepts?: {
+                [key: string]: number;
+            };
+            /**
+             * Beta Net Cost
+             * @default -0.32
+             */
+            beta_net_cost: number;
+            /**
+             * Beta Expected Credits
+             * @default 0.08
+             */
+            beta_expected_credits: number;
+            /**
+             * Beta Expected Gpa
+             * @default 0.45
+             */
+            beta_expected_gpa: number;
+            /**
+             * Beta Time To Degree
+             * @default -0.18
+             */
+            beta_time_to_degree: number;
+            /**
+             * Beta Personal
+             * @default 1.1
+             */
+            beta_personal: number;
+            /**
+             * Coefficients Calibrated
+             * @default false
+             */
+            coefficients_calibrated: boolean;
+            /**
+             * Calibration Note
+             * @default Default synthetic beta coefficients; estimate and validate against historical institutional transitions before empirical claims.
+             */
+            calibration_note: string;
         };
         /** ValidationError */
         ValidationError: {
@@ -6568,6 +7123,260 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    placement_programs_api_v2_placement_programs_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    placement_runs_list_api_v2_placement_runs_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    placement_run_create_api_v2_placement_runs_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlacementRunRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    placement_run_get_api_v2_placement_runs__run_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    placement_runs_compare_api_v2_placement_compare_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlacementCompareRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    university_runs_list_api_v2_university_runs_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    university_run_create_api_v2_university_runs_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UniversityRunRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    university_run_get_api_v2_university_runs__run_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    university_sweep_run_api_v2_university_sweep_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UniversitySweepRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
