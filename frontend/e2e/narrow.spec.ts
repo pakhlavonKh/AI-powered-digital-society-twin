@@ -2,7 +2,9 @@ import { expect, test } from "@playwright/test";
 
 test("narrow screens have no horizontal page scroll and a working menu", async ({ page }) => {
   for (const path of ["/", "/population", "/cohorts", "/personas", "/experiments/new", "/experiments", "/results", "/validation", "/data-sources", "/settings",
-    "/historical", "/historical/personas?record=TST2099_000001", "/historical/results/imp_ab_complete"]) {
+    "/historical", "/historical/personas?record=TST2099_000001", "/historical/results/imp_ab_complete",
+    "/university/programs", "/university/programs?program=001010101", "/university/candidates?candidate=candidate-00000001", "/university/scenarios",
+    "/university/results", "/university/compare"]) {
     await page.goto(path);
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);

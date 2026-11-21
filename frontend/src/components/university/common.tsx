@@ -125,7 +125,7 @@ export function DataQualityPanel({ title = "Data quality", records, recordLabel 
       </div>
       <details open={open}>
         <summary>Record-level findings ({fmtInt(findings.length)})</summary>
-        <div className="details-body"><ValidationList findings={findings} title="Findings" initiallyOpen={false} /></div>
+        <div className="details-body"><ValidationList findings={findings} title="Findings" /></div>
       </details>
     </section>
   );

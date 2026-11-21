@@ -29,7 +29,7 @@ export function ProgramTable({ rows, sort, direction, onSort, onSelect, selected
             const above = r.issues.some((i) => i.issue_code === "placed_above_quota");
             const errors = r.issues.filter((i) => i.severity === "error").length;
             return (
-              <tr key={r.key} aria-selected={selected === r.program.program_code ? true : undefined} className={selected === r.program.program_code ? "is-selected" : undefined}>
+              <tr key={r.key} className={selected === r.program.program_code ? "is-selected" : undefined}>
                 <td className="nowrap"><code>{r.program.program_code}</code></td>
                 <td>{r.university.name_original}<div className="small muted">Type: <Value value={r.university.university_type} /></div></td>
                 <th scope="row">

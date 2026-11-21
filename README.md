@@ -179,6 +179,7 @@ Details and justifications: [docs/architecture.md](docs/architecture.md).
 | [Data handling](data/README.md) | Rules for the data folder |
 | [National pipeline](docs/national-pipeline.md) | Türkiye-wide generator, data workflow, validation, cohorts, personas, experiments, API, limitations |
 | [Research workbench](docs/research-workbench.md) | Local UI and API setup, configuration, the historical Ankara workbench, gated execution |
+| [University simulation UI](docs/university-simulation-ui.md) | University program, candidate, scenario, results and comparison dashboard (fixture data until the registry and placement APIs exist) |
 | [MatrAIx simulation experiment](experiments/matraix_simulation/README.md) | Setup and running of the Ankara proof-of-concept experiment |
 | [Experiment results](experiments/matraix_simulation/EXPERIMENT_RESULTS.md) | Results of the two-persona A/B run (gpt-4o) |
 

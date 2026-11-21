@@ -1,6 +1,5 @@
 "use client";
 
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/PageHeader";
 import { ErrorState, Loading } from "@/components/States";
 import { CandidateExplorer } from "@/components/university/CandidateExplorer";
@@ -8,6 +7,7 @@ import { FixtureNotice, SnapshotGate } from "@/components/university/Gate";
 import { candidateStateFromParams, candidateStateToParams, type CandidateUrlState } from "@/lib/university/candidates";
 import { useRuns, useUniversitySource } from "@/lib/university/context";
 import type { RegistrySnapshot } from "@/lib/university/types";
+import { useUrlParams } from "@/lib/university/urlState";
 import { useApi } from "@/lib/useApi";
 
 /**
@@ -15,9 +15,7 @@ import { useApi } from "@/lib/useApi";
  * plus the filter parameters in candidateStateToParams.
  */
 function Explorer({ snapshot }: { snapshot: RegistrySnapshot }) {
-  const params = useSearchParams();
-  const router = useRouter();
-  const pathname = usePathname();
+  const { params, update: replace } = useUrlParams();
   const source = useUniversitySource();
   const runs = useRuns();
   const cohorts = useApi(`uni:${source.id}:cohorts`, (signal) => source.listCohorts(signal));
@@ -29,11 +27,6 @@ function Explorer({ snapshot }: { snapshot: RegistrySnapshot }) {
   const runId = runParam === "none" ? null : runParam ?? runs.data[0]?.run_id ?? null;
   const run = runs.data.find((r) => r.run_id === runId);
   const cohortId = run?.cohort_id ?? params.get("cohort") ?? cohorts.data[0]?.cohort_id ?? "";
-  const replace = (mutate: (p: URLSearchParams) => void) => {
-    const next = new URLSearchParams(params.toString());
-    mutate(next);
-    router.replace(`${pathname}${next.toString() ? `?${next.toString()}` : ""}`, { scroll: false });
-  };
   return (
     <CandidateExplorer snapshot={snapshot} cohorts={cohorts.data} runs={runs.data} cohortId={cohortId} runId={run ? run.run_id : null}
       state={candidateStateFromParams(params)} selected={params.get("candidate")}
