@@ -85,7 +85,7 @@ function FindingGroup({ severity, items, open, limit = 50 }: { severity: IssueSe
   const shown = showAll ? items : items.slice(0, limit);
   return (
     <details open={open}>
-      <summary>{SEVERITY[severity].label}s ({fmtInt(items.length)})</summary>
+      <summary>{severity === "info" ? "Info" : `${SEVERITY[severity].label}s`} ({fmtInt(items.length)})</summary>
       <ul className="findings">
         {shown.map((f, i) => (
           <li key={`${f.code}:${f.record ?? ""}:${f.field ?? ""}:${i}`} className={`finding sev-${f.severity}`}>
