@@ -133,6 +133,36 @@ MIGRATIONS: list[tuple[int, str, str]] = [
             created_at TEXT NOT NULL
         );
     """),
+    (3, "university simulations", """
+        CREATE TABLE university_placement_runs (
+            run_id TEXT PRIMARY KEY,
+            scenario_id TEXT,
+            population_id TEXT,
+            request_hash TEXT NOT NULL,
+            result_sha256 TEXT NOT NULL,
+            osym_verified INTEGER NOT NULL,
+            request_json TEXT NOT NULL,
+            result_json TEXT NOT NULL,
+            summary_json TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        );
+        CREATE INDEX university_placement_runs_created ON university_placement_runs(created_at DESC);
+        CREATE TABLE university_policy_runs (
+            run_id TEXT PRIMARY KEY,
+            scenario_id TEXT,
+            placement_run_id TEXT REFERENCES university_placement_runs(run_id),
+            request_hash TEXT NOT NULL,
+            result_sha256 TEXT NOT NULL,
+            osym_verified INTEGER NOT NULL,
+            coefficients_calibrated INTEGER NOT NULL,
+            request_json TEXT NOT NULL,
+            result_json TEXT NOT NULL,
+            comparison_json TEXT,
+            summary_json TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        );
+        CREATE INDEX university_policy_runs_created ON university_policy_runs(created_at DESC);
+    """),
 ]
 
 

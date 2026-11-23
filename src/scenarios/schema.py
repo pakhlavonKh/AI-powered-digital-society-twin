@@ -26,6 +26,15 @@ TEMPLATE_FIELDS: tuple[str, ...] = (
     "effective_date",
 )
 
+SimulationMode = Literal[
+    "survey_experiment",
+    "university_placement",
+    "university_decision_hybrid",
+]
+CapacityRoundingMode = Literal["floor", "nearest", "largest_remainder"]
+AffordabilityFilterMode = Literal["none", "hard_exclude", "utility_rerank"]
+RuleFidelity = Literal["hypothetical_simplified", "calibrated_synthetic", "verified_osym"]
+
 
 def template_fields(text: str) -> list[str]:
     """Return the placeholder names used in ``text``; raise ValueError on malformed templates."""
@@ -76,6 +85,62 @@ class ScenarioLocation(BaseModel):
     nuts2_code: str | None = Field(default=None, pattern=r"^[A-Z0-9]{4,5}$")
 
 
+class UniversityPolicyIntervention(BaseModel):
+    """Economic, capacity, and academic parameters for university placement and policy scenarios."""
+    model_config = ConfigDict(extra="forbid")
+
+    # Economic levers (UNI-001, UNI-002, UNI-006)
+    tuition_change_pct: float | None = Field(default=None, gt=-100.0, le=1000.0)
+    tuition_overrides: dict[str, float] = Field(default_factory=dict)
+    aid_budget_change_pct: float | None = Field(default=None, gt=-100.0, le=1000.0)
+    base_aid_budget: float | None = Field(default=None, ge=0.0)
+    aid_income_eligibility_max: float | None = Field(default=None, ge=0.0)
+    max_grant_per_student: float | None = Field(default=None, ge=0.0)
+    installment_count: int | None = Field(default=None, ge=1, le=24)
+    installment_upfront_share: float | None = Field(default=None, gt=0.0, le=1.0)
+    affordability_filter_mode: AffordabilityFilterMode = "none"
+
+    # Placement & capacity levers (UNI-005, OSYM-BARAJ, OBP penalty)
+    capacity_change_pct: float | None = Field(default=None, ge=-100.0, le=1000.0)
+    capacity_rounding: CapacityRoundingMode = "floor"
+    program_capacity_overrides: dict[str, int] = Field(default_factory=dict)
+    closed_programs: list[str] = Field(default_factory=list)
+    rank_threshold_overrides: dict[str, int] = Field(default_factory=dict)
+    min_score_overrides: dict[str, float] = Field(default_factory=dict)
+    apply_prior_placement_obp_penalty: bool = False
+
+    # Longitudinal / post-admission levers (shared contract for Milestone 2 university module)
+    attendance_min_pct: float | None = Field(default=None, ge=0.0, le=100.0)
+    grading_difficulty_shift: float | None = Field(default=None, ge=-4.0, le=4.0)
+    semester_count: int = Field(default=1, ge=1, le=16)
+    replications: int = Field(default=1, ge=1, le=1000)
+
+    # Rule provenance & non-official disclosure
+    ruleset_id: str | None = Field(default=None, max_length=64)
+    rule_fidelity: RuleFidelity = "hypothetical_simplified"
+    osym_verified: bool = False
+
+    @model_validator(mode="after")
+    def _validate_university_intervention(self) -> UniversityPolicyIntervention:
+        for pid, amount in self.tuition_overrides.items():
+            if amount < 0:
+                raise ValueError(f"tuition_overrides[{pid!r}] cannot be negative ({amount})")
+        for pid, cap in self.program_capacity_overrides.items():
+            if cap < 0:
+                raise ValueError(f"program_capacity_overrides[{pid!r}] cannot be negative ({cap})")
+        for group, rank in self.rank_threshold_overrides.items():
+            if rank < 1:
+                raise ValueError(f"rank_threshold_overrides[{group!r}] must be >= 1, got {rank}")
+        for pid, score in self.min_score_overrides.items():
+            if score < 0:
+                raise ValueError(f"min_score_overrides[{pid!r}] cannot be negative ({score})")
+        if self.osym_verified and self.rule_fidelity != "verified_osym":
+            raise ValueError("osym_verified=True requires rule_fidelity='verified_osym'")
+        if self.rule_fidelity == "verified_osym" and not self.osym_verified:
+            raise ValueError("rule_fidelity='verified_osym' requires osym_verified=True")
+        return self
+
+
 class PolicyParameters(BaseModel):
     """Parameters specific to a public policy intervention."""
     model_config = ConfigDict(extra="forbid")
@@ -87,7 +152,7 @@ class PolicyParameters(BaseModel):
         description="Percentage change in tariff (e.g. 20.0 for +20%; negative for a reduction)",
     )
     currency: str = Field(default="TL", max_length=10)
-    fare_category: str | None = Field(default="full_adult_standard", max_length=64)
+    fare_category: str | None = Field(default=None, max_length=64)
     effective_date: str | None = Field(default=None, max_length=32)
     subsidized_exemptions_note: str | None = Field(default=None, max_length=1000)
     policy_summary: str | None = Field(default=None, max_length=2000, description="Summary or rationale of the policy intervention")
@@ -102,7 +167,40 @@ class PolicyParameters(BaseModel):
                     f"Inconsistent fare parameters: baseline {self.baseline_fare} with {self.increase_percentage}% "
                     f"increase implies {expected_new:.2f}, but new_fare was set to {self.new_fare}"
                 )
+        if "simulation_mode" in self.custom_details:
+            mode = self.custom_details["simulation_mode"]
+            if mode not in ("survey_experiment", "university_placement", "university_decision_hybrid"):
+                raise ValueError(
+                    f"Invalid simulation_mode {mode!r} in custom_details; expected one of "
+                    "'survey_experiment', 'university_placement', 'university_decision_hybrid'."
+                )
+        if "university_intervention" in self.custom_details and self.custom_details["university_intervention"] is not None:
+            raw_uni = self.custom_details["university_intervention"]
+            validated = (
+                raw_uni
+                if isinstance(raw_uni, UniversityPolicyIntervention)
+                else UniversityPolicyIntervention.model_validate(raw_uni)
+            )
+            self.custom_details["university_intervention"] = validated.model_dump(mode="json", exclude_none=True)
         return self
+
+    @property
+    def simulation_mode(self) -> SimulationMode:
+        """Execution mode declared in custom_details, defaulting to 'survey_experiment'."""
+        raw = self.custom_details.get("simulation_mode", "survey_experiment")
+        if raw in ("survey_experiment", "university_placement", "university_decision_hybrid"):
+            return raw  # type: ignore[return-value]
+        return "survey_experiment"
+
+    @property
+    def university_intervention(self) -> UniversityPolicyIntervention | None:
+        """Return typed UniversityPolicyIntervention when configured in custom_details."""
+        raw = self.custom_details.get("university_intervention")
+        if raw is None:
+            return None
+        if isinstance(raw, UniversityPolicyIntervention):
+            return raw
+        return UniversityPolicyIntervention.model_validate(raw)
 
     def resolved_fares(self) -> dict[str, float | None]:
         """Baseline, new fare and percentage with the missing one derived from the other two.
@@ -174,19 +272,35 @@ class QuestionConfig(BaseModel):
 
     id: str = Field(pattern=ID_PATTERN, description="Unique alphanumeric identifier for the question")
     text: str = Field(min_length=3, max_length=2000, description="The prompt/question text")
-    type: Literal["single_choice", "multiple_choice"] = Field(default="single_choice")
-    options: list[QuestionOption] = Field(min_length=2, max_length=20, description="Permitted answer options")
+    type: Literal["single_choice", "multiple_choice", "free_text"] = Field(default="single_choice")
+    options: list[QuestionOption] = Field(
+        default_factory=list,
+        max_length=20,
+        description="Permitted answer options (required for choice questions; empty for free_text)",
+    )
+    min_length: int | None = Field(default=None, ge=1, le=5000, description="Minimum characters required for free_text")
+    max_length: int | None = Field(default=2000, ge=1, le=10000, description="Maximum characters allowed for free_text")
     allow_other: bool = Field(default=False, description="Whether free-text input is allowed for an 'other' option")
     ask_rationale: bool = Field(default=True, description="Whether the agent is asked to supply a 1-2 sentence reason")
 
     @model_validator(mode="after")
     def _validate_unique_options(self) -> QuestionConfig:
-        option_ids = [opt.id for opt in self.options]
-        if len(option_ids) != len(set(option_ids)):
-            duplicates = [oid for oid in option_ids if option_ids.count(oid) > 1]
-            raise ValueError(f"Question '{self.id}' contains duplicate option IDs: {set(duplicates)}")
-        if self.allow_other and "other" not in option_ids:
-            raise ValueError(f"Question '{self.id}' specifies allow_other=True but has no option with id 'other'")
+        if self.type in ("single_choice", "multiple_choice"):
+            if len(self.options) < 2:
+                raise ValueError(
+                    f"Question '{self.id}' of type '{self.type}' must have at least 2 options, found {len(self.options)}"
+                )
+            option_ids = [opt.id for opt in self.options]
+            if len(option_ids) != len(set(option_ids)):
+                duplicates = [oid for oid in option_ids if option_ids.count(oid) > 1]
+                raise ValueError(f"Question '{self.id}' contains duplicate option IDs: {set(duplicates)}")
+            if self.allow_other and "other" not in option_ids:
+                raise ValueError(f"Question '{self.id}' specifies allow_other=True but has no option with id 'other'")
+        elif self.type == "free_text":
+            if self.allow_other:
+                raise ValueError(f"Question '{self.id}' of type 'free_text' cannot specify allow_other=True")
+            if self.min_length is not None and self.max_length is not None and self.min_length > self.max_length:
+                raise ValueError(f"min_length ({self.min_length}) cannot exceed max_length ({self.max_length})")
         return self
 
 
@@ -204,12 +318,28 @@ class ScenarioConfig(BaseModel):
     target_population: PopulationFilterConfig = Field(default_factory=PopulationFilterConfig)
     questions: list[QuestionConfig] = Field(min_length=1, max_length=30)
 
+    @property
+    def effective_simulation_mode(self) -> SimulationMode:
+        """Execution mode declared for this scenario."""
+        return self.policy.parameters.simulation_mode
+
+    @property
+    def university_intervention(self) -> UniversityPolicyIntervention | None:
+        """Typed university intervention payload if present."""
+        return self.policy.parameters.university_intervention
+
     @model_validator(mode="after")
     def _validate_unique_questions(self) -> ScenarioConfig:
         q_ids = [q.id for q in self.questions]
         if len(q_ids) != len(set(q_ids)):
             duplicates = [qid for qid in q_ids if q_ids.count(qid) > 1]
             raise ValueError(f"Scenario '{self.scenario_id}' contains duplicate question IDs: {set(duplicates)}")
+        uni = self.policy.parameters.university_intervention
+        if uni is not None and uni.osym_verified:
+            if self.metadata.hypothetical:
+                raise ValueError("An osym_verified=True scenario cannot mark metadata.hypothetical=True.")
+            if not (self.metadata.source_note and self.metadata.source_note.strip()):
+                raise ValueError("An osym_verified=True scenario must cite its official source in metadata.source_note.")
         return self
 
     @model_validator(mode="after")
@@ -274,6 +404,55 @@ class ScenarioConfig(BaseModel):
         raise UnknownQuestionError(
             f"Scenario '{self.scenario_id}' has no question '{question_id}'. "
             f"Available question IDs: {[q.id for q in self.questions]}"
+        )
+
+
+class PlacementScenarioConfig(BaseModel):
+    """Standalone university placement scenario model permitting empty survey questions."""
+    model_config = ConfigDict(extra="forbid")
+
+    scenario_id: str = Field(pattern=ID_PATTERN)
+    version: str = Field(default="1.0.0", pattern=r"^\d+\.\d+\.\d+$")
+    simulation_mode: SimulationMode = "university_placement"
+    name: str = Field(min_length=3, max_length=160)
+    description: str = Field(min_length=10, max_length=5000)
+    location: ScenarioLocation
+    metadata: ScenarioMetadata = Field(default_factory=ScenarioMetadata)
+    policy: PolicyConfig
+    target_population: PopulationFilterConfig = Field(default_factory=PopulationFilterConfig)
+    university_intervention: UniversityPolicyIntervention = Field(default_factory=UniversityPolicyIntervention)
+    questions: list[QuestionConfig] = Field(default_factory=list, max_length=30)
+
+    @model_validator(mode="after")
+    def _validate_placement_scenario(self) -> PlacementScenarioConfig:
+        if self.simulation_mode != "university_placement" and len(self.questions) < 1:
+            raise ValueError(
+                f"Scenario '{self.scenario_id}' with simulation_mode='{self.simulation_mode}' "
+                "must define at least 1 question."
+            )
+        if self.university_intervention.osym_verified:
+            if self.metadata.hypothetical:
+                raise ValueError("An osym_verified=True scenario cannot mark metadata.hypothetical=True.")
+            if not (self.metadata.source_note and self.metadata.source_note.strip()):
+                raise ValueError("An osym_verified=True scenario must cite its official source in metadata.source_note.")
+        return self
+
+    @classmethod
+    def from_scenario_config(cls, scenario: ScenarioConfig) -> PlacementScenarioConfig:
+        """Build a PlacementScenarioConfig from a ScenarioConfig."""
+        uni = scenario.university_intervention or UniversityPolicyIntervention()
+        return cls(
+            scenario_id=scenario.scenario_id,
+            version=scenario.version,
+            simulation_mode=scenario.effective_simulation_mode,
+            name=scenario.name,
+            description=scenario.description,
+            location=scenario.location,
+            metadata=scenario.metadata,
+            policy=scenario.policy,
+            target_population=scenario.target_population,
+            university_intervention=uni,
+            questions=scenario.questions,
         )
 
 

@@ -74,14 +74,22 @@ class StubBackend:
 
     def run(self, requests: list[CallRequest]) -> list[CallResult]:
         ids = [o.id for o in self.definition.task.options]
+        is_free_text = self.definition.task.response_type == "free_text" or not ids
         out = []
         for r in requests:
             started = time.perf_counter()
-            digest = hashlib.sha256(f"{r.system}\0{r.user}\0{r.sample_index}\0{self.definition.model.seed}".encode()).digest()
-            choice = ids[int.from_bytes(digest[:8], "big") % len(ids)]
-            payload = {"choice": choice, "rationale": "Stub placeholder; not produced by a model."}
-            if choice == "other" and self.definition.task.allow_other_text:
-                payload["other_text"] = "Stub placeholder."
+            if is_free_text:
+                prov = r.persona.get("province_name") or r.persona.get("province_code") or "TR"
+                payload = {
+                    "answer": f"Synthetic resident perspective on {self.definition.scenario.title} as a resident of {prov}.",
+                    "rationale": "Stub placeholder; not produced by a model.",
+                }
+            else:
+                digest = hashlib.sha256(f"{r.system}\0{r.user}\0{r.sample_index}\0{self.definition.model.seed}".encode()).digest()
+                choice = ids[int.from_bytes(digest[:8], "big") % len(ids)]
+                payload = {"choice": choice, "rationale": "Stub placeholder; not produced by a model."}
+                if choice == "other" and self.definition.task.allow_other_text:
+                    payload["other_text"] = "Stub placeholder."
             out.append(CallResult(json.dumps(payload), provider_call=False, latency_ms=round((time.perf_counter() - started) * 1000, 3),
                                   input_tokens=None, output_tokens=None, cost_usd=0.0))
         return out
@@ -124,8 +132,7 @@ class MatraixBackend:
     @property
     def label(self) -> str:
         if self.definition.model.transport == "fake":
-            return ("MatrAIx PersonaJsonSurvey with MatrAIx's fake transport: schema-valid placeholder answers, zero provider "
-                    "calls. Demonstrates the integration, not persona behaviour.")
+            return ("MatrAIx PersonaJsonSurvey (Zero-cost simulation mode: schema-valid synthetic placeholder responses, zero cloud LLM provider calls).")
         return f"MatrAIx PersonaJsonSurvey with live model {self.definition.model.model}."
 
     def _task_dir(self, persona: dict, user_prompt: str) -> Path:
@@ -143,10 +150,11 @@ class MatraixBackend:
             f"# {d.title}\n\nRead the context, then answer the question with one of the listed option ids.\n", encoding="utf-8")
         (task / "input" / "context.md").write_text(context + "\n", encoding="utf-8")
         # MatrAIx renders the questionnaire description as the prompt's context, so it carries the full context text.
+        opts = [{"id": o.id, "label": o.label} for o in d.task.options] if d.task.options else [{"id": "open_response", "label": "Open textual response"}]
         questionnaire = {"schemaVersion": "1.0", "id": "societytwin_task", "title": d.title, "description": context,
                          "askRationale": d.task.ask_rationale,
                          "questions": [{"id": "q_choice", "prompt": d.task.instruction, "type": "single_choice", "required": True,
-                                        "options": [{"id": o.id, "label": o.label} for o in d.task.options]}]}
+                                        "options": opts}]}
         (task / "input" / "questionnaire.yaml").write_text(yaml.safe_dump(questionnaire, allow_unicode=True, sort_keys=False),
                                                            encoding="utf-8")
         return task

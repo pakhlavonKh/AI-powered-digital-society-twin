@@ -16,6 +16,7 @@ export const NAV: { href: string; label: string; icon: string; group: string; ta
   { href: "/cohorts", label: "Cohorts", icon: "cohorts", group: "Population" },
   { href: "/personas", label: "Personas", icon: "persona", group: "Population" },
   { href: "/experiments/new", label: "New Experiment", icon: "experiment", group: "Experiments" },
+  { href: "/university", label: "University Sim", icon: "university", group: "Experiments" },
   { href: "/experiments", label: "Experiments", icon: "layers", group: "Experiments" },
   { href: "/results", label: "Results", icon: "results", group: "Experiments" },
   { href: "/historical", label: "Historical Run3", icon: "archive", group: "Experiments", tag: "Recorded proof of concept",

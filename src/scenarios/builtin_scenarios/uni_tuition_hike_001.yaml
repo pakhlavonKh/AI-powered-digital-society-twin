@@ -1,0 +1,67 @@
+scenario_id: uni_tuition_hike_001
+version: "1.0.0"
+name: Ankara University Tuition +20% (Hypothetical UNI-001)
+description: >-
+  A hypothetical university policy intervention (UNI-001) simulating a 20% annual tuition increase
+  for fee-paying programs in {province_name} while keeping 100% merit-scholarship and state programs
+  tuition-free. Uses simplified/hypothetical rules and does NOT reproduce official ÖSYM placement.
+location:
+  province_code: "06"
+  province_name: Ankara
+  nuts2_code: TR51
+
+metadata:
+  hypothetical: true
+  source_note: >-
+    Synthetic university decision prototype scenario (UNI-001). All tuition amounts and affordability
+    thresholds are illustrative placeholders, not official university or ÖSYM policy data.
+  author: SocietyTwin Scenario Engine Module
+  reference_year: 2025
+
+policy:
+  category: university_policy
+  type: tuition_adjustment
+  parameters:
+    increase_percentage: 20.0
+    currency: TL
+    policy_summary: >-
+      Increase published tuition by 20% with hard affordability exclusion against upfront registration
+      liquidity constraints.
+    custom_details:
+      simulation_mode: university_decision_hybrid
+      university_intervention:
+        tuition_change_pct: 20.0
+        affordability_filter_mode: hard_exclude
+        semester_count: 4
+        replications: 100
+        rule_fidelity: hypothetical_simplified
+        osym_verified: false
+
+target_population:
+  minimum_age: 18
+  maximum_age: 26
+  province_codes:
+    - "06"
+  adult_only: true
+  required_attributes:
+    - age
+    - province_code
+    - sex
+
+questions:
+  - id: q1_enrollment_decision
+    text: "If university tuition in {province_name} increases by {increase_percentage}%, which feasible enrollment decision best fits your household situation?"
+    type: single_choice
+    options:
+      - id: enroll_full_load
+        label: "Enroll full-time as planned"
+      - id: enroll_reduced_load
+        label: "Enroll with a reduced course load or installment plan"
+      - id: transfer_lower_cost_program
+        label: "Transfer to a lower-tuition or scholarship program"
+      - id: pause_stop_out
+        label: "Temporarily pause enrollment (stop-out)"
+      - id: withdraw
+        label: "Withdraw from the university program"
+    allow_other: false
+    ask_rationale: true

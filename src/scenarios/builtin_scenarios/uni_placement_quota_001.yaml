@@ -1,0 +1,65 @@
+scenario_id: uni_placement_quota_001
+version: "1.0.0"
+name: Ankara Hypothetical Placement Quota -15% & Baraj Tightening
+description: >-
+  A hypothetical university placement scenario in {province_name} reducing general-quota program
+  capacities by 15% and tightening the illustrative engineering rank threshold to 200,000.
+  Uses simplified/hypothetical rules and does NOT reproduce official ÖSYM placement outcomes.
+location:
+  province_code: "06"
+  province_name: Ankara
+  nuts2_code: TR51
+
+metadata:
+  hypothetical: true
+  source_note: >-
+    Simplified/hypothetical offline university placement benchmark. Does NOT use verified ÖSYM
+    capacity or kılavuz datasets.
+  author: SocietyTwin Scenario Engine Module
+  reference_year: 2025
+
+policy:
+  category: university_placement
+  type: quota_adjustment
+  parameters:
+    increase_percentage: -15.0
+    currency: TL
+    policy_summary: >-
+      Reduce general quota seats by 15% (floor rounding) and tighten engineering rank threshold to 200,000.
+    custom_details:
+      simulation_mode: university_placement
+      university_intervention:
+        capacity_change_pct: -15.0
+        capacity_rounding: floor
+        rank_threshold_overrides:
+          engineering: 200000
+        affordability_filter_mode: none
+        rule_fidelity: hypothetical_simplified
+        osym_verified: false
+
+target_population:
+  minimum_age: 18
+  maximum_age: 25
+  province_codes:
+    - "06"
+  adult_only: true
+  required_attributes:
+    - age
+    - province_code
+    - sex
+
+questions:
+  - id: q1_placement_preference_response
+    text: "Under this hypothetical 15% seat quota reduction and stricter rank threshold in {province_name}, how would a candidate adjust their preference strategy?"
+    type: single_choice
+    options:
+      - id: keep_preferences
+        label: "Submit original ordered program preferences unchanged"
+      - id: shift_to_scholarship_or_state
+        label: "Prioritize state or full-scholarship programs"
+      - id: broaden_safety_choices
+        label: "Add lower-cutoff safety programs across provinces"
+      - id: defer_next_cycle
+        label: "Wait for the next admission cycle if desired seats are unavailable"
+    allow_other: false
+    ask_rationale: true

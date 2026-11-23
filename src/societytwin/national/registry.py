@@ -173,3 +173,110 @@ class NationalRegistry:
         with transaction(self.conn):
             self.conn.execute("INSERT OR IGNORE INTO response_cache VALUES (?, ?, ?)",
                               (key, json.dumps(payload, ensure_ascii=False), utc_now()))
+
+    # university placement & policy runs (migration 3) ----------------------
+    def insert_placement_run(self, record: dict) -> None:
+        with transaction(self.conn):
+            self.conn.execute(
+                "INSERT INTO university_placement_runs "
+                "(run_id, scenario_id, population_id, request_hash, result_sha256, osym_verified, "
+                "request_json, result_json, summary_json, created_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    record["run_id"],
+                    record.get("scenario_id"),
+                    record.get("population_id"),
+                    record["request_hash"],
+                    record["result_sha256"],
+                    1 if record.get("osym_verified") else 0,
+                    json.dumps(record["request"], ensure_ascii=False),
+                    json.dumps(record["result"], ensure_ascii=False),
+                    json.dumps(record["summary"], ensure_ascii=False),
+                    record["created_at"],
+                ),
+            )
+
+    def _placement_row(self, row, *, include_payload: bool) -> dict:
+        out = {
+            "run_id": row["run_id"],
+            "scenario_id": row["scenario_id"],
+            "population_id": row["population_id"],
+            "request_hash": row["request_hash"],
+            "result_sha256": row["result_sha256"],
+            "osym_verified": bool(row["osym_verified"]),
+            "request": json.loads(row["request_json"]),
+            "summary": json.loads(row["summary_json"]),
+            "created_at": row["created_at"],
+        }
+        if include_payload:
+            out["result"] = json.loads(row["result_json"])
+        return out
+
+    def placement_runs(self, limit: int = 50) -> list[dict]:
+        rows = self.conn.execute(
+            "SELECT * FROM university_placement_runs ORDER BY created_at DESC, run_id DESC LIMIT ?",
+            (limit,),
+        )
+        return [self._placement_row(r, include_payload=False) for r in rows]
+
+    def placement_run(self, run_id: str) -> dict | None:
+        row = self.conn.execute(
+            "SELECT * FROM university_placement_runs WHERE run_id = ?",
+            (run_id,),
+        ).fetchone()
+        return self._placement_row(row, include_payload=True) if row else None
+
+    def insert_university_run(self, record: dict) -> None:
+        with transaction(self.conn):
+            self.conn.execute(
+                "INSERT INTO university_policy_runs "
+                "(run_id, scenario_id, placement_run_id, request_hash, result_sha256, osym_verified, "
+                "coefficients_calibrated, request_json, result_json, comparison_json, summary_json, created_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    record["run_id"],
+                    record.get("scenario_id"),
+                    record.get("placement_run_id"),
+                    record["request_hash"],
+                    record["result_sha256"],
+                    1 if record.get("osym_verified") else 0,
+                    1 if record.get("coefficients_calibrated") else 0,
+                    json.dumps(record["request"], ensure_ascii=False),
+                    json.dumps(record["result"], ensure_ascii=False),
+                    json.dumps(record["comparison"], ensure_ascii=False) if record.get("comparison") is not None else None,
+                    json.dumps(record["summary"], ensure_ascii=False),
+                    record["created_at"],
+                ),
+            )
+
+    def _university_row(self, row, *, include_payload: bool) -> dict:
+        out = {
+            "run_id": row["run_id"],
+            "scenario_id": row["scenario_id"],
+            "placement_run_id": row["placement_run_id"],
+            "request_hash": row["request_hash"],
+            "result_sha256": row["result_sha256"],
+            "osym_verified": bool(row["osym_verified"]),
+            "coefficients_calibrated": bool(row["coefficients_calibrated"]),
+            "request": json.loads(row["request_json"]),
+            "summary": json.loads(row["summary_json"]),
+            "created_at": row["created_at"],
+        }
+        if include_payload:
+            out["result"] = json.loads(row["result_json"])
+            out["comparison"] = json.loads(row["comparison_json"]) if row["comparison_json"] else None
+        return out
+
+    def university_runs(self, limit: int = 50) -> list[dict]:
+        rows = self.conn.execute(
+            "SELECT * FROM university_policy_runs ORDER BY created_at DESC, run_id DESC LIMIT ?",
+            (limit,),
+        )
+        return [self._university_row(r, include_payload=False) for r in rows]
+
+    def university_run(self, run_id: str) -> dict | None:
+        row = self.conn.execute(
+            "SELECT * FROM university_policy_runs WHERE run_id = ?",
+            (run_id,),
+        ).fetchone()
+        return self._university_row(row, include_payload=True) if row else None

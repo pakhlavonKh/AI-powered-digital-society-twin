@@ -29,6 +29,7 @@ try:
         ScenarioConfig,
         ScenarioLocation,
         ScenarioMetadata,
+        UniversityPolicyIntervention,
     )
 except ImportError:
     from societytwin.national.geography import PROVINCES, _BY_NAME, name_key  # type: ignore
@@ -41,6 +42,7 @@ except ImportError:
         ScenarioConfig,
         ScenarioLocation,
         ScenarioMetadata,
+        UniversityPolicyIntervention,
     )
 
 logger = logging.getLogger(__name__)
@@ -172,6 +174,38 @@ def detect_domain_and_category(text: str) -> tuple[str, str]:
         p_type = "fare_increase" if _has_keyword(text, ("increase", "zam", "hike", "raise", "artış")) else "fare_adjustment"
         return "transportation", p_type
 
+    if _has_keyword(
+        text,
+        (
+            "ösym", "osym", "yks", "tyt", "ayt", "ydt", "yerleştirme", "tercih",
+            "kontenjan", "taban puan", "başarı sırası", "baraj", "placement",
+            "burslu", "kırık obp", "seat quota", "admission quota",
+        ),
+    ):
+        if _has_keyword(text, ("kontenjan", "quota", "capacity", "seat", "seats", "kapasite")):
+            return "university_placement", "quota_adjustment"
+        if _has_keyword(text, ("baraj", "rank", "sıra", "başarı sırası", "threshold")):
+            return "university_placement", "rank_threshold_adjustment"
+        return "university_placement", "placement_simulation"
+
+    if _has_keyword(
+        text,
+        (
+            "tuition", "harç", "öğrenim ücreti", "need-based aid", "financial aid",
+            "burs bütçesi", "installment", "taksit", "attendance", "devamsızlık",
+            "course seat", "course seats", "grading", "gpa", "stop-out",
+        ),
+    ):
+        if _has_keyword(text, ("tuition", "harç", "öğrenim ücreti")):
+            return "university_policy", "tuition_adjustment"
+        if _has_keyword(text, ("aid", "burs", "scholarship", "grant")):
+            return "university_policy", "financial_aid"
+        if _has_keyword(text, ("installment", "taksit")):
+            return "university_policy", "installment_plan"
+        if _has_keyword(text, ("attendance", "devamsızlık", "grading", "gpa")):
+            return "university_policy", "academic_rule_change"
+        return "university_policy", "capacity_adjustment"
+
     if _has_keyword(text, ("rent", "housing", "kira", "konut", "ev", "barınma", "apartment", "deprem", "earthquake")):
         p_type = "subsidy" if _has_keyword(text, ("subsidy", "destek", "yardım", "relief")) else "rent_regulation"
         return "housing", p_type
@@ -186,6 +220,110 @@ def detect_domain_and_category(text: str) -> tuple[str, str]:
         return "education", "student_support"
 
     return "public_policy", "policy_intervention"
+
+
+def _extract_signed_pct_near(text: str, anchors: tuple[str, ...]) -> float | None:
+    """Extract a percentage near one of the given domain anchors."""
+    anchor_pat = "|".join(re.escape(a) for a in anchors)
+    patterns = (
+        rf"(?:{anchor_pat})\b[^.;,\n]{{0,40}}?([+-]?\d+(?:\.\d+)?)\s*%",
+        rf"([+-]?\d+(?:\.\d+)?)\s*%\s*(?:[a-zçğıöşüâîû]+\s+){{0,3}}(?:{anchor_pat})\b",
+    )
+    for pat in patterns:
+        m = re.search(pat, text, flags=re.IGNORECASE)
+        if m:
+            val = float(m.group(1))
+            window = text[max(0, m.start() - 25) : min(len(text), m.end() + 25)].lower()
+            if not m.group(1).startswith(("+", "-")) and any(
+                w in window for w in ("cut", "drop", "reduce", "reduction", "decrease", "discount", "indirim", "azalt", "düş")
+            ):
+                return -abs(val)
+            return val
+    return None
+
+
+def _parse_rank_number(raw: str, unit: str | None) -> int:
+    clean = raw.replace(",", "").replace(".", "").replace("_", "")
+    val = int(clean)
+    if unit and unit.lower() in ("k", "bin"):
+        val *= 1000
+    return val
+
+
+def extract_university_parameters(text: str, category: str, global_pct: float | None) -> UniversityPolicyIntervention:
+    """Extract typed economic, capacity, and placement rule levers from natural language."""
+    lower = text.lower()
+    tuition_pct = _extract_signed_pct_near(text, ("tuition", "harç", "öğrenim ücreti", "fee", "fees"))
+    aid_pct = _extract_signed_pct_near(text, ("aid", "need-based aid", "financial aid", "burs", "scholarship", "grant"))
+    cap_pct = _extract_signed_pct_near(text, ("quota", "quotas", "kontenjan", "seat", "seats", "capacity", "kapasite"))
+
+    if tuition_pct is None and global_pct is not None and _has_keyword(text, ("tuition", "harç", "öğrenim ücreti")):
+        tuition_pct = global_pct
+    if aid_pct is None and global_pct is not None and _has_keyword(text, ("aid", "burs", "scholarship", "grant")) and tuition_pct is None:
+        aid_pct = global_pct
+    if cap_pct is None and global_pct is not None and _has_keyword(text, ("quota", "kontenjan", "seat", "seats", "capacity")):
+        cap_pct = global_pct
+
+    installment_count: int | None = None
+    inst_match = re.search(r"(\d+)\s*(?:installments?|taksit)", lower)
+    if inst_match:
+        installment_count = max(1, min(24, int(inst_match.group(1))))
+    elif _has_keyword(text, ("installment", "installments", "taksit")):
+        installment_count = 4
+
+    attendance_min: float | None = None
+    att_to = re.search(r"(?:attendance|devamsızlık)[^.\n]{0,40}?(?:to|→|->)\s*(\d+(?:\.\d+)?)\s*%", lower)
+    if att_to:
+        attendance_min = float(att_to.group(1))
+    else:
+        att_single = re.search(r"(?:attendance|devamsızlık)[^.\n]{0,30}?(\d+(?:\.\d+)?)\s*%", lower)
+        if att_single:
+            attendance_min = float(att_single.group(1))
+
+    rank_overrides: dict[str, int] = {}
+    baraj_aliases = {
+        "medicine": ("medicine", "tıp"),
+        "dentistry": ("dentistry", "diş"),
+        "pharmacy": ("pharmacy", "eczacılık"),
+        "law": ("law", "hukuk"),
+        "engineering": ("engineering", "mühendislik"),
+        "architecture": ("architecture", "mimarlık"),
+        "teaching": ("teaching", "öğretmenlik"),
+    }
+    for group, aliases in baraj_aliases.items():
+        alias_pat = "|".join(re.escape(a) for a in aliases)
+        rank_pat = re.compile(
+            rf"(?:{alias_pat})[^.;\n]{{0,50}}?(?:top|ilk|<=|threshold|baraj|rank|sıra|to)\s*(\d[\d,.]*)\s*(k|bin)?\b(?!\s*%)"
+        )
+        for m in rank_pat.finditer(lower):
+            if _has_keyword(text, ("rank", "baraj", "sıra", "top", "ilk", "threshold")):
+                val = _parse_rank_number(m.group(1), m.group(2))
+                if val >= 100:
+                    rank_overrides[group] = val
+                    break
+
+    apply_obp_penalty = any(p in lower for p in ("kırık obp", "prior placement penalty", "obp penalty"))
+
+    affordability_mode = "none"
+    if "utility rerank" in lower or "rerank" in lower or "re-rank" in lower:
+        affordability_mode = "utility_rerank"
+    elif (tuition_pct is not None or aid_pct is not None or installment_count is not None) and category == "university_placement":
+        affordability_mode = "hard_exclude"
+    elif "cannot afford" in lower or "affordability" in lower or "liquidity" in lower:
+        affordability_mode = "hard_exclude"
+
+    return UniversityPolicyIntervention(
+        tuition_change_pct=tuition_pct,
+        aid_budget_change_pct=aid_pct,
+        capacity_change_pct=cap_pct,
+        installment_count=installment_count,
+        attendance_min_pct=attendance_min,
+        rank_threshold_overrides=rank_overrides,
+        apply_prior_placement_obp_penalty=apply_obp_penalty,
+        affordability_filter_mode=affordability_mode,  # type: ignore[arg-type]
+        rule_fidelity="hypothetical_simplified",
+        osym_verified=False,
+    )
 
 
 def detect_target_population(text: str, province_code: str) -> PopulationFilterConfig:
@@ -219,10 +357,30 @@ def synthesize_questions(
     pct: float | None,
 ) -> list[QuestionConfig]:
     """Generate balanced, relevant survey questions and options based on policy context."""
+    is_pure_text_prompt = _has_keyword(
+        prompt,
+        (
+            "only text", "text only", "no options", "pure text", "open ended question",
+            "sadece metin", "açık uçlu", "free text", "free-text", "open-ended",
+            "open ended", "open response", "in your own words", "qualitative",
+            "kendi cümlelerinizle",
+        ),
+    )
+    if is_pure_text_prompt:
+        clean_prompt = prompt.strip().rstrip("?.")
+        return [
+            QuestionConfig(
+                id="q1_text_response",
+                text=f"Regarding the policy situation: '{clean_prompt}', please provide your detailed thoughts and perspective in your own words.",
+                type="free_text",
+                options=[],
+                ask_rationale=False,
+            )
+        ]
     if domain == "transportation":
         action = "decrease" if (pct is not None and pct < 0) else "increase"
         pct_text = f" by {abs(pct):.0f}%" if pct is not None else ""
-        return [
+        questions = [
             QuestionConfig(
                 id="q1_usage_change",
                 text=f"If public transit fares in {province_name} {action}{pct_text}, how would your daily travel habits most likely change?",
@@ -253,8 +411,8 @@ def synthesize_questions(
             ),
         ]
 
-    if domain == "housing":
-        return [
+    elif domain == "housing":
+        questions = [
             QuestionConfig(
                 id="q1_housing_impact",
                 text=f"How would this municipal housing policy in {province_name} impact your household budget?",
@@ -284,37 +442,89 @@ def synthesize_questions(
             ),
         ]
 
-    # Default / general public policy
-    clean_prompt = prompt.strip().rstrip("?.")
-    return [
-        QuestionConfig(
-            id="q1_behavioral_response",
-            text=f"Regarding the policy situation: '{clean_prompt}', how would you personally respond?",
-            type="single_choice",
-            options=[
-                QuestionOption(id="adapt_positively", label="Adapt positively and make use of the policy change"),
-                QuestionOption(id="no_change", label="Maintain current routine without change"),
-                QuestionOption(id="financially_strained", label="Feel financially strained or inconvenienced"),
-                QuestionOption(id="seek_alternatives", label="Actively look for alternative solutions or services"),
-            ],
-            allow_other=False,
-            ask_rationale=True,
-        ),
-        QuestionConfig(
-            id="q2_policy_support",
-            text=f"Overall, do you support or oppose this policy in {province_name}?",
-            type="single_choice",
-            options=[
-                QuestionOption(id="strongly_support", label="Strongly support"),
-                QuestionOption(id="somewhat_support", label="Somewhat support"),
-                QuestionOption(id="neutral", label="Neutral / Undecided"),
-                QuestionOption(id="somewhat_oppose", label="Somewhat oppose"),
-                QuestionOption(id="strongly_oppose", label="Strongly oppose"),
-            ],
-            allow_other=False,
-            ask_rationale=True,
-        ),
-    ]
+    elif domain == "university_placement":
+        questions = [
+            QuestionConfig(
+                id="q1_placement_preference_response",
+                text=f"Under this hypothetical university placement rule change in {province_name}, how would a candidate most likely adjust their preference strategy?",
+                type="single_choice",
+                options=[
+                    QuestionOption(id="keep_preferences", label="Submit original ordered program preferences unchanged"),
+                    QuestionOption(id="shift_to_scholarship_or_state", label="Prioritize state or full-scholarship programs to manage costs"),
+                    QuestionOption(id="broaden_safety_choices", label="Add lower-cutoff safety programs across provinces"),
+                    QuestionOption(id="defer_next_cycle", label="Wait for the next admission cycle if desired seats are unavailable"),
+                ],
+                allow_other=False,
+                ask_rationale=True,
+            ),
+        ]
+
+    elif domain == "university_policy":
+        questions = [
+            QuestionConfig(
+                id="q1_enrollment_decision",
+                text=f"Given this hypothetical university policy change in {province_name}, which feasible enrollment decision best fits the student profile?",
+                type="single_choice",
+                options=[
+                    QuestionOption(id="enroll_full_load", label="Enroll full-time as planned"),
+                    QuestionOption(id="enroll_reduced_load", label="Enroll with a reduced course load or installment plan"),
+                    QuestionOption(id="transfer_lower_cost_program", label="Transfer to a lower-tuition or scholarship program"),
+                    QuestionOption(id="pause_stop_out", label="Temporarily pause enrollment (stop-out)"),
+                    QuestionOption(id="withdraw", label="Withdraw from the university program"),
+                ],
+                allow_other=False,
+                ask_rationale=True,
+            ),
+        ]
+
+    else:
+        # Default / general public policy
+        clean_prompt = prompt.strip().rstrip("?.")
+        questions = [
+            QuestionConfig(
+                id="q1_behavioral_response",
+                text=f"Regarding the policy situation: '{clean_prompt}', how would you personally respond?",
+                type="single_choice",
+                options=[
+                    QuestionOption(id="adapt_positively", label="Adapt positively and make use of the policy change"),
+                    QuestionOption(id="no_change", label="Maintain current routine without change"),
+                    QuestionOption(id="financially_strained", label="Feel financially strained or inconvenienced"),
+                    QuestionOption(id="seek_alternatives", label="Actively look for alternative solutions or services"),
+                ],
+                allow_other=False,
+                ask_rationale=True,
+            ),
+            QuestionConfig(
+                id="q2_policy_support",
+                text=f"Overall, do you support or oppose this policy in {province_name}?",
+                type="single_choice",
+                options=[
+                    QuestionOption(id="strongly_support", label="Strongly support"),
+                    QuestionOption(id="somewhat_support", label="Somewhat support"),
+                    QuestionOption(id="neutral", label="Neutral / Undecided"),
+                    QuestionOption(id="somewhat_oppose", label="Somewhat oppose"),
+                    QuestionOption(id="strongly_oppose", label="Strongly oppose"),
+                ],
+                allow_other=False,
+                ask_rationale=True,
+            ),
+        ]
+
+    has_text_request = _has_keyword(
+        prompt,
+        ("free text", "text answer", "open ended", "in your own words", "describe", "explain", "thoughts", "opinion", "feedback", "kendi cümlelerinizle", "yorum", "görüş")
+    )
+    if has_text_request:
+        questions.append(
+            QuestionConfig(
+                id="q_qualitative_feedback",
+                text=f"In your own words, what is your primary personal view, concern, or suggestion regarding this policy in {province_name}?",
+                type="free_text",
+                options=[],
+                ask_rationale=False,
+            )
+        )
+    return questions
 
 
 def compile_scenario_from_prompt_heuristic(prompt: str) -> ScenarioConfig:
@@ -332,11 +542,24 @@ def compile_scenario_from_prompt_heuristic(prompt: str) -> ScenarioConfig:
 
     # Format title and description
     pct_str = f" (+{pct:.0f}%)" if pct and pct > 0 else (f" ({pct:.0f}%)" if pct else "")
-    title = f"{prov_name} {category.capitalize()} Policy{pct_str}"[:160]
+    cat_label = category.replace("_", " ").title() if "_" in category else category.capitalize()
+    title = f"{prov_name} {cat_label} Policy{pct_str}"[:160]
     description = (
         f"A simulation scenario generated from user prompt: '{prompt.strip()}'. "
         f"Evaluates the demographic and behavioral reactions of synthetic residents in {prov_name}."
     )
+
+    custom_details: dict[str, Any] = {}
+    source_note = "Compiled automatically from natural language prompt input."
+    if category in ("university_placement", "university_policy"):
+        uni_intervention = extract_university_parameters(prompt, category, pct)
+        sim_mode = "university_placement" if category == "university_placement" else "university_decision_hybrid"
+        custom_details["simulation_mode"] = sim_mode
+        custom_details["university_intervention"] = uni_intervention.model_dump(mode="json", exclude_none=True)
+        source_note = (
+            "Compiled automatically from natural language prompt input. "
+            "Uses simplified/hypothetical university rules; does NOT reproduce official ÖSYM placement."
+        )
 
     parameters = PolicyParameters(
         baseline_fare=baseline,
@@ -344,6 +567,7 @@ def compile_scenario_from_prompt_heuristic(prompt: str) -> ScenarioConfig:
         increase_percentage=pct,
         currency="TL",
         policy_summary=prompt.strip(),
+        custom_details=custom_details,
     )
 
     return ScenarioConfig(
@@ -358,7 +582,7 @@ def compile_scenario_from_prompt_heuristic(prompt: str) -> ScenarioConfig:
         ),
         metadata=ScenarioMetadata(
             hypothetical=True,
-            source_note="Compiled automatically from natural language prompt input.",
+            source_note=source_note,
             author="SocietyTwin Prompt Compiler",
         ),
         policy=PolicyConfig(

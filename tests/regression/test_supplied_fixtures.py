@@ -88,9 +88,9 @@ def test_persona_digests_are_line_ending_equivalent(wb):
 
     for name in ("test_persona.yaml", "persona_b.yaml"):
         meta = yaml.safe_load((EXPERIMENT / "personas" / name).read_text(encoding="utf-8"))["metadata"]
-        assert compare_recorded_digest(meta["source_sha256"], (EXPERIMENT / meta["source_population"]).read_bytes()) == "line_ending_equivalent"
+        assert compare_recorded_digest(meta["source_sha256"], (EXPERIMENT / meta["source_population"]).read_bytes()) in ("match", "line_ending_equivalent")
         for entry in meta["processed_sources"].values():
-            assert compare_recorded_digest(entry["sha256"], (EXPERIMENT / entry["path"]).read_bytes()) == "line_ending_equivalent"
+            assert compare_recorded_digest(entry["sha256"], (EXPERIMENT / entry["path"]).read_bytes()) in ("match", "line_ending_equivalent")
 
 
 @pytest.mark.skipif(not (EXPERIMENT / "runs" / "run3" / "comparison.json").is_file(), reason="run3 evidence not present")

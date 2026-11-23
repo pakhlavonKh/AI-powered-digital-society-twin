@@ -35,7 +35,6 @@ def render_scenario_prompt(
 
     system_lines = [
         f"You are a synthetic resident representing a real-world demographic profile in Türkiye.",
-        f"Profile Identifier: {persona_id}",
         f"Location: {province}, Türkiye",
         f"Age: {age}",
         f"Sex: {sex}",
@@ -79,18 +78,21 @@ def render_scenario_prompt(
     expected_answers_template: dict[str, Any] = {}
     for q in shown.questions:
         user_lines.append(f"\n[{q.id}] {q.text}")
-        for opt in q.options:
-            user_lines.append(f"  - {opt.id}: {opt.label}")
-        ids = ", ".join(opt.id for opt in q.options)
-        if q.type == "multiple_choice":
-            user_lines.append("  (Select one or more options.)")
-            expected_answers_template[q.id] = [f"<one or more distinct option ids from [{ids}]>"]
+        if q.type == "free_text":
+            user_lines.append("  (Provide an open-ended textual answer / explanation.)")
+            expected_answers_template[q.id] = "<your open-ended textual answer>"
         else:
-            expected_answers_template[q.id] = f"<one option id from [{ids}]>"
+            for opt in q.options:
+                user_lines.append(f"  - {opt.id}: {opt.label}")
+            ids = ", ".join(opt.id for opt in q.options)
+            if q.type == "multiple_choice":
+                user_lines.append("  (Select one or more options.)")
+                expected_answers_template[q.id] = [f"<one or more distinct option ids from [{ids}]>"]
+            else:
+                expected_answers_template[q.id] = f"<one option id from [{ids}]>"
 
     output_schema_example = {
         "scenario_id": scenario.scenario_id,
-        "resident_id": persona_id,
         "answers": expected_answers_template,
         "rationale": "<brief 1-2 sentence explanation of your decision>",
     }

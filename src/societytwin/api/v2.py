@@ -19,6 +19,12 @@ from societytwin.national.generator import MAX_SIZE, GenerationConfig
 from societytwin.national.rng import MAX_SEED
 from societytwin.national.service import NationalService
 from societytwin.national.store import MAX_PAGE, SORTABLE, PopulationFilter
+from societytwin.national.university_service import (
+    PlacementCompareRequest,
+    PlacementRunRequest,
+    UniversityRunRequest,
+    UniversitySweepRequest,
+)
 
 
 class GenerateRequest(BaseModel):
@@ -297,6 +303,11 @@ def build_router() -> APIRouter:
                       limit: Annotated[int, Query(ge=1, le=MAX_PAGE)] = 50):
         return s.run_responses(run_id, final_only, offset, limit)
 
+    @r.get("/runs/{run_id}/text-summary", tags=["results"],
+           description="Retrieve an executive textual summary of the simulation run results.")
+    def run_text_summary(run_id: str, s: S):
+        return s.run_text_summary(run_id)
+
     @r.get("/runs/{run_id}/aggregate", tags=["results"])
     def run_aggregate(run_id: str, s: S, group_by: Annotated[list[str] | None, Query()] = None,
                       min_group: Annotated[int, Query(ge=1, le=1000)] = 10):
@@ -306,5 +317,51 @@ def build_router() -> APIRouter:
             description="Reproduces a completed run exactly from the response cache; makes no backend calls.")
     def run_replay(run_id: str, body: ReplayRequest, s: S):
         return s.replay(run_id, body.idempotency_key)
+
+    # ------------------------------------------------------------------ university placement & policy
+    @r.get("/placement/programs", tags=["university-placement"],
+           description="Default hypothetical general-quota placement program catalog (osym_verified=false).")
+    def placement_programs(s: S):
+        return s.placement_programs()
+
+    @r.post("/placement/runs", status_code=201, tags=["university-placement"],
+            description="Execute an offline deterministic university placement run (with optional baseline comparison).")
+    def placement_run_create(body: PlacementRunRequest, s: S):
+        return s.run_placement_simulation(body)
+
+    @r.get("/placement/runs", tags=["university-placement"],
+           description="List persisted university placement simulation runs.")
+    def placement_runs_list(s: S):
+        return s.list_placement_runs()
+
+    @r.get("/placement/runs/{run_id}", tags=["university-placement"],
+           description="Retrieve full persisted placement run outcomes, comparison, and handoff payload.")
+    def placement_run_get(run_id: str, s: S):
+        return s.get_placement_run(run_id)
+
+    @r.post("/placement/compare", tags=["university-placement"],
+            description="Compare two persisted placement runs executed on the identical candidate cohort.")
+    def placement_runs_compare(body: PlacementCompareRequest, s: S):
+        return s.compare_placement_runs(body)
+
+    @r.post("/university/runs", status_code=201, tags=["university-simulation"],
+            description="Execute a multi-semester post-admission policy simulation (synthetic/uncalibrated defaults).")
+    def university_run_create(body: UniversityRunRequest, s: S):
+        return s.run_university_simulation_job(body)
+
+    @r.get("/university/runs", tags=["university-simulation"],
+           description="List persisted multi-semester university policy runs.")
+    def university_runs_list(s: S):
+        return s.list_university_runs()
+
+    @r.get("/university/runs/{run_id}", tags=["university-simulation"],
+           description="Retrieve a persisted multi-semester university simulation run and CRN comparison.")
+    def university_run_get(run_id: str, s: S):
+        return s.get_university_run(run_id)
+
+    @r.post("/university/sweep", tags=["university-simulation"],
+            description="Sweep tuition percentage sensitivity curves with paired CRN replications.")
+    def university_sweep_run(body: UniversitySweepRequest, s: S):
+        return s.run_university_sweep(body)
 
     return r

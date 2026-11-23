@@ -4551,6 +4551,47 @@
         }
       }
     },
+    "/api/v2/runs/{run_id}/text-summary": {
+      "get": {
+        "tags": [
+          "results"
+        ],
+        "summary": "Run Text Summary",
+        "description": "Retrieve an executive textual summary of the simulation run results.",
+        "operationId": "run_text_summary_api_v2_runs__run_id__text_summary_get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v2/runs/{run_id}/aggregate": {
       "get": {
         "tags": [
@@ -4653,6 +4694,304 @@
         },
         "responses": {
           "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/placement/programs": {
+      "get": {
+        "tags": [
+          "university-placement"
+        ],
+        "summary": "Placement Programs",
+        "description": "Default hypothetical general-quota placement program catalog (osym_verified=false).",
+        "operationId": "placement_programs_api_v2_placement_programs_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/placement/runs": {
+      "get": {
+        "tags": [
+          "university-placement"
+        ],
+        "summary": "Placement Runs List",
+        "description": "List persisted university placement simulation runs.",
+        "operationId": "placement_runs_list_api_v2_placement_runs_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "university-placement"
+        ],
+        "summary": "Placement Run Create",
+        "description": "Execute an offline deterministic university placement run (with optional baseline comparison).",
+        "operationId": "placement_run_create_api_v2_placement_runs_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlacementRunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/placement/runs/{run_id}": {
+      "get": {
+        "tags": [
+          "university-placement"
+        ],
+        "summary": "Placement Run Get",
+        "description": "Retrieve full persisted placement run outcomes, comparison, and handoff payload.",
+        "operationId": "placement_run_get_api_v2_placement_runs__run_id__get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/placement/compare": {
+      "post": {
+        "tags": [
+          "university-placement"
+        ],
+        "summary": "Placement Runs Compare",
+        "description": "Compare two persisted placement runs executed on the identical candidate cohort.",
+        "operationId": "placement_runs_compare_api_v2_placement_compare_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlacementCompareRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/university/runs": {
+      "get": {
+        "tags": [
+          "university-simulation"
+        ],
+        "summary": "University Runs List",
+        "description": "List persisted multi-semester university policy runs.",
+        "operationId": "university_runs_list_api_v2_university_runs_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "university-simulation"
+        ],
+        "summary": "University Run Create",
+        "description": "Execute a multi-semester post-admission policy simulation (synthetic/uncalibrated defaults).",
+        "operationId": "university_run_create_api_v2_university_runs_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UniversityRunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/university/runs/{run_id}": {
+      "get": {
+        "tags": [
+          "university-simulation"
+        ],
+        "summary": "University Run Get",
+        "description": "Retrieve a persisted multi-semester university simulation run and CRN comparison.",
+        "operationId": "university_run_get_api_v2_university_runs__run_id__get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/university/sweep": {
+      "post": {
+        "tags": [
+          "university-simulation"
+        ],
+        "summary": "University Sweep Run",
+        "description": "Sweep tuition percentage sensitivity curves with paired CRN replications.",
+        "operationId": "university_sweep_run_api_v2_university_sweep_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UniversitySweepRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
@@ -8670,6 +9009,221 @@
         ],
         "title": "PersonaView"
       },
+      "PlacementCompareRequest": {
+        "properties": {
+          "baseline_run_id": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Baseline Run Id"
+          },
+          "policy_run_id": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Policy Run Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "baseline_run_id",
+          "policy_run_id"
+        ],
+        "title": "PlacementCompareRequest"
+      },
+      "PlacementRuleset": {
+        "properties": {
+          "ruleset_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{1,63}$",
+            "title": "Ruleset Id",
+            "default": "hypothetical_yks_v1"
+          },
+          "rule_fidelity": {
+            "type": "string",
+            "enum": [
+              "hypothetical_simplified",
+              "calibrated_synthetic",
+              "verified_osym"
+            ],
+            "title": "Rule Fidelity",
+            "default": "hypothetical_simplified"
+          },
+          "osym_verified": {
+            "type": "boolean",
+            "title": "Osym Verified",
+            "default": false
+          },
+          "max_preferences": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Max Preferences",
+            "default": 24
+          },
+          "strict_preference_cap": {
+            "type": "boolean",
+            "title": "Strict Preference Cap",
+            "default": false
+          },
+          "duplicate_preference_policy": {
+            "type": "string",
+            "enum": [
+              "deduplicate_keep_first",
+              "reject_candidate"
+            ],
+            "title": "Duplicate Preference Policy",
+            "default": "deduplicate_keep_first"
+          },
+          "require_tyt_for_bachelor": {
+            "type": "boolean",
+            "title": "Require Tyt For Bachelor",
+            "default": false
+          },
+          "derive_ranks_from_cohort": {
+            "type": "boolean",
+            "title": "Derive Ranks From Cohort",
+            "default": true
+          },
+          "prior_placement_obp_multiplier": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Prior Placement Obp Multiplier",
+            "default": 0.5
+          },
+          "score_precision_decimals": {
+            "type": "integer",
+            "maximum": 8.0,
+            "minimum": 0.0,
+            "title": "Score Precision Decimals",
+            "default": 5
+          },
+          "rank_thresholds": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Rank Thresholds",
+            "description": "Success-rank ceilings by baraj_group; illustrative placeholders unless osym_verified=True."
+          },
+          "tie_break_policy": {
+            "$ref": "#/components/schemas/TieBreakPolicy"
+          },
+          "source_note": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Note"
+          },
+          "osym_kilavuz_year": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 2050.0,
+                "minimum": 2000.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Osym Kilavuz Year"
+          },
+          "source_sha256": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Sha256"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "PlacementRuleset",
+        "description": "Versioned rules governing eligibility, baraj checks, score resolution, and ties."
+      },
+      "PlacementRunRequest": {
+        "properties": {
+          "scenario_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scenario Id"
+          },
+          "population_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 160
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Population Id"
+          },
+          "cohort_size": {
+            "type": "integer",
+            "maximum": 5000.0,
+            "minimum": 20.0,
+            "title": "Cohort Size",
+            "default": 200
+          },
+          "seed": {
+            "type": "integer",
+            "maximum": 9.223372036854776e+18,
+            "minimum": 0.0,
+            "title": "Seed",
+            "default": 42
+          },
+          "compare_baseline": {
+            "type": "boolean",
+            "title": "Compare Baseline",
+            "default": true
+          },
+          "intervention": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UniversityPolicyIntervention"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "ruleset": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PlacementRuleset"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "PlacementRunRequest"
+      },
       "PolicyConfig": {
         "properties": {
           "category": {
@@ -8758,8 +9312,7 @@
                 "type": "null"
               }
             ],
-            "title": "Fare Category",
-            "default": "full_adult_standard"
+            "title": "Fare Category"
           },
           "effective_date": {
             "anyOf": [
@@ -9723,7 +10276,8 @@
             "type": "string",
             "enum": [
               "single_choice",
-              "multiple_choice"
+              "multiple_choice",
+              "free_text"
             ],
             "title": "Type",
             "default": "single_choice"
@@ -9734,9 +10288,37 @@
             },
             "type": "array",
             "maxItems": 20,
-            "minItems": 2,
             "title": "Options",
-            "description": "Permitted answer options"
+            "description": "Permitted answer options (required for choice questions; empty for free_text)"
+          },
+          "min_length": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 5000.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Length",
+            "description": "Minimum characters required for free_text"
+          },
+          "max_length": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 10000.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Length",
+            "description": "Maximum characters allowed for free_text",
+            "default": 2000
           },
           "allow_other": {
             "type": "boolean",
@@ -9755,8 +10337,7 @@
         "type": "object",
         "required": [
           "id",
-          "text",
-          "options"
+          "text"
         ],
         "title": "QuestionConfig",
         "description": "Specification of an individual question presented to an AI persona."
@@ -10869,7 +11450,7 @@
           },
           "question_type": {
             "type": "string",
-            "pattern": "^single_choice$",
+            "pattern": "^(single_choice|free_text)$",
             "title": "Question Type",
             "default": "single_choice"
           },
@@ -11311,6 +11892,54 @@
         ],
         "title": "TaskOut"
       },
+      "TieBreakPolicy": {
+        "properties": {
+          "use_raw_score": {
+            "type": "boolean",
+            "title": "Use Raw Score",
+            "default": true
+          },
+          "use_obp": {
+            "type": "boolean",
+            "title": "Use Obp",
+            "default": true
+          },
+          "prefer_earlier_choice": {
+            "type": "boolean",
+            "title": "Prefer Earlier Choice",
+            "default": false
+          },
+          "age_tie_rule": {
+            "type": "string",
+            "enum": [
+              "none",
+              "younger_first",
+              "older_first"
+            ],
+            "title": "Age Tie Rule",
+            "default": "none"
+          },
+          "terminal_tie_breaker": {
+            "type": "string",
+            "enum": [
+              "canonical_id",
+              "seeded_hash"
+            ],
+            "title": "Terminal Tie Breaker",
+            "default": "canonical_id"
+          },
+          "tie_seed": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Tie Seed",
+            "default": 42
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "TieBreakPolicy",
+        "description": "Explicit, total-order tie-breaking policy for boundary candidates."
+      },
       "Trial": {
         "properties": {
           "label": {
@@ -11665,6 +12294,531 @@
         ],
         "title": "UnavailableField"
       },
+      "UniversityPolicyIntervention": {
+        "properties": {
+          "tuition_change_pct": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1000.0,
+                "exclusiveMinimum": -100.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tuition Change Pct"
+          },
+          "tuition_overrides": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Tuition Overrides"
+          },
+          "aid_budget_change_pct": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1000.0,
+                "exclusiveMinimum": -100.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Aid Budget Change Pct"
+          },
+          "base_aid_budget": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Aid Budget"
+          },
+          "aid_income_eligibility_max": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Aid Income Eligibility Max"
+          },
+          "max_grant_per_student": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Grant Per Student"
+          },
+          "installment_count": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 24.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Installment Count"
+          },
+          "installment_upfront_share": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Installment Upfront Share"
+          },
+          "affordability_filter_mode": {
+            "type": "string",
+            "enum": [
+              "none",
+              "hard_exclude",
+              "utility_rerank"
+            ],
+            "title": "Affordability Filter Mode",
+            "default": "none"
+          },
+          "capacity_change_pct": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1000.0,
+                "minimum": -100.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capacity Change Pct"
+          },
+          "capacity_rounding": {
+            "type": "string",
+            "enum": [
+              "floor",
+              "nearest",
+              "largest_remainder"
+            ],
+            "title": "Capacity Rounding",
+            "default": "floor"
+          },
+          "program_capacity_overrides": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Program Capacity Overrides"
+          },
+          "closed_programs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Closed Programs"
+          },
+          "rank_threshold_overrides": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Rank Threshold Overrides"
+          },
+          "min_score_overrides": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Min Score Overrides"
+          },
+          "apply_prior_placement_obp_penalty": {
+            "type": "boolean",
+            "title": "Apply Prior Placement Obp Penalty",
+            "default": false
+          },
+          "attendance_min_pct": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 100.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attendance Min Pct"
+          },
+          "grading_difficulty_shift": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 4.0,
+                "minimum": -4.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grading Difficulty Shift"
+          },
+          "semester_count": {
+            "type": "integer",
+            "maximum": 16.0,
+            "minimum": 1.0,
+            "title": "Semester Count",
+            "default": 1
+          },
+          "replications": {
+            "type": "integer",
+            "maximum": 1000.0,
+            "minimum": 1.0,
+            "title": "Replications",
+            "default": 1
+          },
+          "ruleset_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ruleset Id"
+          },
+          "rule_fidelity": {
+            "type": "string",
+            "enum": [
+              "hypothetical_simplified",
+              "calibrated_synthetic",
+              "verified_osym"
+            ],
+            "title": "Rule Fidelity",
+            "default": "hypothetical_simplified"
+          },
+          "osym_verified": {
+            "type": "boolean",
+            "title": "Osym Verified",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "UniversityPolicyIntervention",
+        "description": "Economic, capacity, and academic parameters for university placement and policy scenarios."
+      },
+      "UniversityRuleset": {
+        "properties": {
+          "ruleset_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{1,63}$",
+            "title": "Ruleset Id",
+            "default": "hypothetical_uni_rules_v1"
+          },
+          "degree_credits_required": {
+            "type": "integer",
+            "maximum": 360.0,
+            "minimum": 30.0,
+            "title": "Degree Credits Required",
+            "default": 120
+          },
+          "credits_per_course": {
+            "type": "integer",
+            "maximum": 30.0,
+            "minimum": 1.0,
+            "title": "Credits Per Course",
+            "default": 6
+          },
+          "full_load_courses": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Full Load Courses",
+            "default": 5
+          },
+          "reduced_load_courses": {
+            "type": "integer",
+            "maximum": 8.0,
+            "minimum": 1.0,
+            "title": "Reduced Load Courses",
+            "default": 3
+          },
+          "attendance_min_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Attendance Min Pct",
+            "default": 70.0
+          },
+          "passing_grade_min": {
+            "type": "number",
+            "maximum": 4.0,
+            "minimum": 0.0,
+            "title": "Passing Grade Min",
+            "default": 2.0
+          },
+          "min_graduation_gpa": {
+            "type": "number",
+            "maximum": 4.0,
+            "minimum": 0.0,
+            "title": "Min Graduation Gpa",
+            "default": 2.0
+          },
+          "repeat_policy": {
+            "type": "string",
+            "enum": [
+              "replace_highest",
+              "average_all"
+            ],
+            "title": "Repeat Policy",
+            "default": "replace_highest"
+          },
+          "max_stop_out_semesters": {
+            "type": "integer",
+            "maximum": 8.0,
+            "minimum": 0.0,
+            "title": "Max Stop Out Semesters",
+            "default": 2
+          },
+          "transfer_tuition_discount_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Transfer Tuition Discount Pct",
+            "default": 50.0
+          },
+          "default_hold_threshold": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Default Hold Threshold",
+            "default": 5000.0
+          },
+          "osym_verified": {
+            "type": "boolean",
+            "title": "Osym Verified",
+            "default": false
+          },
+          "coefficients_calibrated": {
+            "type": "boolean",
+            "title": "Coefficients Calibrated",
+            "default": false
+          },
+          "source_note": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Note"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "UniversityRuleset",
+        "description": "Academic, attendance, grading, and financial rules for multi-semester execution."
+      },
+      "UniversityRunRequest": {
+        "properties": {
+          "scenario_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scenario Id"
+          },
+          "placement_run_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Placement Run Id"
+          },
+          "cohort_size": {
+            "type": "integer",
+            "maximum": 2000.0,
+            "minimum": 20.0,
+            "title": "Cohort Size",
+            "default": 200
+          },
+          "semester_count": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 8.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Semester Count"
+          },
+          "replications": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 100.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Replications"
+          },
+          "seed": {
+            "type": "integer",
+            "maximum": 9.223372036854776e+18,
+            "minimum": 0.0,
+            "title": "Seed",
+            "default": 42
+          },
+          "compare_baseline": {
+            "type": "boolean",
+            "title": "Compare Baseline",
+            "default": true
+          },
+          "intervention": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UniversityPolicyIntervention"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "ruleset": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UniversityRuleset"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "weights": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UtilityWeights"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "UniversityRunRequest"
+      },
+      "UniversitySweepRequest": {
+        "properties": {
+          "placement_run_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Placement Run Id"
+          },
+          "cohort_size": {
+            "type": "integer",
+            "maximum": 2000.0,
+            "minimum": 20.0,
+            "title": "Cohort Size",
+            "default": 160
+          },
+          "semester_count": {
+            "type": "integer",
+            "maximum": 8.0,
+            "minimum": 1.0,
+            "title": "Semester Count",
+            "default": 4
+          },
+          "replications": {
+            "type": "integer",
+            "maximum": 50.0,
+            "minimum": 1.0,
+            "title": "Replications",
+            "default": 5
+          },
+          "seed": {
+            "type": "integer",
+            "maximum": 9.223372036854776e+18,
+            "minimum": 0.0,
+            "title": "Seed",
+            "default": 42
+          },
+          "tuition_pcts": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "maxItems": 15,
+            "minItems": 2,
+            "title": "Tuition Pcts"
+          },
+          "aid_budget_pct": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 500.0,
+                "minimum": -100.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Aid Budget Pct"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "UniversitySweepRequest"
+      },
       "Usage": {
         "properties": {
           "n_input_tokens": {
@@ -11780,6 +12934,65 @@
           "billed_cost_usd"
         ],
         "title": "Usage"
+      },
+      "UtilityWeights": {
+        "properties": {
+          "beta_intercepts": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "propertyNames": {
+              "enum": [
+                "enroll_full_load",
+                "enroll_reduced_load",
+                "transfer_lower_cost_program",
+                "pause_stop_out",
+                "withdraw"
+              ]
+            },
+            "type": "object",
+            "title": "Beta Intercepts"
+          },
+          "beta_net_cost": {
+            "type": "number",
+            "title": "Beta Net Cost",
+            "default": -0.32
+          },
+          "beta_expected_credits": {
+            "type": "number",
+            "title": "Beta Expected Credits",
+            "default": 0.08
+          },
+          "beta_expected_gpa": {
+            "type": "number",
+            "title": "Beta Expected Gpa",
+            "default": 0.45
+          },
+          "beta_time_to_degree": {
+            "type": "number",
+            "title": "Beta Time To Degree",
+            "default": -0.18
+          },
+          "beta_personal": {
+            "type": "number",
+            "title": "Beta Personal",
+            "default": 1.1
+          },
+          "coefficients_calibrated": {
+            "type": "boolean",
+            "title": "Coefficients Calibrated",
+            "default": false
+          },
+          "calibration_note": {
+            "type": "string",
+            "title": "Calibration Note",
+            "default": "Default synthetic beta coefficients; estimate and validate against historical institutional transitions before empirical claims."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "UtilityWeights",
+        "description": "Random-utility multinomial logit coefficients (uncalibrated defaults unless stated)."
       },
       "ValidationError": {
         "properties": {
@@ -12189,7 +13402,7 @@
           },
           "response_type": {
             "type": "string",
-            "pattern": "^single_choice$",
+            "pattern": "^(single_choice|free_text)$",
             "title": "Response Type",
             "default": "single_choice"
           },
@@ -12199,7 +13412,6 @@
             },
             "type": "array",
             "maxItems": 12,
-            "minItems": 2,
             "title": "Options"
           },
           "allow_other_text": {
@@ -12227,8 +13439,7 @@
         "additionalProperties": false,
         "type": "object",
         "required": [
-          "instruction",
-          "options"
+          "instruction"
         ],
         "title": "TaskSpec"
       }

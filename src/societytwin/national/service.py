@@ -769,6 +769,22 @@ class NationalService:
         rows = self.db.responses(run_id, final_only)
         return {"run_id": run_id, "total": len(rows), "offset": offset, "limit": limit, "items": rows[offset:offset + limit]}
 
+    def run_text_summary(self, run_id: str) -> dict:
+        run = self.db.run(run_id)
+        if run is None:
+            raise not_found("unknown_run", f"No run {run_id}")
+        exp, d = self._definition(run["experiment_id"])
+        rows = self.db.responses(run_id, final_only=True)
+        agg = None
+        try:
+            agg = self.run_aggregate(run_id, [], 10)
+        except Exception:
+            pass
+        from scenarios.summary import generate_result_text_summary
+        is_live_exp = d.model.transport == "live" and d.model.backend == "matraix"
+        allow_llm = bool(self.settings.live_execution_enabled and is_live_exp)
+        return generate_result_text_summary(exp["definition"], rows, agg, allow_llm=allow_llm)
+
     def run_aggregate(self, run_id: str, group_by: list[str], min_group: int) -> dict:
         run = self.db.run(run_id)
         if run is None:
@@ -837,6 +853,52 @@ class NationalService:
                 "vocabularies": {k: v.as_dict() for k, v in VOCABULARIES.items()}, "evidence_levels": Evidence.DESCRIPTIONS,
                 "persona_fields": {"all": list(PERSON_FIELDS), "default_visible": list(DEFAULT_VISIBLE)},
                 "groupable": list(GROUPABLE)}
+
+    # ================================================================ university placement & policy simulations
+    def placement_programs(self) -> dict:
+        from societytwin.national.university_service import placement_programs_catalog
+
+        return placement_programs_catalog()
+
+    def run_placement_simulation(self, req) -> dict:
+        from societytwin.national.university_service import run_placement_workbench
+
+        return run_placement_workbench(self, req)
+
+    def list_placement_runs(self) -> dict:
+        from societytwin.national.university_service import list_placement_runs_workbench
+
+        return list_placement_runs_workbench(self)
+
+    def get_placement_run(self, run_id: str) -> dict:
+        from societytwin.national.university_service import get_placement_run_workbench
+
+        return get_placement_run_workbench(self, run_id)
+
+    def compare_placement_runs(self, req) -> dict:
+        from societytwin.national.university_service import compare_placement_runs_workbench
+
+        return compare_placement_runs_workbench(self, req)
+
+    def run_university_simulation_job(self, req) -> dict:
+        from societytwin.national.university_service import run_university_workbench
+
+        return run_university_workbench(self, req)
+
+    def list_university_runs(self) -> dict:
+        from societytwin.national.university_service import list_university_runs_workbench
+
+        return list_university_runs_workbench(self)
+
+    def get_university_run(self, run_id: str) -> dict:
+        from societytwin.national.university_service import get_university_run_workbench
+
+        return get_university_run_workbench(self, run_id)
+
+    def run_university_sweep(self, req) -> dict:
+        from societytwin.national.university_service import run_university_sweep_workbench
+
+        return run_university_sweep_workbench(self, req)
 
 
 def _sum(values) -> float | None:

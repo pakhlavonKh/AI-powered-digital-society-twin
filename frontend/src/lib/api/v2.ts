@@ -343,7 +343,7 @@ export type CreateScenarioPayload = {
   questions: {
     id: string;
     text: string;
-    type?: "single_choice" | "multiple_choice";
+    type?: "single_choice" | "multiple_choice" | "free_text";
     options: { id: string; label: string }[];
     allow_other?: boolean;
     ask_rationale?: boolean;
@@ -357,4 +357,229 @@ export type ScenarioPromptRequest = {
 };
 
 export type CompiledScenarioResponse = CreateScenarioPayload;
+
+export type ResultTextSummary = {
+  title: string;
+  headline: string;
+  key_findings: string[];
+  summary_markdown: string;
+  representative_quotes: {
+    synthetic_id: string;
+    province_code: string;
+    choice?: string;
+    quote: string;
+    rationale?: string | null;
+  }[];
+  is_free_text: boolean;
+  total_responses: number;
+  valid_responses: number;
+};
+
+// ---------------------------------------------------------------- university placement & policy
+export type UniversityInterventionPayload = {
+  tuition_change_pct?: number | null;
+  aid_budget_change_pct?: number | null;
+  capacity_change_pct?: number | null;
+  capacity_rounding?: "floor" | "nearest" | "largest_remainder";
+  installment_count?: number | null;
+  installment_upfront_share?: number | null;
+  affordability_filter_mode?: "none" | "warn" | "hard_exclude";
+  attendance_min_pct?: number | null;
+  grading_difficulty_shift?: number | null;
+  semester_count?: number;
+  replications?: number;
+  rank_threshold_overrides?: Record<string, number>;
+  apply_prior_placement_obp_penalty?: boolean;
+  osym_verified?: boolean;
+};
+
+export type PlacementProgram = {
+  program_id: string;
+  university_id: string;
+  university_name: string;
+  university_type: "state" | "foundation";
+  province_code: string;
+  department_name: string;
+  degree_level: "associate" | "bachelor";
+  score_type: "TYT" | "SAY" | "EA" | "SÖZ" | "DİL";
+  baraj_group?: string | null;
+  capacity: number;
+  tuition_annual: number;
+  scholarship_pct: number;
+  status: string;
+};
+
+export type PlacementProgramsCatalog = {
+  osym_verified: boolean;
+  rule_fidelity: string;
+  disclaimer: string;
+  score_types: string[];
+  rank_thresholds: Record<string, number>;
+  programs: PlacementProgram[];
+};
+
+export type PlacementProgramDelta = {
+  program_id: string;
+  baseline_capacity: number;
+  policy_capacity: number;
+  capacity_delta: number;
+  baseline_filled: number;
+  policy_filled: number;
+  filled_delta: number;
+  baseline_cutoff_score: number | null;
+  policy_cutoff_score: number | null;
+  cutoff_score_delta: number | null;
+  first_choice_delta: number;
+};
+
+export type PlacementTransitionBreakdown = {
+  total_candidates: number;
+  same_program: number;
+  improved_preference: number;
+  worsened_preference: number;
+  newly_placed: number;
+  displaced_to_unplaced: number;
+  remained_unplaced: number;
+  eligibility_changed: number;
+};
+
+export type PlacementComparisonReport = {
+  baseline_result_sha256: string;
+  policy_result_sha256: string;
+  candidates_sha256: string;
+  osym_verified: boolean;
+  rule_fidelity: string;
+  disclaimer: string;
+  metric_deltas: Record<string, { baseline: number | null; policy: number | null; delta: number | null }>;
+  transitions: PlacementTransitionBreakdown;
+  program_deltas: PlacementProgramDelta[];
+};
+
+export type PlacementRunResponse = {
+  run_id: string;
+  scenario_id: string | null;
+  population_id: string | null;
+  osym_verified: boolean;
+  rule_fidelity?: string;
+  disclaimer?: string;
+  result_sha256: string;
+  created_at: string;
+  summary: {
+    title: string;
+    headline: string;
+    key_findings: string[];
+    summary_markdown: string;
+    osym_verified: boolean;
+    rule_fidelity: string;
+    disclaimer: string;
+  };
+  result?: {
+    placement_result: {
+      manifest: Record<string, unknown>;
+      aggregate_metrics: Record<string, number | Record<string, number> | null>;
+      program_outcomes: {
+        program_id: string;
+        university_name: string;
+        department_name: string;
+        score_type: string;
+        effective_capacity: number;
+        filled: number;
+        cutoff_score: number | null;
+        first_choice_count: number;
+      }[];
+    };
+    comparison: PlacementComparisonReport | null;
+    handoff: { student_count: number; source_result_sha256: string };
+    demographic_source: string;
+    admitted_count: number;
+  };
+};
+
+export type UniversityTrajectoryPoint = {
+  semester: number;
+  mean_active_students: number;
+  p05_active_students: number;
+  p95_active_students: number;
+  mean_paused_stop_out: number;
+  mean_transferred: number;
+  mean_withdrawn_dropout: number;
+  mean_graduated: number;
+  mean_retention_rate: number;
+  mean_gpa: number;
+  mean_waitlisted: number;
+  mean_net_tuition_revenue: number;
+  mean_aid_disbursed: number;
+};
+
+export type UniversityRunResponse = {
+  run_id: string;
+  scenario_id: string | null;
+  placement_run_id: string | null;
+  osym_verified: boolean;
+  coefficients_calibrated: boolean;
+  disclaimer?: string;
+  result_sha256: string;
+  created_at: string;
+  summary: {
+    title: string;
+    headline: string;
+    key_findings: string[];
+    summary_markdown: string;
+    osym_verified: boolean;
+    coefficients_calibrated: boolean;
+    disclaimer: string;
+  };
+  result?: {
+    manifest: Record<string, unknown>;
+    semester_snapshots: {
+      semester: number;
+      active_students: number;
+      paused_stop_out_students: number;
+      transferred_students: number;
+      withdrawn_dropout_students: number;
+      graduated_students: number;
+      mean_gpa: number;
+      total_waitlisted_requests: number;
+      total_net_tuition_revenue: number;
+    }[];
+    final_summary: Record<string, number>;
+  };
+  comparison?: {
+    replications: number;
+    osym_verified: boolean;
+    coefficients_calibrated: boolean;
+    disclaimer: string;
+    policy_effects: Record<string, {
+      baseline_mean: number;
+      policy_mean: number;
+      mean: number;
+      std: number;
+      p05: number;
+      p50: number;
+      p95: number;
+    }>;
+    baseline_trajectory: UniversityTrajectoryPoint[];
+    policy_trajectory: UniversityTrajectoryPoint[];
+  } | null;
+};
+
+export type UniversitySweepResponse = {
+  placement_run_id: string | null;
+  cohort_size: number;
+  semester_count: number;
+  replications: number;
+  osym_verified: boolean;
+  coefficients_calibrated: boolean;
+  disclaimer: string;
+  rows: {
+    tuition_change_pct: number;
+    aid_budget_change_pct: number;
+    mean_retention_rate: number;
+    retention_delta_vs_zero: number;
+    mean_withdrawn_dropout: number;
+    mean_paused_stop_out: number;
+    mean_net_tuition_revenue: number;
+    mean_aid_disbursed: number;
+  }[];
+};
 

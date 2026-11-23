@@ -13,10 +13,20 @@ from typing import Any
 
 try:
     from .loader import load_scenario
-    from .schema import ScenarioConfig, UnknownQuestionError
+    from .schema import (
+        PlacementScenarioConfig,
+        ScenarioConfig,
+        UniversityPolicyIntervention,
+        UnknownQuestionError,
+    )
 except ImportError:
     from scenarios.loader import load_scenario
-    from scenarios.schema import ScenarioConfig, UnknownQuestionError
+    from scenarios.schema import (
+        PlacementScenarioConfig,
+        ScenarioConfig,
+        UniversityPolicyIntervention,
+        UnknownQuestionError,
+    )
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +38,7 @@ _DEFAULT_REL_DIRS = (
 DEFAULT_SCENARIOS_DIRS = list(_DEFAULT_REL_DIRS)
 
 # Question types the national experiment runtime (TaskSpec) can execute.
-EXECUTABLE_QUESTION_TYPES = frozenset({"single_choice"})
+EXECUTABLE_QUESTION_TYPES = frozenset({"single_choice", "free_text"})
 # PopulationFilterConfig fields enforced by the runtime through ExperimentDefinition.scenario_ref.
 _ENFORCED_FILTERS = {"minimum_age", "maximum_age", "province_codes", "adult_only", "required_attributes"}
 
@@ -218,6 +228,11 @@ def scenario_to_experiment_definition(
 
     # Build task options
     options = [{"id": opt.id, "label": opt.label} for opt in target_q.options]
+    allow_other_text = False
+    if target_q.type == "single_choice" and target_q.allow_other:
+        if not any(opt["id"] == "other" for opt in options):
+            options.append({"id": "other", "label": "Other"})
+        allow_other_text = True
 
     tp = scenario.target_population
     unenforced = sorted(
@@ -238,8 +253,9 @@ def scenario_to_experiment_definition(
         },
         "task": {
             "instruction": target_q.text,
+            "response_type": target_q.type,
             "options": options,
-            "allow_other_text": target_q.allow_other,
+            "allow_other_text": allow_other_text,
             "ask_rationale": target_q.ask_rationale,
             "adult_only": tp.adult_only,
         },
@@ -332,4 +348,317 @@ def save_custom_scenario(
         yaml.safe_dump(dump_dict, f, sort_keys=False, allow_unicode=True)
 
     return config
+
+
+def scenario_to_placement_spec(
+    scenario: ScenarioConfig | PlacementScenarioConfig,
+    candidates: Any = None,
+    programs: list[Any] | None = None,
+    ruleset: Any = None,
+    seed: int = 42,
+) -> dict[str, Any]:
+    """Transform a university ScenarioConfig or PlacementScenarioConfig into an offline placement input bundle."""
+    try:
+        from .placement.cohort_synth import build_standalone_demo_programs, build_standalone_test_cohort
+        from .placement.models import CandidateCohort, PlacementRuleset
+    except ImportError:
+        from scenarios.placement.cohort_synth import (  # type: ignore
+            build_standalone_demo_programs,
+            build_standalone_test_cohort,
+        )
+        from scenarios.placement.models import CandidateCohort, PlacementRuleset  # type: ignore
+
+    if isinstance(scenario, PlacementScenarioConfig):
+        sim_mode = scenario.simulation_mode
+        intervention = scenario.university_intervention
+    else:
+        sim_mode = scenario.effective_simulation_mode
+        intervention = scenario.university_intervention
+
+    if sim_mode not in ("university_placement", "university_decision_hybrid") and intervention is None:
+        raise ValueError(
+            f"Scenario '{scenario.scenario_id}' has simulation_mode='{sim_mode}' and no university_intervention; "
+            "cannot convert to a placement specification."
+        )
+
+    resolved_programs = list(programs) if programs is not None else build_standalone_demo_programs()
+    if candidates is None:
+        cohort = build_standalone_test_cohort(resolved_programs, seed=seed)
+        resolved_candidates = cohort.candidates
+    elif isinstance(candidates, CandidateCohort):
+        resolved_candidates = candidates.candidates
+    else:
+        resolved_candidates = list(candidates)
+
+    resolved_ruleset = ruleset if ruleset is not None else PlacementRuleset()
+    if intervention is not None and intervention.ruleset_id:
+        resolved_ruleset = resolved_ruleset.model_copy(update={"ruleset_id": intervention.ruleset_id})
+
+    return {
+        "scenario": scenario,
+        "simulation_mode": sim_mode,
+        "candidates": resolved_candidates,
+        "programs": resolved_programs,
+        "ruleset": resolved_ruleset,
+        "intervention": intervention,
+        "seed": seed,
+        "osym_verified": resolved_ruleset.osym_verified,
+        "rule_fidelity": resolved_ruleset.rule_fidelity,
+        "disclaimer": resolved_ruleset.disclosure_banner(),
+    }
+
+
+def execute_placement_scenario(
+    scenario: ScenarioConfig | PlacementScenarioConfig,
+    candidates: Any = None,
+    programs: list[Any] | None = None,
+    ruleset: Any = None,
+    seed: int = 42,
+    min_group: int = 1,
+) -> Any:
+    """Resolve scenario parameters and execute the offline deterministic placement engine."""
+    try:
+        from .placement.engine import run_placement
+    except ImportError:
+        from scenarios.placement.engine import run_placement  # type: ignore
+
+    spec = scenario_to_placement_spec(
+        scenario=scenario,
+        candidates=candidates,
+        programs=programs,
+        ruleset=ruleset,
+        seed=seed,
+    )
+    return run_placement(
+        candidates=spec["candidates"],
+        programs=spec["programs"],
+        ruleset=spec["ruleset"],
+        intervention=spec["intervention"],
+        scenario=scenario,
+        seed=seed,
+        min_group=min_group,
+    )
+
+
+def placement_result_to_student_cohort(
+    result: Any,
+    candidates: Any,
+    programs: list[Any],
+) -> dict[str, Any]:
+    """Handoff contract converting placed candidates into post-admission student cohort records (Milestone 2)."""
+    try:
+        from .placement.models import CandidateCohort
+    except ImportError:
+        from scenarios.placement.models import CandidateCohort  # type: ignore
+
+    cand_list = candidates.candidates if isinstance(candidates, CandidateCohort) else list(candidates)
+    cand_map = {c.candidate_id: c for c in cand_list}
+    prog_map = {p.program_id: p for p in programs}
+
+    admitted_students: list[dict[str, Any]] = []
+    for outcome in result.candidate_outcomes:
+        if outcome.placement_status != "placed" or outcome.assigned_program_id is None:
+            continue
+        cand = cand_map.get(outcome.candidate_id)
+        prog = prog_map.get(outcome.assigned_program_id)
+        admitted_students.append({
+            "student_id": outcome.candidate_id,
+            "source_synthetic_id": outcome.source_synthetic_id,
+            "province_code": cand.province_code if cand else (prog.province_code if prog else None),
+            "age": cand.age if cand else None,
+            "sex": cand.sex if cand else None,
+            "income_band": cand.income_band if cand else None,
+            "liquid_budget": cand.liquid_budget if cand else None,
+            "program_id": outcome.assigned_program_id,
+            "university_name": prog.university_name if prog else None,
+            "department_name": prog.department_name if prog else None,
+            "score_type_used": outcome.score_type_used,
+            "admission_score": outcome.effective_score,
+            "financials": outcome.financials.model_dump(mode="json") if outcome.financials else None,
+            "semester_state": "admitted_term_1",
+        })
+
+    return {
+        "handoff_version": "placement-to-university-1.0",
+        "source_result_sha256": result.manifest.result_sha256,
+        "scenario_id": result.manifest.scenario_id,
+        "osym_verified": result.manifest.osym_verified,
+        "rule_fidelity": result.manifest.rule_fidelity,
+        "disclaimer": result.manifest.disclaimer,
+        "student_count": len(admitted_students),
+        "students": admitted_students,
+    }
+
+
+def _extract_university_mode_and_intervention(
+    scenario: ScenarioConfig | PlacementScenarioConfig,
+) -> tuple[str, Any]:
+    if isinstance(scenario, PlacementScenarioConfig):
+        return scenario.simulation_mode, scenario.university_intervention
+    return scenario.effective_simulation_mode, scenario.university_intervention
+
+
+def scenario_to_university_spec(
+    scenario: ScenarioConfig | PlacementScenarioConfig,
+    *,
+    students: list[Any] | None = None,
+    courses: list[Any] | None = None,
+    ruleset: Any = None,
+    weights: Any = None,
+    semester_count: int | None = None,
+    replications: int | None = None,
+    seed: int = 42,
+    cohort_size: int = 200,
+) -> dict[str, Any]:
+    """Transform a university ScenarioConfig into an offline Milestone 2 simulation specification."""
+    try:
+        from .university.cohort import (
+            build_synthetic_university_cohort,
+            student_cohort_from_placement_handoff,
+        )
+        from .university.models import UniversityRuleset, UtilityWeights
+    except ImportError:
+        from scenarios.university.cohort import (  # type: ignore
+            build_synthetic_university_cohort,
+            student_cohort_from_placement_handoff,
+        )
+        from scenarios.university.models import UniversityRuleset, UtilityWeights  # type: ignore
+
+    sim_mode, intervention = _extract_university_mode_and_intervention(scenario)
+    if sim_mode not in ("university_decision", "university_decision_hybrid") and intervention is None:
+        raise ValueError(
+            f"Scenario '{scenario.scenario_id}' has simulation_mode='{sim_mode}' and no university_intervention; "
+            "cannot convert to a university multi-semester specification."
+        )
+
+    eff_intervention = intervention or UniversityPolicyIntervention()
+    eff_semesters = semester_count if semester_count is not None else eff_intervention.semester_count
+    eff_replications = replications if replications is not None else eff_intervention.replications
+
+    if students is not None and courses is not None:
+        resolved_students, resolved_courses = list(students), list(courses)
+    elif sim_mode == "university_decision_hybrid" and students is None:
+        placement_spec = scenario_to_placement_spec(scenario=scenario, seed=seed)
+        placement_result = execute_placement_scenario(
+            scenario=scenario,
+            candidates=placement_spec["candidates"],
+            programs=placement_spec["programs"],
+            ruleset=placement_spec["ruleset"],
+            seed=seed,
+        )
+        handoff = placement_result_to_student_cohort(
+            placement_result,
+            placement_spec["candidates"],
+            placement_spec["programs"],
+        )
+        resolved_students, resolved_courses = student_cohort_from_placement_handoff(handoff, seed=seed)
+        if courses is not None:
+            resolved_courses = list(courses)
+    else:
+        syn_students, syn_courses = build_synthetic_university_cohort(size=cohort_size, seed=seed)
+        resolved_students = list(students) if students is not None else syn_students
+        resolved_courses = list(courses) if courses is not None else syn_courses
+
+    resolved_ruleset = ruleset if ruleset is not None else UniversityRuleset()
+    resolved_weights = weights if weights is not None else UtilityWeights()
+
+    return {
+        "scenario": scenario,
+        "simulation_mode": sim_mode,
+        "students": resolved_students,
+        "courses": resolved_courses,
+        "ruleset": resolved_ruleset,
+        "weights": resolved_weights,
+        "intervention": eff_intervention,
+        "semester_count": eff_semesters,
+        "replications": eff_replications,
+        "seed": seed,
+        "osym_verified": resolved_ruleset.osym_verified,
+        "coefficients_calibrated": resolved_weights.coefficients_calibrated,
+        "disclaimer": resolved_ruleset.disclosure_banner(),
+    }
+
+
+def execute_university_scenario(
+    scenario: ScenarioConfig | PlacementScenarioConfig,
+    *,
+    students: list[Any] | None = None,
+    courses: list[Any] | None = None,
+    ruleset: Any = None,
+    weights: Any = None,
+    semester_count: int | None = None,
+    replications: int | None = None,
+    seed: int = 42,
+    cohort_size: int = 200,
+    run_comparison: bool | None = None,
+) -> dict[str, Any]:
+    """Resolve and execute a Milestone 2 university scenario (single run or paired CRN comparison)."""
+    try:
+        from .summary import summarize_university_comparison, summarize_university_result
+        from .university.experiments import run_replicated_university_experiment
+        from .university.semester_engine import run_university_simulation
+    except ImportError:
+        from scenarios.summary import (  # type: ignore
+            summarize_university_comparison,
+            summarize_university_result,
+        )
+        from scenarios.university.experiments import run_replicated_university_experiment  # type: ignore
+        from scenarios.university.semester_engine import run_university_simulation  # type: ignore
+
+    spec = scenario_to_university_spec(
+        scenario=scenario,
+        students=students,
+        courses=courses,
+        ruleset=ruleset,
+        weights=weights,
+        semester_count=semester_count,
+        replications=replications,
+        seed=seed,
+        cohort_size=cohort_size,
+    )
+
+    eff_reps = int(spec["replications"])
+    do_compare = run_comparison if run_comparison is not None else (eff_reps > 1)
+
+    single_result = run_university_simulation(
+        students=spec["students"],
+        courses=spec["courses"],
+        ruleset=spec["ruleset"],
+        weights=spec["weights"],
+        intervention=spec["intervention"],
+        scenario_id=scenario.scenario_id,
+        semester_count=spec["semester_count"],
+        seed=seed,
+        record_decisions=(not do_compare),
+    )
+
+    comparison = None
+    if do_compare:
+        comparison = run_replicated_university_experiment(
+            students=spec["students"],
+            courses=spec["courses"],
+            policy_intervention=spec["intervention"],
+            baseline_intervention=UniversityPolicyIntervention(semester_count=spec["semester_count"]),
+            ruleset=spec["ruleset"],
+            weights=spec["weights"],
+            semester_count=spec["semester_count"],
+            replications=eff_reps,
+            base_seed=seed,
+            baseline_scenario_id=f"{scenario.scenario_id}_baseline",
+            policy_scenario_id=scenario.scenario_id,
+        )
+        summary = summarize_university_comparison(comparison)
+    else:
+        summary = summarize_university_result(single_result)
+
+    return {
+        "mode": spec["simulation_mode"],
+        "scenario_id": scenario.scenario_id,
+        "osym_verified": spec["osym_verified"],
+        "coefficients_calibrated": spec["coefficients_calibrated"],
+        "disclaimer": spec["disclaimer"],
+        "result": single_result.model_dump(mode="json"),
+        "comparison": comparison.model_dump(mode="json") if comparison is not None else None,
+        "summary": summary,
+    }
 
