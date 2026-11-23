@@ -91,8 +91,14 @@ def test_subprocess_invocation_is_isolated(make_settings, tmp_path, monkeypatch)
     assert captured["argv"][:3] == [str(python), "-I", "-B"] and "shell" not in captured
     env = captured["env"]
     assert "FAKEPROV_API_KEY" not in env and env["HTTPS_PROXY"] == "http://127.0.0.1:9"
-    assert set(env) <= {"PATH", "HOME", "LANG", "LC_ALL", "PYTHONUTF8", "PYTHONDONTWRITEBYTECODE", "MATRAIX_ROOT",
-                        "HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "http_proxy", "https_proxy", "all_proxy", "NO_PROXY"}
+    allowed_env = {
+        "PATH", "HOME", "LANG", "LC_ALL", "PYTHONUTF8", "PYTHONDONTWRITEBYTECODE", "MATRAIX_ROOT",
+        "HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "http_proxy", "https_proxy", "all_proxy", "NO_PROXY",
+    }
+    if os.name == "nt":
+        allowed_env |= {"USERPROFILE", "TEMP", "TMP", "SystemRoot"}
+        assert env["USERPROFILE"] == env["TEMP"] == env["TMP"] == str(settings.runtime_home)
+    assert set(env) <= allowed_env
     assert captured["cwd"] == settings.repo_root and captured["stdin"] == subprocess.DEVNULL
     log = (settings.state_dir / "logs" / "x.log").read_text()
     assert "artificial-value" not in log

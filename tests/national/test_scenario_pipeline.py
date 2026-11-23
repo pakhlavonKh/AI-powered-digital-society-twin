@@ -275,8 +275,11 @@ def test_stale_text_or_inconsistent_parameters_blocked_in_plan(national_client, 
     assert plan_synced["blockers"] == []
 
 
-def test_api_scenarios_filtering_by_category_and_province(national_client):
+def test_api_scenarios_filtering_by_category_and_province(national_client, monkeypatch):
     """Audit Repro 4: GET /api/v2/scenarios supports category and province query filters."""
+    from scenarios import adapter
+
+    monkeypatch.setattr(adapter, "DEFAULT_SCENARIOS_DIRS", [adapter._BUILTIN_SCENARIOS_DIR])
     c = national_client
 
     # Filter by category=energy and province=06 -> returns energy_subsidy_001

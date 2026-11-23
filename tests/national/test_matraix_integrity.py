@@ -99,8 +99,9 @@ def definition(transport="live", attempts=1):
 def requests():
     return [CallRequest(f"per-{i}:1", {
         "persona_id": f"per-{i}", "synthetic_id": f"ST-{i}", "province_code": province,
-        "model_visible": {"province_name": name}, "attributes": [], "template_version": "1",
-        "population_id": "test", "hidden": [], "limitations": [], "provenance": {}},
+        "model_visible": {"province_name": name}, "model_visible_fields": ["province_name"],
+        "attributes": [{"field": "province_name", "value": province, "display": name, "status": "visible"}],
+        "template_version": "1", "population_id": "test", "hidden": [], "limitations": [], "provenance": {}},
         1, 1, f"system {i}", f"Province: {name}\nTask:\nChoose")
         for i, (province, name) in enumerate([("06", "Ankara"), ("69", "Bayburt"), ("06", "Ankara")])]
 
