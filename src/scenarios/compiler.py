@@ -374,7 +374,7 @@ def synthesize_questions(
                 text=f"Regarding the policy situation: '{clean_prompt}', please provide your detailed thoughts and perspective in your own words.",
                 type="free_text",
                 options=[],
-                ask_rationale=False,
+                ask_rationale=True,
             )
         ]
     if domain == "transportation":

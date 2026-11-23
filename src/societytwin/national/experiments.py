@@ -350,9 +350,9 @@ def parse_response(text: str | None, task: TaskSpec) -> dict:
     if task.response_type == "free_text":
         answer = payload.get("answer") or payload.get("text") or payload.get("response")
         if not answer or answer == "open_response":
-            answer = payload.get("rationale") or payload.get("choice")
-        if not isinstance(answer, str) or not answer.strip():
-            return {"valid": False, "error": "answer must be a non-empty string"}
+            answer = payload.get("rationale")
+        if not isinstance(answer, str) or not answer.strip() or answer.strip() == "open_response":
+            return {"valid": False, "error": "answer must be a non-empty free-text response"}
         rationale = payload.get("rationale")
         return {"valid": True, "answer": answer.strip(), "choice": answer.strip(),
                 "rationale": rationale if isinstance(rationale, str) else None}

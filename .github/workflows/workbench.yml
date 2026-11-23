@@ -46,6 +46,7 @@ jobs:
         run: |
           PYTHONPATH=src .venv/bin/python -m societytwin.api.openapi_export /tmp/openapi.json
           diff -q /tmp/openapi.json frontend/openapi.json
+          (cd frontend && npx --no-install openapi-typescript openapi.json -o /tmp/schema.d.ts && diff -q /tmp/schema.d.ts src/lib/api/schema.d.ts)
       - name: Typecheck and component tests
         run: cd frontend && npx tsc --noEmit && npx vitest run
       - name: Browser flow (artificial fixture, no runtime, no keys)

@@ -5,14 +5,17 @@ import type { Overview, ProvinceCoverage, ValidationReport } from "@/lib/api/v2"
 import { coverageNote } from "@/lib/coverage";
 import { featuredRun } from "@/lib/recordedRuns";
 
+const mockPathname = vi.hoisted(() => vi.fn(() => "/"));
+
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
   useSearchParams: () => new URLSearchParams(""),
-  usePathname: () => "/",
+  usePathname: () => mockPathname(),
 }));
 
 const { PersonaPair } = await import("@/components/historical/PersonaPair");
 const { PipelineStatus } = await import("@/components/dashboard/PipelineStatus");
+const { ValidationTabs } = await import("@/components/ValidationTabs");
 
 function province(code: string, name: string, controls: boolean): ProvinceCoverage {
   return { province_code: code, province_name: name, nuts3_code: "TR000", nuts2_code: "TR00", nuts1_code: "TR0", nuts1_name: "x", iso_3166_2: `TR-${code}`,
@@ -144,5 +147,14 @@ describe("pipeline status", () => {
     expect(stages[2]).toHaveTextContent("Needs a population");
     expect(stages[3]).toHaveTextContent("Needs a population");
     expect(screen.getByText("Validation runs once a population exists.")).toBeInTheDocument();
+  });
+});
+
+describe("validation tabs", () => {
+  it("marks the active /historical validation or data-sources tab with aria-current", () => {
+    mockPathname.mockReturnValueOnce("/historical/validation");
+    render(<ValidationTabs />);
+    expect(screen.getByRole("link", { name: "Validation" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "Data sources" })).not.toHaveAttribute("aria-current");
   });
 });

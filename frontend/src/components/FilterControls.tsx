@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Filters } from "@/lib/filters";
 
 type Props = {
@@ -24,6 +24,9 @@ function toggle<T extends string>(list: T[] | undefined, value: string): T[] | u
 /** AND across fields, OR within a field. Only fields that exist in the selected build can be used. */
 export function FilterControls({ filters, onChange, categories, availableFields, translations = {}, showTranslations, idSearch, disabled }: Props) {
   const [idText, setIdText] = useState(filters.person_ids?.join(" ") ?? "");
+  useEffect(() => {
+    setIdText(filters.person_ids?.join(" ") ?? "");
+  }, [filters.person_ids]);
   const maritalAvailable = availableFields.includes("marital_status");
   const label = (value: string) => (showTranslations && translations[value] ? `${value} (${translations[value]})` : value);
 

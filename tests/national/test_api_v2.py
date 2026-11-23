@@ -145,6 +145,8 @@ def test_unknown_ids_are_404(national_client, path):
 
 
 def test_scenarios_catalog_and_experiment_definition(national_client):
+    from pathlib import Path
+
     c = national_client
 
     # 1. Catalog listing
@@ -211,19 +213,29 @@ def test_scenarios_catalog_and_experiment_definition(national_client):
             }
         ],
     }
+    test_file = Path("experiments/policy_scenarios/scenarios/test_custom_001.yaml")
+    prompt_file: Path | None = None
     try:
         create_res = c.post("/api/v2/scenarios", json=custom_payload)
         assert create_res.status_code == 201, create_res.json()
         assert create_res.json()["scenario_id"] == "test_custom_001"
+        assert not test_file.exists(), "Custom scenarios must save under state_dir, not the tracked source tree"
 
         # Verify custom scenario appears in catalog
         cat_after = c.get("/api/v2/scenarios").json()["items"]
         assert any(item["scenario_id"] == "test_custom_001" for item in cat_after)
+
+        # Prompt compilation also writes to state_dir rather than tracked experiments/policy_scenarios/scenarios/
+        prompt_res = c.post("/api/v2/scenarios/from-prompt", json={"prompt": "Ankara transit fare rise by 15%"})
+        assert prompt_res.status_code == 201, prompt_res.json()
+        sid = prompt_res.json()["scenario_id"]
+        prompt_file = Path("experiments/policy_scenarios/scenarios") / f"{sid}.yaml"
+        assert not prompt_file.exists(), "Prompt scenarios must save under state_dir, not the tracked source tree"
     finally:
-        from pathlib import Path
-        test_file = Path("experiments/policy_scenarios/scenarios/test_custom_001.yaml")
         if test_file.exists():
             test_file.unlink()
+        if prompt_file is not None and prompt_file.exists():
+            prompt_file.unlink()
 
     # 8. Invalid scenario rejects with 400 or 422
     bad_res = c.post("/api/v2/scenarios", json={"scenario_id": "123_invalid_id"})

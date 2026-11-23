@@ -163,7 +163,19 @@ export type ExperimentDefinition = {
   cohort: { cohort_id: string; sample_size: number; sampling_method: string; seed: number; strata_field?: string | null };
   model: { backend: "stub" | "matraix"; transport: "fake" | "live"; model?: string | null; temperature: number; seed?: number | null; max_output_tokens?: number };
   execution: { repetitions: number; max_attempts: number; max_calls: number; max_cost_usd?: number | null };
-  persona?: { visible_fields: string[] | null };
+  persona?: {
+    visible_fields?: string[] | null;
+    field_selection?: {
+      schema_version?: "persona-field-selection-1";
+      allowlist: string[];
+      required?: string[];
+      optional?: string[];
+      max_attributes?: number;
+      missingness?: "omit" | "error";
+      sidecar_root?: string | null;
+      sidecar_id?: string | null;
+    } | null;
+  };
   scenario_ref?: {
     scenario_id: string;
     scenario_version: string;
@@ -311,7 +323,7 @@ export type ScenarioListItem = {
   type: string;
   location: { province_code: string; province_name: string };
   questions_count: number;
-  questions: { id: string; text: string }[];
+  questions: { id: string; text: string; type?: "single_choice" | "multiple_choice" | "free_text" | string }[];
 };
 export type ScenarioList = { items: ScenarioListItem[] };
 
@@ -320,23 +332,30 @@ export type CreateScenarioPayload = {
   version?: string;
   name: string;
   description: string;
-  location: { province_code: string; province_name: string };
-  metadata?: { hypothetical?: boolean; source_note?: string | null };
+  location: { province_code: string; province_name: string; nuts2_code?: string | null };
+  metadata?: { hypothetical?: boolean; source_note?: string | null; author?: string | null; reference_year?: number | null };
   policy: {
     category: string;
     type: string;
     parameters: {
-      baseline_fare?: number;
-      new_fare?: number;
-      increase_percentage?: number;
+      baseline_fare?: number | null;
+      new_fare?: number | null;
+      increase_percentage?: number | null;
       currency?: string;
-      fare_category?: string;
+      fare_category?: string | null;
+      effective_date?: string | null;
+      subsidized_exemptions_note?: string | null;
+      policy_summary?: string | null;
+      custom_details?: Record<string, unknown>;
     };
   };
   target_population?: {
-    minimum_age?: number;
+    minimum_age?: number | null;
     maximum_age?: number | null;
     province_codes?: string[] | null;
+    sexes?: string[] | null;
+    marital_statuses?: string[] | null;
+    education_levels?: string[] | null;
     adult_only?: boolean;
     required_attributes?: string[];
   };
@@ -345,6 +364,8 @@ export type CreateScenarioPayload = {
     text: string;
     type?: "single_choice" | "multiple_choice" | "free_text";
     options: { id: string; label: string }[];
+    min_length?: number | null;
+    max_length?: number | null;
     allow_other?: boolean;
     ask_rationale?: boolean;
   }[];
@@ -373,6 +394,7 @@ export type ResultTextSummary = {
   is_free_text: boolean;
   total_responses: number;
   valid_responses: number;
+  generated_by?: string;
 };
 
 // ---------------------------------------------------------------- university placement & policy
@@ -383,7 +405,7 @@ export type UniversityInterventionPayload = {
   capacity_rounding?: "floor" | "nearest" | "largest_remainder";
   installment_count?: number | null;
   installment_upfront_share?: number | null;
-  affordability_filter_mode?: "none" | "warn" | "hard_exclude";
+  affordability_filter_mode?: "none" | "hard_exclude" | "utility_rerank";
   attendance_min_pct?: number | null;
   grading_difficulty_shift?: number | null;
   semester_count?: number;
@@ -541,6 +563,7 @@ export type UniversityRunResponse = {
       mean_gpa: number;
       total_waitlisted_requests: number;
       total_net_tuition_revenue: number;
+      course_pass_rate?: number | null;
     }[];
     final_summary: Record<string, number>;
   };

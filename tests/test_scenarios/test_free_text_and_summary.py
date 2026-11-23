@@ -425,3 +425,39 @@ def test_summary_never_calls_provider_in_fake_or_offline_mode(monkeypatch):
     summary = generate_result_text_summary(definition, responses)
     assert len(called) == 0, "Provider call was unexpectedly initiated during offline experiment summary!"
     assert summary["generated_by"] == "deterministic"
+
+
+def test_matraix_free_text_requests_rationale_and_rejects_sentinel(tmp_path):
+    """MatraixBackend forces askRationale=True for free_text and parse_response never emits bare 'open_response'."""
+    import yaml
+    from societytwin.national.experiments import ExperimentDefinition
+    from societytwin.national.runner import MatraixBackend
+
+    spec = TaskSpec(
+        instruction="Share your perspective in your own words.",
+        response_type="free_text",
+        options=[],
+        ask_rationale=False,
+    )
+    assert parse_response('{"choice": "open_response", "rationale": "Fares will squeeze student budgets."}', spec) == {
+        "valid": True,
+        "answer": "Fares will squeeze student budgets.",
+        "choice": "Fares will squeeze student budgets.",
+        "rationale": "Fares will squeeze student budgets.",
+    }
+    rejected = parse_response('{"choice": "open_response", "rationale": null}', spec)
+    assert rejected["valid"] is False
+
+    defn = ExperimentDefinition.model_validate({
+        "title": "Free text MatrAIx test",
+        "scenario": {"title": "Test scenario", "description": "Testing free_text rationale flow.", "parameters": [], "hypothetical": True},
+        "task": {"instruction": spec.instruction, "response_type": "free_text", "options": [], "allow_other_text": False, "ask_rationale": False},
+        "environment": {"province_code": "06", "context_indicators": []},
+        "cohort": {"cohort_id": "c1", "sample_size": 1, "sampling_method": "weighted", "seed": 7},
+        "model": {"backend": "matraix", "transport": "fake", "temperature": 0.0},
+        "execution": {"repetitions": 1, "max_attempts": 1, "max_calls": 1},
+    })
+    backend = MatraixBackend(defn, runtime=None, run_dir=tmp_path, settings=None, live_credentials=None)
+    task_dir = backend._task_dir({}, "Scenario: Test scenario\nTask: Share your perspective")
+    q_yaml = yaml.safe_load((task_dir / "input" / "questionnaire.yaml").read_text(encoding="utf-8"))
+    assert q_yaml["askRationale"] is True

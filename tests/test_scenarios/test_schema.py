@@ -3,7 +3,7 @@
 import pytest
 from pydantic import ValidationError
 
-from src.scenarios.schema import (
+from scenarios.schema import (
     PolicyConfig,
     PolicyParameters,
     PopulationFilterConfig,

@@ -146,13 +146,22 @@ class MatraixBackend:
             'version = "1.0"\nartifacts = [ "/app/output",]\n\n[task]\nname = "societytwin/experiment"\n\n'
             '[metadata]\ntype = "survey"\ndomain = "societytwin"\n\n[agent]\ntimeout_sec = 600.0\n\n'
             '[environment]\ndefinition = "application/shared-survey-form"\n', encoding="utf-8")
-        (task / "instruction.md").write_text(
-            f"# {d.title}\n\nRead the context, then answer the question with one of the listed option ids.\n", encoding="utf-8")
+        is_free_text = d.task.response_type == "free_text" or not d.task.options
+        if is_free_text:
+            (task / "instruction.md").write_text(
+                f"# {d.title}\n\nRead the context, choose 'open_response', and write your full response in the rationale field.\n",
+                encoding="utf-8",
+            )
+        else:
+            (task / "instruction.md").write_text(
+                f"# {d.title}\n\nRead the context, then answer the question with one of the listed option ids.\n",
+                encoding="utf-8",
+            )
         (task / "input" / "context.md").write_text(context + "\n", encoding="utf-8")
         # MatrAIx renders the questionnaire description as the prompt's context, so it carries the full context text.
         opts = [{"id": o.id, "label": o.label} for o in d.task.options] if d.task.options else [{"id": "open_response", "label": "Open textual response"}]
         questionnaire = {"schemaVersion": "1.0", "id": "societytwin_task", "title": d.title, "description": context,
-                         "askRationale": d.task.ask_rationale,
+                         "askRationale": True if is_free_text else d.task.ask_rationale,
                          "questions": [{"id": "q_choice", "prompt": d.task.instruction, "type": "single_choice", "required": True,
                                         "options": opts}]}
         (task / "input" / "questionnaire.yaml").write_text(yaml.safe_dump(questionnaire, allow_unicode=True, sort_keys=False),

@@ -122,7 +122,7 @@ class Settings:
 
 
 def _load_dotenv_files(*paths: Path) -> None:
-    if "PYTEST_CURRENT_TEST" in os.environ:
+    if "PYTEST_CURRENT_TEST" in os.environ or _env_flag("SOCIETYTWIN_DISABLE_DOTENV", False):
         return
     for path in paths:
         if not path.is_file():

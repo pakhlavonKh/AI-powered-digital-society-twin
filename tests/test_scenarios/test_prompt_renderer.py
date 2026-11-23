@@ -2,8 +2,8 @@
 
 from pathlib import Path
 
-from src.scenarios.loader import load_scenario
-from src.scenarios.prompt_renderer import render_scenario_prompt
+from scenarios.loader import load_scenario
+from scenarios.prompt_renderer import render_scenario_prompt
 
 SCENARIO_PATH = Path(__file__).resolve().parents[2] / "experiments" / "policy_scenarios" / "scenarios" / "transport_fare_001.yaml"
 

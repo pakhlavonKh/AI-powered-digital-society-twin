@@ -89,6 +89,14 @@ def _svc(request: Request) -> NationalService:
     return request.app.state.workbench.national
 
 
+def _state_dir(request: Request):
+    wb = getattr(request.app.state, "workbench", None)
+    if wb is not None:
+        return wb.national.settings.state_dir
+    from societytwin.config import load_settings
+    return load_settings().state_dir
+
+
 S = Annotated[NationalService, Depends(_svc)]
 F = Annotated[PopulationFilter, Depends(_filters)]
 
@@ -197,18 +205,21 @@ def build_router() -> APIRouter:
     @r.get("/scenarios", tags=["experiments"],
            description="List all available policy scenarios from registered scenario directories.")
     def list_scenarios(
+        request: Request,
         category: Annotated[str | None, Query(description="Filter scenarios by policy category")] = None,
         province: Annotated[str | None, Query(description="Filter scenarios by province code or name")] = None,
     ):
-        from scenarios.adapter import list_available_scenarios
-        return {"items": list_available_scenarios(category=category, province=province)}
+        from scenarios.adapter import list_available_scenarios, scenario_dirs_for_state
+        search_dirs, _ = scenario_dirs_for_state(_state_dir(request))
+        return {"items": list_available_scenarios(custom_dirs=search_dirs, category=category, province=province)}
 
     @r.get("/scenarios/{scenario_id}", tags=["experiments"],
            description="Retrieve full scenario configuration by scenario_id.")
-    def get_scenario_detail(scenario_id: str):
-        from scenarios.adapter import get_scenario
+    def get_scenario_detail(scenario_id: str, request: Request):
+        from scenarios.adapter import get_scenario, scenario_dirs_for_state
+        search_dirs, _ = scenario_dirs_for_state(_state_dir(request))
         try:
-            return get_scenario(scenario_id).model_dump(mode="json")
+            return get_scenario(scenario_id, custom_dirs=search_dirs).model_dump(mode="json")
         except KeyError as exc:
             raise not_found("scenario_not_found", str(exc))
 
@@ -216,14 +227,16 @@ def build_router() -> APIRouter:
            description="Transform a scenario into an experiment definition for a given cohort.")
     def get_scenario_experiment_definition(
         scenario_id: str,
+        request: Request,
         cohort_id: Annotated[str | None, Query()] = None,
         question_id: Annotated[str | None, Query()] = None,
         seed: Annotated[int, Query()] = 7,
     ):
-        from scenarios.adapter import get_scenario, scenario_to_experiment_definition, UnsupportedQuestionTypeError
+        from scenarios.adapter import get_scenario, scenario_dirs_for_state, scenario_to_experiment_definition, UnsupportedQuestionTypeError
         from scenarios.schema import UnknownQuestionError
+        search_dirs, _ = scenario_dirs_for_state(_state_dir(request))
         try:
-            scenario = get_scenario(scenario_id)
+            scenario = get_scenario(scenario_id, custom_dirs=search_dirs)
             return scenario_to_experiment_definition(scenario, cohort_id or "", question_id, seed)
         except KeyError as exc:
             raise not_found("scenario_not_found", str(exc))
@@ -234,10 +247,11 @@ def build_router() -> APIRouter:
 
     @r.post("/scenarios", status_code=201, tags=["experiments"],
            description="Create and register a custom policy scenario definition.")
-    def create_scenario(body: ScenarioConfig):
-        from scenarios.adapter import save_custom_scenario, ScenarioConflictError
+    def create_scenario(body: ScenarioConfig, request: Request):
+        from scenarios.adapter import save_custom_scenario, scenario_dirs_for_state, ScenarioConflictError
+        search_dirs, save_dir = scenario_dirs_for_state(_state_dir(request))
         try:
-            saved = save_custom_scenario(body)
+            saved = save_custom_scenario(body, target_dir=save_dir, search_dirs=search_dirs)
             return saved.model_dump(mode="json")
         except ScenarioConflictError as exc:
             raise conflict("scenario_conflict", str(exc))
@@ -246,13 +260,14 @@ def build_router() -> APIRouter:
 
     @r.post("/scenarios/from-prompt", status_code=201, tags=["experiments"],
            description="Compile a natural language prompt into a validated policy scenario.")
-    def create_scenario_from_prompt(body: ScenarioPromptRequest):
+    def create_scenario_from_prompt(body: ScenarioPromptRequest, request: Request):
         from scenarios.compiler import compile_scenario_from_prompt
-        from scenarios.adapter import save_custom_scenario
+        from scenarios.adapter import save_custom_scenario, scenario_dirs_for_state
+        search_dirs, save_dir = scenario_dirs_for_state(_state_dir(request))
         try:
             scenario = compile_scenario_from_prompt(body.prompt, model=body.model)
             if body.save:
-                saved = save_custom_scenario(scenario)
+                saved = save_custom_scenario(scenario, target_dir=save_dir, search_dirs=search_dirs)
                 return saved.model_dump(mode="json")
             return scenario.model_dump(mode="json")
         except Exception as exc:

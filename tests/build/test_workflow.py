@@ -16,9 +16,12 @@ from tests.households.test_type_size import optional  # noqa: F401
 
 
 @pytest.fixture
-def config(store,national_settings,tmp_path):
-    return BuildConfig(inputs={'controls_directory':national_settings.national_controls_dir},
-                       resident_sample_size=1000,output_root=tmp_path/'bundles')
+def config(store, national_settings):
+    import tempfile
+
+    with tempfile.TemporaryDirectory(prefix='st-') as short_tmp:
+        yield BuildConfig(inputs={'controls_directory': national_settings.national_controls_dir},
+                          resident_sample_size=1000, output_root=Path(short_tmp) / 'b')
 
 
 def test_defaults():

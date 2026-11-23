@@ -14,6 +14,8 @@ printf 'datasets: []\n' > "$WORK/manifest.yaml"
 cleanup() { [ -n "${API_PID:-}" ] && kill "$API_PID" 2>/dev/null || true; [ -n "${WEB_PID:-}" ] && kill "$WEB_PID" 2>/dev/null || true; rm -rf "$WORK"; }
 trap cleanup EXIT
 env -i PATH="$PATH" HOME="$HOME" PYTHONPATH="$REPO/src" \
+  SOCIETYTWIN_DISABLE_DOTENV=1 SOCIETYTWIN_ENABLE_LIVE_EXECUTION=0 \
+  SOCIETYTWIN_ENABLE_LIVE_SCENARIO_LLM=0 SOCIETYTWIN_ALLOW_LLM_SUMMARY=0 \
   SOCIETYTWIN_EXPERIMENT_ROOT="$WORK/experiment" SOCIETYTWIN_STATE_DIR="$WORK/state" MATRAIX_ROOT="$WORK/no-matraix" \
   SOCIETYTWIN_DATA_MANIFEST="$WORK/manifest.yaml" SOCIETYTWIN_TUIK_PACKAGE="$WORK/tuik_package" \
   SOCIETYTWIN_TUIK_MAPPING="$REPO/tests/fixtures/artificial_tuik_package_mapping.yaml" \
