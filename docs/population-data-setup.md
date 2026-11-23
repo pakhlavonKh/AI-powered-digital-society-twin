@@ -213,11 +213,7 @@ must fail. No optional feature is activated by installing a raw input.
 
 ## Build controls and unified artifacts
 
-On Windows, the existing `python -m societytwin.national` CLI fails before parsing
-arguments because it imports Unix-only `resource`. The same failure is present in
-the original `ui_design` worktree. Do not describe that CLI as verified on Windows.
-Its cross-platform repair is a separate task. The existing source functions provide
-a verified Windows-compatible setup path without changing generator algorithms:
+*(Note: `src/societytwin/national/__main__.py` now guards the Unix-only `resource` import so `python -m societytwin.national` also runs cleanly on Windows.)* The function-level control-build snippet below remains an alternative setup path:
 
 ```powershell
 @'

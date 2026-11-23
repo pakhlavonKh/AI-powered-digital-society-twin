@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CohortStatusBadge, FilterChips } from "@/components/CohortStatus";
 import { FilterControls } from "@/components/FilterControls";
 import { SyntheticNotice } from "@/components/Notices";
@@ -11,7 +11,7 @@ import { EmptyState, ErrorState, Loading, UnavailableState } from "@/components/
 import { StatTile } from "@/components/StatTile";
 import { api, toApiError, unwrap, type ApiError } from "@/lib/api/client";
 import { useBuild } from "@/lib/build";
-import { filtersToBody, type Filters } from "@/lib/filters";
+import { filtersFromParams, filtersToBody, type Filters } from "@/lib/filters";
 import { fmtDecimal, fmtInt } from "@/lib/format";
 import { useApi } from "@/lib/useApi";
 import { withBuild } from "@/lib/urls";
@@ -26,9 +26,11 @@ export default function CohortsPage() {
   const router = useRouter();
   const params = useSearchParams();
   const linkBuild = params.get("build");
+  const urlIdKey = params.getAll("id").join("\0");
   const { build, missingBuildId } = useBuild();
   const buildId = build?.availability.status === "available" ? build.build_id : null;
-  const [filters, setFilters] = useState<Filters>({});
+  const [filters, setFilters] = useState<Filters>(() => filtersFromParams(params));
+  const prevBuildId = useRef<string | null>(null);
   const [size, setSize] = useState("10");
   const [seed, setSeed] = useState("");
   const [name, setName] = useState("");
@@ -36,7 +38,18 @@ export default function CohortsPage() {
   const [saveError, setSaveError] = useState<ApiError | undefined>();
 
   useEffect(() => setSeed(String(randomSeed())), []);
-  useEffect(() => setFilters({}), [buildId]);
+  useEffect(() => {
+    if (prevBuildId.current && buildId && prevBuildId.current !== buildId) {
+      setFilters({});
+    }
+    if (buildId) prevBuildId.current = buildId;
+  }, [buildId]);
+  useEffect(() => {
+    const ids = params.getAll("id").filter(Boolean);
+    if (ids.length) {
+      setFilters((cur) => ({ ...cur, person_ids: ids }));
+    }
+  }, [urlIdKey, params]);
 
   const cats = useApi(buildId ? `cats:${buildId}` : null, (signal) =>
     unwrap(api.GET("/api/v1/builds/{build_id}/summary", { params: { path: { build_id: buildId! } }, signal })));

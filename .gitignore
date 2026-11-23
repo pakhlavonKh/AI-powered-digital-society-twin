@@ -9,6 +9,7 @@ data/processed/*
 data/populations/*
 data/households/*
 data/results/*
+data/reference_package_k2_v1/
 !data/*/.gitkeep
 !data/*/README.md
 
@@ -83,6 +84,7 @@ __pycache__/
 *.py[cod]
 *.egg-info/
 .venv/
+.venv-*/
 venv/
 env/
 .pytest_cache/
@@ -92,7 +94,7 @@ env/
 .coverage
 htmlcov/
 .ipynb_checkpoints/
-build/
+/build/
 dist/
 
 # ------------------------------------------------------------------
@@ -122,9 +124,3 @@ Thumbs.db
 # ------------------------------------------------------------------
 frontend/test-results/
 frontend/playwright-report/
-
-# Unified population workflow source and tests (not packaging build output).
-!src/societytwin/build/
-!src/societytwin/build/**
-!tests/build/
-!tests/build/**

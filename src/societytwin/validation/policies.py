@@ -173,15 +173,14 @@ def _normalize_status(item: Any) -> str:
     as ``"fail"`` even if an older ``status`` field was present.
     """
     if isinstance(item, Mapping):
+        raw_status = str(item.get("status", "")).strip().lower()
+        if raw_status in {"not_evaluable", "unavailable", "skipped"}:
+            return "not_evaluable"
         if "passed" in item and item["passed"] is not None:
             passed_val = bool(item["passed"])
-            raw_status = str(item.get("status", "")).strip().lower()
             if not passed_val:
-                if raw_status == "not_evaluable":
-                    return "not_evaluable"
                 return "fail"
             return "pass"
-        raw_status = str(item.get("status", "")).strip().lower()
         if raw_status in {"pass", "passed", "valid", "ok"}:
             return "pass"
         if raw_status in {"fail", "failed", "invalid", "error"}:
@@ -260,17 +259,34 @@ def _extract_checks(report: Any) -> dict[str, str]:
 
     # 3. Dictionary representation (e.g. to_ui_dict() or raw JSON report)
     if isinstance(report, Mapping):
-        if "population_validation" in report and isinstance(report["population_validation"], Mapping):
-            pv = report["population_validation"]
-            for seq_name in ("marginal_checks", "conditional_checks", "household_checks"):
-                for chk in pv.get(seq_name, ()) or ():
-                    _record_item(chk)
-        if "dependency_validation" in report and isinstance(report["dependency_validation"], Mapping):
-            dv = report["dependency_validation"]
-            for seq_name in ("conditional_checks", "household_checks", "district_checks"):
-                for chk in dv.get(seq_name, ()) or ():
-                    _record_item(chk)
-        for seq_name in ("marginal_checks", "conditional_checks", "household_checks", "district_checks", "checks"):
+        for nested_key in ("population_validation", "population_report"):
+            pv = report.get(nested_key)
+            if isinstance(pv, Mapping):
+                for seq_name in ("marginal_checks", "conditional_checks", "household_checks", "checks"):
+                    for chk in pv.get(seq_name, ()) or ():
+                        _record_item(chk)
+        for nested_key in ("dependency_validation", "dependency_report"):
+            dv = report.get(nested_key)
+            if isinstance(dv, Mapping):
+                for seq_name in (
+                    "supported_joint_checks",
+                    "unverified_relationships",
+                    "conditional_checks",
+                    "household_checks",
+                    "district_checks",
+                    "checks",
+                ):
+                    for chk in dv.get(seq_name, ()) or ():
+                        _record_item(chk)
+        for seq_name in (
+            "marginal_checks",
+            "supported_joint_checks",
+            "unverified_relationships",
+            "conditional_checks",
+            "household_checks",
+            "district_checks",
+            "checks",
+        ):
             if seq_name in report and isinstance(report[seq_name], Sequence):
                 for chk in report[seq_name]:
                     _record_item(chk)
@@ -290,14 +306,17 @@ def _extract_population_metadata(report: Any, population: Any = None) -> dict[st
 
     # Check report attributes
     if isinstance(report, Mapping):
+        pv_map = report.get("population_validation") or report.get("population_report") or {}
+        if not isinstance(pv_map, Mapping):
+            pv_map = {}
         meta["population_id"] = str(
             report.get("population_id")
-            or report.get("population_validation", {}).get("population_id", "")
+            or pv_map.get("population_id", "")
             or ""
         )
         meta["resident_count"] = int(
             report.get("resident_count")
-            or report.get("population_validation", {}).get("resident_count", 0)
+            or pv_map.get("resident_count", 0)
             or 0
         )
         if "has_verified_household_linkage" in report:
@@ -713,17 +732,55 @@ def evaluate_policy_c_matraix_persona_projection(
                     unsupported_fields_found.add(str(s_key))
             rec_map = supp
         elif isinstance(rec, Mapping):
-            rec_map = dict(rec)
-            # Check for any unknown/unsupported keys in the dict
-            for k, v in rec_map.items():
-                if k in _MATRAIX_FORBIDDEN_UNLINKED_HOUSEHOLD_FIELDS:
-                    # On raw ResidentRecord dicts household fields are None; if non-None or explicitly projected, flag
-                    if v is not None:
+            # Support both flat attribute dicts and NationalService/build_persona envelopes
+            if any(k in rec for k in ("model_visible", "dimensions", "supported_attributes")):
+                envelope_allowed = frozenset({
+                    "persona_id", "synthetic_id", "resident_id", "province_code", "province_name",
+                    "template_version", "persona_card_sha256", "eligibility", "model_visible",
+                    "dimensions", "attributes", "metadata", "inclusion_probability", "analysis_weight",
+                    "unsupported_attributes", "sidecar_attributes", "supported_attributes",
+                })
+                for u_field in rec.get("unsupported_attributes") or ():
+                    unsupported_fields_found.add(str(u_field))
+                rec_map = {}
+                for k, v in rec.items():
+                    if k in envelope_allowed:
+                        continue
+                    if k in _MATRAIX_FORBIDDEN_UNLINKED_HOUSEHOLD_FIELDS:
+                        if v is not None:
+                            unsupported_fields_found.add(k)
+                    elif k not in _MATRAIX_SUPPORTED_FIELDS and k not in _MATRAIX_PERMITTED_SIDECAR_FIELDS:
                         unsupported_fields_found.add(k)
-                elif k not in _MATRAIX_SUPPORTED_FIELDS and k not in _MATRAIX_PERMITTED_SIDECAR_FIELDS:
-                    unsupported_fields_found.add(k)
-                elif k in _MATRAIX_PERMITTED_SIDECAR_FIELDS and v is None:
-                    unlinked_sidecar_warning = True
+                    else:
+                        rec_map[k] = v
+                for id_key in ("synthetic_id", "resident_id", "province_code"):
+                    if rec.get(id_key) is not None:
+                        rec_map[id_key] = rec[id_key]
+                for sub_key in ("supported_attributes", "dimensions", "model_visible", "sidecar_attributes"):
+                    sub = rec.get(sub_key)
+                    if isinstance(sub, Mapping):
+                        for sk, sv in sub.items():
+                            if sk in _MATRAIX_FORBIDDEN_UNLINKED_HOUSEHOLD_FIELDS:
+                                if sv is not None:
+                                    unsupported_fields_found.add(sk)
+                            elif sk not in _MATRAIX_SUPPORTED_FIELDS and sk not in _MATRAIX_PERMITTED_SIDECAR_FIELDS:
+                                unsupported_fields_found.add(sk)
+                            elif sk in _MATRAIX_PERMITTED_SIDECAR_FIELDS and sv is None:
+                                unlinked_sidecar_warning = True
+                            else:
+                                rec_map[sk] = sv
+            else:
+                rec_map = dict(rec)
+                # Check for any unknown/unsupported keys in the dict
+                for k, v in rec_map.items():
+                    if k in _MATRAIX_FORBIDDEN_UNLINKED_HOUSEHOLD_FIELDS:
+                        # On raw ResidentRecord dicts household fields are None; if non-None or explicitly projected, flag
+                        if v is not None:
+                            unsupported_fields_found.add(k)
+                    elif k not in _MATRAIX_SUPPORTED_FIELDS and k not in _MATRAIX_PERMITTED_SIDECAR_FIELDS:
+                        unsupported_fields_found.add(k)
+                    elif k in _MATRAIX_PERMITTED_SIDECAR_FIELDS and v is None:
+                        unlinked_sidecar_warning = True
         else:
             # ResidentRecord or custom object
             rec_map = {}

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 from pathlib import Path
 from typing import Any
 
@@ -36,6 +37,14 @@ _DEFAULT_REL_DIRS = (
     Path("scenarios"),
 )
 DEFAULT_SCENARIOS_DIRS = list(_DEFAULT_REL_DIRS)
+
+
+def scenario_dirs_for_state(state_dir: Path | None = None) -> tuple[list[Path] | None, Path | None]:
+    """Return ``(search_dirs, save_dir)`` scoped to ``state_dir`` unless DEFAULT_SCENARIOS_DIRS was overridden."""
+    if tuple(DEFAULT_SCENARIOS_DIRS) != _DEFAULT_REL_DIRS or state_dir is None:
+        return None, None
+    state_scenarios = state_dir / "scenarios"
+    return [state_scenarios, *DEFAULT_SCENARIOS_DIRS, _BUILTIN_SCENARIOS_DIR], state_scenarios
 
 # Question types the national experiment runtime (TaskSpec) can execute.
 EXECUTABLE_QUESTION_TYPES = frozenset({"single_choice", "free_text"})
@@ -226,11 +235,23 @@ def scenario_to_experiment_definition(
     if p.subsidized_exemptions_note:
         params.append({"name": "concessions", "label": "Concessions and exemptions", "value": p.subsidized_exemptions_note})
 
-    # Build task options
-    options = [{"id": opt.id, "label": opt.label} for opt in target_q.options]
+    # Build task options constrained to ExperimentDefinition TaskSpec limits
+    options: list[dict[str, str]] = []
+    seen_opt_ids: set[str] = set()
+    max_base_opts = 11 if (target_q.type == "single_choice" and target_q.allow_other) else 12
+    for idx, opt in enumerate(target_q.options[:max_base_opts], start=1):
+        norm_id = re.sub(r"[^a-z0-9_]", "_", opt.id.lower()).strip("_")
+        if not norm_id or not norm_id[0].isalpha():
+            norm_id = f"opt_{norm_id}" if norm_id else f"opt_{idx}"
+        norm_id = norm_id[:49]
+        if norm_id in seen_opt_ids:
+            suffix = f"_{idx}"
+            norm_id = f"{norm_id[: 49 - len(suffix)]}{suffix}"
+        seen_opt_ids.add(norm_id)
+        options.append({"id": norm_id, "label": opt.label[:300]})
     allow_other_text = False
     if target_q.type == "single_choice" and target_q.allow_other:
-        if not any(opt["id"] == "other" for opt in options):
+        if "other" not in seen_opt_ids:
             options.append({"id": "other", "label": "Other"})
         allow_other_text = True
 
@@ -240,12 +261,15 @@ def scenario_to_experiment_definition(
         if name not in _ENFORCED_FILTERS and value not in (None, [], ())
     )
 
+    title_suffix = " (Hypothetical)" if scenario.metadata.hypothetical else ""
+    exp_title = f"{scenario.name[: 160 - len(title_suffix)]}{title_suffix}"
+
     # Return structure matching societytwin.national.experiments.ExperimentDefinition
     return {
-        "title": f"{scenario.name} (Hypothetical)" if scenario.metadata.hypothetical else scenario.name,
+        "title": exp_title,
         "scenario": {
-            "title": scenario.name,
-            "description": shown.description,
+            "title": scenario.name[:160],
+            "description": shown.description[:4000],
             "parameters": params,
             "hypothetical": scenario.metadata.hypothetical,
             "source_note": scenario.metadata.source_note,
@@ -297,6 +321,7 @@ def save_custom_scenario(
     data: dict[str, Any] | ScenarioConfig,
     target_dir: Path | None = None,
     overwrite: bool = False,
+    search_dirs: list[Path] | None = None,
 ) -> ScenarioConfig:
     """Validate and persist a custom policy scenario as a YAML file in the scenarios catalog.
 
@@ -328,8 +353,8 @@ def save_custom_scenario(
     resolved_dir.mkdir(parents=True, exist_ok=True)
 
     target_file = resolved_dir / f"{config.scenario_id}.yaml"
-    existing_path = target_file if target_file.exists() else find_scenario_paths(
-        [target_dir] if target_dir else None).get(config.scenario_id)
+    conflict_dirs = search_dirs if search_dirs is not None else ([target_dir] if target_dir else None)
+    existing_path = target_file if target_file.exists() else find_scenario_paths(conflict_dirs).get(config.scenario_id)
     if existing_path is not None and not overwrite:
         try:
             existing = load_scenario(existing_path)

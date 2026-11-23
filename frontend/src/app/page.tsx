@@ -79,6 +79,17 @@ export default function DashboardPage() {
               </>
             ) : null}
           </section>
+          <section className="card stack" aria-labelledby="uni-card-h">
+            <div className="card-head" style={{ marginBottom: 0 }}>
+              <h2 id="uni-card-h">University track</h2>
+              <Badge tone="info" glyph="·">Two-stage simulator</Badge>
+            </div>
+            <p className="small muted" style={{ margin: 0 }}>Counterfactual ÖSYM-style placement and multi-semester policy studio alongside program &amp; candidate explorers.</p>
+            <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
+              <Link className="button small" href={withPop("/university", pop)}>University Sim →</Link>
+              <Link className="button small" href="/university/programs">Programs Explorer →</Link>
+            </div>
+          </section>
         </div>
       </div>
 

@@ -39,11 +39,29 @@ def test_generation_summary_filters_and_province_coverage(national_client, popul
     assert c.get(f"/api/v2/populations/{population_id}/records", params={"limit": 500}).status_code == 422
     v = c.get(f"/api/v2/populations/{population_id}/validation", params={"province_code": "06"}).json()
     assert [p["province_code"] for p in v["provinces"]] == ["06"] and v["constraint_violations"] == 0
+    dep = v["dependency_validation"]
+    assert dep["validator_version"] and dep["overall_status"] in ("pass", "fail", "not_evaluable")
+    check_ids = {chk["check_id"] for chk in dep["supported_joint_checks"] + dep["unverified_relationships"]}
+    assert {"joint_age_marital", "joint_sex_age_marital", "joint_household_size_type", "joint_age_education", "joint_age_employment"} <= check_ids
+    ds = c.get("/api/v2/data-sources").json()
+    assert "optional_modules" in ds and set(ds["optional_modules"]) >= {"marital_strategy", "resident_enrichment", "households", "k1_k7_validation"}
     env = c.get("/api/v2/environments/06").json()
     assert "mobility" in env["domains"] and env["structurally_unavailable_datasets"] == []
     env34 = c.get("/api/v2/environments/34").json()
     assert any(d["source_id"] == "tuik_pkg:air_traffic" for d in env34["structurally_unavailable_datasets"])
     assert c.get("/api/v2/environments/99").status_code == 404
+
+
+def test_optional_modules_status_reads_repo_registries(make_settings, tmp_path):
+    from tests.conftest import REPO, make_client
+
+    manifest = tmp_path / "manifest.yaml"
+    manifest.write_text("datasets: []\n", encoding="utf-8")
+    with make_client(make_settings(repo_root=REPO, data_manifest=manifest, state_dir=tmp_path / "state")) as c:
+        opt = c.get("/api/v2/data-sources").json()["optional_modules"]
+        assert opt["marital_strategy"]["configured"] is True and opt["marital_strategy"]["enabled"] is False
+        assert opt["resident_enrichment"]["configured"] is True and "degurba_class" in opt["resident_enrichment"]["attributes"]
+        assert opt["households"]["configured"] is True and opt["households"]["linkage_supported"] is False
 
 
 def test_record_detail_shows_visible_and_hidden_attributes(national_client, population_id):
@@ -145,6 +163,8 @@ def test_unknown_ids_are_404(national_client, path):
 
 
 def test_scenarios_catalog_and_experiment_definition(national_client):
+    from pathlib import Path
+
     c = national_client
 
     # 1. Catalog listing
@@ -211,21 +231,75 @@ def test_scenarios_catalog_and_experiment_definition(national_client):
             }
         ],
     }
+    test_file = Path("experiments/policy_scenarios/scenarios/test_custom_001.yaml")
+    prompt_file: Path | None = None
     try:
         create_res = c.post("/api/v2/scenarios", json=custom_payload)
         assert create_res.status_code == 201, create_res.json()
         assert create_res.json()["scenario_id"] == "test_custom_001"
+        assert not test_file.exists(), "Custom scenarios must save under state_dir, not the tracked source tree"
 
         # Verify custom scenario appears in catalog
         cat_after = c.get("/api/v2/scenarios").json()["items"]
         assert any(item["scenario_id"] == "test_custom_001" for item in cat_after)
+
+        # Prompt compilation also writes to state_dir rather than tracked experiments/policy_scenarios/scenarios/
+        prompt_res = c.post("/api/v2/scenarios/from-prompt", json={"prompt": "Ankara transit fare rise by 15%"})
+        assert prompt_res.status_code == 201, prompt_res.json()
+        sid = prompt_res.json()["scenario_id"]
+        prompt_file = Path("experiments/policy_scenarios/scenarios") / f"{sid}.yaml"
+        assert not prompt_file.exists(), "Prompt scenarios must save under state_dir, not the tracked source tree"
     finally:
-        from pathlib import Path
-        test_file = Path("experiments/policy_scenarios/scenarios/test_custom_001.yaml")
         if test_file.exists():
             test_file.unlink()
+        if prompt_file is not None and prompt_file.exists():
+            prompt_file.unlink()
 
     # 8. Invalid scenario rejects with 400 or 422
     bad_res = c.post("/api/v2/scenarios", json={"scenario_id": "123_invalid_id"})
     assert bad_res.status_code in (400, 422)
+
+
+def test_alignment_regression_guards(national_client, population_id):
+    c = national_client
+
+    # Unknown province on validation returns 404, not 500
+    bad_prov = c.get(f"/api/v2/populations/{population_id}/validation?province_code=99")
+    assert bad_prov.status_code == 404
+    assert bad_prov.json()["error"]["code"] == "unknown_province"
+
+    # Unknown visible_fields on sample personas returns 422, not 500
+    cid = _cohort(c, population_id, {"adult_only": True})
+    smp = c.post(f"/api/v2/cohorts/{cid}/samples", json={"size": 5, "method": "simple_random", "seed": 7})
+    assert smp.status_code == 201
+    sid = smp.json()["sample_id"]
+    bad_fields = c.get(f"/api/v2/samples/{sid}/personas?visible_fields=telepathic_power")
+    assert bad_fields.status_code == 422
+    assert bad_fields.json()["error"]["code"] == "invalid_persona_fields"
+
+    # Prompt with curly braces, >2000 chars, and extreme numbers compiles and creates valid experiment definition
+    long_prompt = ("Public policy {test} from 0 TL to 20 TL cut by 150% attendance threshold 120% " + "detail " * 350).strip()
+    comp = c.post("/api/v2/scenarios/from-prompt", json={"prompt": long_prompt, "save": True})
+    assert comp.status_code == 201, comp.text
+    scen_id = comp.json()["scenario_id"]
+    exp_def = c.get(f"/api/v2/scenarios/{scen_id}/experiment-definition", params={"cohort_id": cid})
+    assert exp_def.status_code == 200, exp_def.text
+    created_exp = c.post("/api/v2/experiments", json=exp_def.json())
+    assert created_exp.status_code == 201, created_exp.text
+
+    # generate_result_text_summary handles explicit None shares cleanly
+    from scenarios.summary import generate_result_text_summary
+
+    res_summary = generate_result_text_summary(
+        definition=created_exp.json(),
+        agg={"overall": {"options": [{"option_id": "adapt_positively", "weighted_share": None, "unweighted_share": None}]}},
+        responses=[{"status": "valid", "choice": "adapt_positively", "rationale": "ok"}],
+    )
+    assert res_summary["valid_responses"] == 1
+
+    # Stratified sampling redistributes spare capacity across under-capacity strata
+    from societytwin.national.cohorts import stratified
+
+    members, _ = stratified(["a", "b", "c", "d", "e"], [100.0, 1.0, 1.0, 1.0, 1.0], ["S1", "S2", "S2", "S2", "S2"], 3, seed=42)
+    assert len(members) == 3
 

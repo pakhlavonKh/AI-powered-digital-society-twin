@@ -30,29 +30,35 @@ export default function RunPage() {
   const [page, setPage] = useState(0);
   const [replayError, setReplayError] = useState<ApiError | null>(null);
   const historical = runId.startsWith("imp_");
-  const [tick, setTick] = useState(0);
-  const detail = useApi(historical ? null : `v2:run:${runId}:${tick}`, (signal) => v2<RunDetail>(`/runs/${runId}`, { signal }));
+  const detail = useApi(historical ? null : `v2:run:${runId}`, (signal) => v2<RunDetail>(`/runs/${runId}`, { signal }));
   const state = detail.data?.run.state;
   const done = state !== undefined && ["completed", "completed_with_errors", "failed", "budget_stopped"].includes(state);
-  const agg = useApi(historical || !done ? null : `v2:agg:${runId}:${group}:${minGroup}`, (signal) => v2<Aggregate>(`/runs/${runId}/aggregate`, { query: { group_by: [group], min_group: minGroup }, signal }));
+  const taskType = detail.data?.definition.task.response_type;
+  const hasOptions = (detail.data?.definition.task.options.length ?? 0) > 0;
+  const isFreeTextDef = taskType === "free_text" || (detail.data !== undefined && !hasOptions);
+  const agg = useApi(
+    historical || !done || isFreeTextDef ? null : `v2:agg:${runId}:${group}:${minGroup}`,
+    (signal) => v2<Aggregate>(`/runs/${runId}/aggregate`, { query: { group_by: [group], min_group: minGroup }, signal }),
+  );
   const responses = useApi(historical || !done ? null : `v2:resp:${runId}:${page}`, (signal) => v2<ResponsesPage>(`/runs/${runId}/responses`, { query: { offset: page * 20, limit: 20 }, signal }));
   const textSummary = useApi(
     historical || !done ? null : `v2:text-summary:${runId}`,
     (signal) => v2<ResultTextSummary>(`/runs/${runId}/text-summary`, { signal })
   );
   const [showFullReport, setShowFullReport] = useState(false);
-  const [copiedSummary, setCopiedSummary] = useState(false);
+  const [copiedSummary, setCopiedSummary] = useState<"idle" | "copied" | "failed">("idle");
   useEffect(() => { if (historical) router.replace(`/historical/results/${encodeURIComponent(runId)}`); }, [historical, router, runId]);
   useEffect(() => {  // queued or running MatrAIx runs are executed by the local worker; poll until they finish
-    if (!state || done) return;
-    const timer = setTimeout(() => setTick((t) => t + 1), 2000);
+    if (historical || !state || done) return;
+    const timer = setTimeout(() => { detail.reload(); }, 2000);
     return () => clearTimeout(timer);
-  }, [state, done, tick]);
+  }, [historical, state, done, detail.reload, detail.loading, detail.error]);
   if (historical) return null;
-  if (detail.error) return <><PageHeader title="Run" /><ErrorState error={detail.error} onRetry={detail.reload} what="run" /></>;
+  if (detail.error && !detail.data) return <><PageHeader title="Run" /><ErrorState error={detail.error} onRetry={detail.reload} what="run" /></>;
   if (!detail.data) return <><PageHeader title="Run" /><Loading what="run" /></>;
   if (!done) return <><PageHeader title={detail.data.title} /><div className="row"><RunStateBadge state={detail.data.run.state} />
-    <span className="small muted">Waiting for the local worker; this page refreshes automatically.</span></div></>;
+    <span className="small muted">Waiting for the local worker; this page refreshes automatically.</span></div>
+    {detail.error ? <ErrorState error={detail.error} onRetry={detail.reload} what="polling run status" /> : null}</>;
   const { run, definition, plan, manifest, cohort } = detail.data;
   const isFreeText = definition.task.response_type === "free_text" || definition.task.options.length === 0;
   const optionLabels = Object.fromEntries(definition.task.options.map((o) => [o.id, o.label]));
@@ -105,15 +111,18 @@ export default function RunPage() {
           <button
             type="button"
             className="button small"
-            onClick={() => {
-              if (textSummary.data?.summary_markdown) {
-                navigator.clipboard.writeText(textSummary.data.summary_markdown);
-                setCopiedSummary(true);
-                setTimeout(() => setCopiedSummary(false), 2000);
+            onClick={async () => {
+              if (!textSummary.data?.summary_markdown) return;
+              try {
+                await navigator.clipboard.writeText(textSummary.data.summary_markdown);
+                setCopiedSummary("copied");
+              } catch {
+                setCopiedSummary("failed");
               }
+              setTimeout(() => setCopiedSummary("idle"), 2000);
             }}
           >
-            {copiedSummary ? "✓ Copied to Clipboard" : "Copy Result Summary"}
+            {copiedSummary === "copied" ? "✓ Copied to Clipboard" : copiedSummary === "failed" ? "Copy failed" : "Copy Result Summary"}
           </button>
         </div>
 
@@ -206,7 +215,7 @@ export default function RunPage() {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
+              gridTemplateColumns: "repeat(auto-fill, minmax(min(280px, 100%), 1fr))",
               gap: 14,
             }}
           >
@@ -276,25 +285,27 @@ export default function RunPage() {
         </section>
       )}
 
-      <section className="card stack" aria-labelledby="sub-h">
-        <div className="card-head"><h2 id="sub-h">Subgroup comparison</h2>
-          <div className="row">
-            <div className="field"><label htmlFor="grp">Group by</label><select id="grp" value={group} onChange={(e) => setGroup(e.target.value)}>{GROUPS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></div>
-            <div className="field"><label htmlFor="ming">Minimum personas per group</label><input id="ming" type="number" min={1} value={minGroup} onChange={(e) => setMinGroup(Math.max(1, Number(e.target.value)))} /></div>
-          </div></div>
-        {agg.data?.by[group] ? (
-          <>
-            {agg.data.by[group].groups.map((g) => (
-              <div key={g.value} className="stack" style={{ borderTop: "1px solid var(--border)", paddingTop: 10 }}>
-                <strong>{group === "province_code" ? g.value : labels(group, g.value)} <span className="small muted">· {g.personas} personas</span></strong>
-                {g.suppressed ? <span className="small muted">{g.reason}</span> : <ShareBars options={g.options} labels={optionLabels} caption={`Responses for ${g.value}`} />}
-              </div>
-            ))}
-            {agg.data.by[group].comparisons.length ? <ul className="small">{agg.data.by[group].comparisons.map((c) => <li key={c}>{c}</li>)}</ul>
-              : <p className="small muted">No subgroup difference whose intervals do not overlap. Differences between small groups are not reported as findings.</p>}
-          </>
-        ) : null}
-      </section>
+      {!isFreeText ? (
+        <section className="card stack" aria-labelledby="sub-h">
+          <div className="card-head"><h2 id="sub-h">Subgroup comparison</h2>
+            <div className="row">
+              <div className="field"><label htmlFor="grp">Group by</label><select id="grp" value={group} onChange={(e) => setGroup(e.target.value)}>{GROUPS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></div>
+              <div className="field"><label htmlFor="ming">Minimum personas per group</label><input id="ming" type="number" min={1} value={minGroup} onChange={(e) => { const n = Number(e.target.value); setMinGroup(Number.isFinite(n) && n >= 1 ? Math.floor(n) : 1); }} /></div>
+            </div></div>
+          {agg.data?.by[group] ? (
+            <>
+              {agg.data.by[group].groups.map((g) => (
+                <div key={g.value} className="stack" style={{ borderTop: "1px solid var(--border)", paddingTop: 10 }}>
+                  <strong>{group === "province_code" ? g.value : labels(group, g.value)} <span className="small muted">· {g.personas} personas</span></strong>
+                  {g.suppressed ? <span className="small muted">{g.reason}</span> : <ShareBars options={g.options} labels={optionLabels} caption={`Responses for ${g.value}`} />}
+                </div>
+              ))}
+              {agg.data.by[group].comparisons.length ? <ul className="small">{agg.data.by[group].comparisons.map((c) => <li key={c}>{c}</li>)}</ul>
+                : <p className="small muted">No subgroup difference whose intervals do not overlap. Differences between small groups are not reported as findings.</p>}
+            </>
+          ) : null}
+        </section>
+      ) : null}
 
       <section className="card" aria-labelledby="resp-h">
         <h2 id="resp-h">Structured responses (final attempt per persona)</h2>

@@ -207,6 +207,35 @@ export default function DataSourcesPage() {
             <p className="small"><code>{ds.data.root_manifest.path}</code>: {ds.data.root_manifest.status} ({ds.data.root_manifest.datasets.length} entries). {ds.data.root_manifest.note}</p>
             <p className="small muted">Missing values keep their status: OBSERVED (a published number, including 0), NOT_REPORTED (blank), UNKNOWN, NOT_APPLICABLE and STRUCTURALLY_UNAVAILABLE (dataset does not cover the province). None is shown as zero. Rows absent from the package are not created. See also <Link href="/historical/data-sources">historical fixture evidence</Link>.</p>
           </section>
+          {ds.data.optional_modules ? (
+            <section className="card stack" aria-labelledby="opt-h">
+              <h2 id="opt-h">Optional modules, sidecars &amp; K1–K7 reference status</h2>
+              <dl className="kv">
+                <dt>Marital strategy</dt>
+                <dd className="small">
+                  {ds.data.optional_modules.marital_strategy.configured
+                    ? `${ds.data.optional_modules.marital_strategy.strategy ?? "default"} · ${ds.data.optional_modules.marital_strategy.enabled ? "enabled" : "disabled by default"} · raw seed ${ds.data.optional_modules.marital_strategy.seed_present ? "present" : "not present"}`
+                    : "Registry not configured in active repo root"}
+                </dd>
+                <dt>Resident enrichment</dt>
+                <dd className="small">
+                  {ds.data.optional_modules.resident_enrichment.configured
+                    ? `${ds.data.optional_modules.resident_enrichment.attributes.join(", ")} · ${ds.data.optional_modules.resident_enrichment.enabled ? "enabled" : "disabled by default"} · sources ${Object.entries(ds.data.optional_modules.resident_enrichment.sources_present).map(([k, v]) => `${k}: ${v ? "present" : "absent"}`).join(", ")}`
+                    : "Registry not configured in active repo root"}
+                </dd>
+                <dt>Households extension</dt>
+                <dd className="small">
+                  {ds.data.optional_modules.households.configured
+                    ? `size ${ds.data.optional_modules.households.size_enabled ? "enabled" : "disabled"} · type/size ${ds.data.optional_modules.households.type_size_enabled ? "enabled" : "disabled"} · person linkage: ${ds.data.optional_modules.households.linkage_supported ? "supported" : "unlinked (not supported)"}`
+                    : "Registry not configured in active repo root"}
+                </dd>
+                <dt>K1–K7 validation bundle</dt>
+                <dd className="small">
+                  Joint K4 checks: {ds.data.optional_modules.k1_k7_validation.joint_dependency_checks_active ? "active" : "inactive"} · district CSV {ds.data.optional_modules.k1_k7_validation.district_csv_present ? "present" : "absent"} · built K2 reference package {ds.data.optional_modules.k1_k7_validation.built_reference_package_present ? "present" : "absent"}
+                </dd>
+              </dl>
+            </section>
+          ) : null}
         </>
       ) : null}
     </>

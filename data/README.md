@@ -25,8 +25,12 @@ MatrAIx experiment (now corroborating: every value equals the package's).
 | `processed/national/` | Standard control tables built by `python -m societytwin.national build-controls` (`controls.csv`, `context.csv`, `manifest.json` with checksums, sources, the indicator dictionary and the package audit). | No (git-ignored) |
 | `populations/` | Generated populations: one folder per build with `records.parquet`, `manifest.json`, `validation.json`. | No (git-ignored) |
 | `results/` | Workbench state: registry, run manifests and responses. | No (git-ignored) |
-| `manifest.yaml` | Metadata for every dataset in use: source, title, identifier, URL, years, coverage, variables, licence, checksum, transformations, limitations. | **Yes** |
+| `manifest.yaml` | Metadata for every dataset in use (37 entries: 1 `tuik:*`, 3 `legacy:*`, 33 `tuik_pkg:*`): source, title, URL, years, coverage, variables, checksum (LF-normalized for extracts). | **Yes** |
 | `tuik_package_mapping.yaml` | Rules that turn package indicators into generator control tables, and the domain, use and reason for every package dataset (metadata, no data). | **Yes** |
+| `dependency_registry.yaml` | Versioned Phase 1/2B person-attribute dependencies and opt-in `marital_strategy`. | **Yes** |
+| `household_registry.yaml`, `household_type_size_registry.yaml`, `household_linkage_evidence.yaml` | Optional household-scope registries and linkage readiness audit (`enabled: false` by default; no person-level household linkage). | **Yes** |
+| `resident_extension_registry.yaml` | Optional sidecar resident attribute registry (`degurba_class`, disabled by default). | **Yes** |
+| `build_configs/` | Unified build YAML configurations consumed by `python -m societytwin.build`. | **Yes** |
 
 ## Setting up the data package locally (teammates)
 

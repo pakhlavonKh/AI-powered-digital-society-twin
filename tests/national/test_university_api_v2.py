@@ -115,11 +115,13 @@ def test_placement_and_university_api_persistence_and_handoff(national_settings,
         assert p1_data["run_id"] in {item["run_id"] for item in p_list["items"]}
         p_detail = restarted.get(f"/api/v2/placement/runs/{p1_data['run_id']}").json()
         assert p_detail["result_sha256"] == p1_data["result_sha256"]
+        assert p_detail["disclaimer"]
 
         u_list = restarted.get("/api/v2/university/runs").json()
         assert u1_data["run_id"] in {item["run_id"] for item in u_list["items"]}
         u_detail = restarted.get(f"/api/v2/university/runs/{u1_data['run_id']}").json()
         assert u_detail["result_sha256"] == u1_data["result_sha256"]
+        assert u_detail["disclaimer"]
 
         # 8. Built-in scenario YAML executes directly via /api/v2/university/runs & 404/422 errors are structured
         u_sc = restarted.post(
@@ -141,3 +143,104 @@ def test_university_mutations_require_loopback(settings):
         r2 = remote.post("/api/v2/university/runs", json={"cohort_size": 40})
         assert r2.status_code == 403 and r2.json()["error"]["code"] == "mutations_local_only"
         assert remote.get("/api/v2/placement/programs").status_code == 200
+
+
+def test_university_registry_sqlite_endpoints_graceful_when_missing(national_client, national_settings):
+    db_path = national_settings.university_db_path
+    assert not db_path.exists()
+    status = national_client.get("/api/v2/university-registry/status")
+    assert status.status_code == 200
+    assert status.json()["available"] is False
+    assert not db_path.exists(), "Read-only status check must never create an empty SQLite file"
+    snaps = national_client.get("/api/v2/university-registry/snapshots")
+    assert snaps.status_code == 200 and snaps.json()["available"] is False and snaps.json()["items"] == []
+    assert national_client.get("/api/v2/university-registry/snapshots/missing/programs").status_code == 503
+    cand = national_client.get("/api/v2/university-registry/candidates/preview", params={"seed": 42, "size": 10})
+    assert cand.status_code == 200
+    cand_body = cand.json()
+    assert cand_body["manifest"]["generator_version"] == "candidate-development-v1"
+    assert len(cand_body["candidates"]) == 10
+
+
+def test_university_registry_sqlite_endpoints_query_imported_snapshot(make_settings, tmp_path):
+    from societytwin.university.db import connect, initialize_database
+
+    db_path = tmp_path / "university.sqlite3"
+    initialize_database(db_path)
+    with connect(db_path) as conn:
+        conn.execute(
+            "INSERT INTO source_snapshots(snapshot_id, source_filename, file_sha256, imported_at, importer_version, verification_status) "
+            "VALUES ('snap-2026', 'ankara.xlsx', ?, '2026-10-20T00:00:00Z', 'university-xlsx-v1', 'unverified')",
+            ("a" * 64,),
+        )
+        conn.execute(
+            "INSERT INTO universities(university_id, snapshot_id, university_key, name_original, name_normalized, university_type, city) "
+            "VALUES (1, 'snap-2026', 'ankara_test_u', 'Ankara Test Üniversitesi', 'ankara test universitesi', 'Vakıf', 'Ankara')"
+        )
+        conn.execute(
+            "INSERT INTO programs(program_id, snapshot_id, university_id, program_code, name_original, degree_level, score_type, scholarship_original, source_sheet, source_row) "
+            "VALUES (10, 'snap-2026', 1, '200100101', 'Bilgisayar Mühendisliği', 'Lisans', 'SAY', 'Burslu', 'Programlar', 2)"
+        )
+        conn.execute(
+            "INSERT INTO annual_admissions(program_id, snapshot_id, admission_year, quota, placed_students, success_rank, source_sheet, source_row) "
+            "VALUES (10, 'snap-2026', 2025, 40, 40, 12500, 'Yıllık Uzun Format', 2)"
+        )
+        conn.execute(
+            "INSERT INTO annual_tuition(program_id, snapshot_id, academic_year_start, full_amount_minor, net_amount_minor, currency, source_sheet, source_row) "
+            "VALUES (10, 'snap-2026', 2025, 45000000, 0, 'TRY', 'Programlar', 2)"
+        )
+        conn.execute(
+            "INSERT INTO data_quality_issues(snapshot_id, issue_key, severity, issue_code, message, program_id, related_year) "
+            "VALUES ('snap-2026', 'iss-1', 'warning', 'missing_quota', 'Sample warning', 10, 2024)"
+        )
+        conn.commit()
+
+    with make_client(make_settings(university_db_path=db_path)) as c:
+        st = c.get("/api/v2/university-registry/status").json()
+        assert st["available"] is True and st["snapshots"][0]["counts"]["programs"] == 1
+        progs = c.get("/api/v2/university-registry/snapshots/snap-2026/programs", params={"score_type": "SAY", "q": "Bilgisayar"}).json()
+        assert progs["total"] == 1 and progs["items"][0]["program_code"] == "200100101"
+        detail = c.get("/api/v2/university-registry/snapshots/snap-2026/programs/200100101").json()
+        assert len(detail["admissions"]) == 1 and detail["tuition"][0]["full_amount_minor"] == 45000000
+        issues = c.get("/api/v2/university-registry/snapshots/snap-2026/issues").json()
+        assert issues["total"] == 1 and issues["items"][0]["issue_code"] == "missing_quota"
+        assert c.get("/api/v2/university-registry/snapshots/snap-2026/programs/999999").status_code == 404
+        assert c.get("/api/v2/university-registry/snapshots/nope/programs").status_code == 404
+
+
+def test_corrupt_sqlite_and_university_engine_regression_guards(make_settings, tmp_path):
+    # 1. Corrupt SQLite file returns 503 rather than HTTP 500
+    bad_db = tmp_path / "corrupt.sqlite3"
+    bad_db.write_bytes(b"not a valid sqlite database")
+    with make_client(make_settings(university_db_path=bad_db)) as c:
+        res = c.get("/api/v2/university-registry/status")
+        assert res.status_code == 503
+        assert res.json()["error"]["code"] == "university_registry_invalid"
+
+    # 2. Repeated courses under replace_highest do not inflate attempted_credits denominator
+    from scenarios.university.cohort import build_synthetic_university_cohort
+    from scenarios.university.financial_ledger import apply_university_economic_policy
+    from scenarios.university.models import UniversityRuleset
+    from scenarios.university.semester_engine import run_university_simulation
+    from scenarios.schema import UniversityPolicyIntervention
+
+    students, courses = build_synthetic_university_cohort(size=10, seed=42)
+    sim = run_university_simulation(
+        students=students,
+        courses=courses,
+        ruleset=UniversityRuleset(repeat_policy="replace_highest"),
+        intervention=UniversityPolicyIntervention(),
+        semester_count=4,
+        seed=42,
+    )
+    for st in sim.final_students:
+        assert st.earned_credits <= st.attempted_credits
+
+    # 3. Aid allocation does not double-scale eligible zero-aid students
+    s_inelig = students[0].model_copy(update={"income_band": "high", "need_aid_grant": 5000.0})
+    s_elig_zero = students[1].model_copy(update={"income_band": "low", "need_aid_grant": 0.0})
+    _, info = apply_university_economic_policy(
+        [s_inelig, s_elig_zero],
+        UniversityPolicyIntervention(aid_budget_change_pct=20.0),
+    )
+    assert info["aid_allocated"] <= 5000.0 * 1.2 + 1e-6

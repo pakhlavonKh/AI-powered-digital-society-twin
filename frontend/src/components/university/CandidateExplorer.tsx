@@ -13,9 +13,9 @@ import { CandidateDetails, cohortProvenance } from "./CandidateDetails";
 import { DataKindBadge, DataQualityPanel, Missing, Pagination, ProvenancePanel, SortHeader, Value } from "./common";
 import { PlacementBadge, RunPicker } from "./RunPicker";
 
-function NumberInput({ id, label, value, onCommit }: { id: string; label: string; value: number | null; onCommit: (v: number | null) => void }) {
+function NumberInput({ id, label, value, resetKey, onCommit }: { id: string; label: string; value: number | null; resetKey: number; onCommit: (v: number | null) => void }) {
   const [text, setText] = useState(value === null ? "" : String(value));
-  useEffect(() => { setText(value === null ? "" : String(value)); }, [value]);
+  useEffect(() => { setText(value === null ? "" : String(value)); }, [value, resetKey]);
   const invalid = text !== "" && (!Number.isFinite(Number(text)) || Number(text) < 0 || Number(text) > 10000);
   return (
     <div className="field">
@@ -36,6 +36,7 @@ export function CandidateExplorer({ snapshot, cohorts, runs, cohortId, runId, on
   const source = useUniversitySource();
   const catalogue = useCatalogue(snapshot.snapshot_id);
   const [text, setText] = useState(state.search);
+  const [resetNonce, setResetNonce] = useState(0);
   useEffect(() => { setText(state.search); }, [state.search]);
   const query = { ...state, cohort_id: cohortId, run_id: runId, status: runId ? state.status : null, offset: state.page * CANDIDATE_PAGE_SIZE, limit: CANDIDATE_PAGE_SIZE };
   const page = useApi(`uni:${source.id}:candidates:${JSON.stringify(query)}`, (signal) => source.queryCandidates(query, signal));
@@ -67,7 +68,7 @@ export function CandidateExplorer({ snapshot, cohorts, runs, cohortId, runId, on
       <section className="card filters2" aria-label="Candidate filters">
         <div className="row" style={{ justifyContent: "space-between" }}>
           <h2 style={{ margin: 0 }}>Filters</h2>
-          <button type="button" className="button small" onClick={() => { setText(""); onChange({ search: "", score_types: [], proxy_min: null, proxy_max: null, status: null, sort: state.sort, direction: state.direction, page: 0 }); }}>Reset filters</button>
+          <button type="button" className="button small" onClick={() => { setText(""); setResetNonce((n) => n + 1); onChange({ search: "", score_types: [], proxy_min: null, proxy_max: null, status: null, sort: state.sort, direction: state.direction, page: 0 }); }}>Reset filters</button>
         </div>
         <RunPicker id="candidate-run" label="Placement shown from run" runs={runs} value={runId} onChange={onRun} allowNone
           hint="Placement status comes from the selected simulation run. Choosing a run also selects its cohort." />
@@ -98,8 +99,8 @@ export function CandidateExplorer({ snapshot, cohorts, runs, cohortId, runId, on
           </div>
         </fieldset>
         <div className="age-row">
-          <NumberInput id="proxy-min" label="Proxy from" value={state.proxy_min} onCommit={(v) => set({ proxy_min: v })} />
-          <NumberInput id="proxy-max" label="Proxy to" value={state.proxy_max} onCommit={(v) => set({ proxy_max: v })} />
+          <NumberInput id="proxy-min" label="Proxy from" value={state.proxy_min} resetKey={resetNonce} onCommit={(v) => set({ proxy_min: v })} />
+          <NumberInput id="proxy-max" label="Proxy to" value={state.proxy_max} resetKey={resetNonce} onCommit={(v) => set({ proxy_max: v })} />
         </div>
         <p className="field-hint" style={{ margin: 0 }}>Achievement proxy: synthetic 0–10,000, higher is better. Not a YKS score or rank.</p>
         <fieldset disabled={runId === null}>

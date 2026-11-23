@@ -145,12 +145,24 @@ def extract_percentages_and_numbers(text: str) -> tuple[float | None, float | No
             except ValueError:
                 pass
 
+        if baseline is not None and baseline <= 0:
+            baseline = None
+        if new_val is not None and new_val <= 0:
+            new_val = None
+
         if baseline is not None and new_val is not None and pct is None and baseline > 0:
             pct = round(((new_val - baseline) / baseline) * 100.0, 1)
-        elif baseline is not None and pct is not None and new_val is None:
+        elif baseline is not None and pct is not None and new_val is None and (1.0 + pct / 100.0) > 0:
             new_val = round(baseline * (1.0 + pct / 100.0), 2)
         elif new_val is not None and pct is not None and baseline is None and (1.0 + pct / 100.0) > 0:
             baseline = round(new_val / (1.0 + pct / 100.0), 2)
+
+    if pct is not None:
+        pct = max(-99.9, min(1000.0, pct))
+    if baseline is not None and baseline <= 0:
+        baseline = None
+    if new_val is not None and new_val <= 0:
+        new_val = None
 
     return pct, baseline, new_val
 
@@ -274,11 +286,11 @@ def extract_university_parameters(text: str, category: str, global_pct: float | 
     attendance_min: float | None = None
     att_to = re.search(r"(?:attendance|devamsızlık)[^.\n]{0,40}?(?:to|→|->)\s*(\d+(?:\.\d+)?)\s*%", lower)
     if att_to:
-        attendance_min = float(att_to.group(1))
+        attendance_min = max(0.0, min(100.0, float(att_to.group(1))))
     else:
         att_single = re.search(r"(?:attendance|devamsızlık)[^.\n]{0,30}?(\d+(?:\.\d+)?)\s*%", lower)
         if att_single:
-            attendance_min = float(att_single.group(1))
+            attendance_min = max(0.0, min(100.0, float(att_single.group(1))))
 
     rank_overrides: dict[str, int] = {}
     baraj_aliases = {
@@ -366,15 +378,19 @@ def synthesize_questions(
             "kendi cümlelerinizle",
         ),
     )
+    def _safe_q_prompt(raw_text: str) -> str:
+        escaped = raw_text.strip().rstrip("?.").replace("{", "{{").replace("}", "}}")
+        return escaped[:1800]
+
     if is_pure_text_prompt:
-        clean_prompt = prompt.strip().rstrip("?.")
+        clean_prompt = _safe_q_prompt(prompt)
         return [
             QuestionConfig(
                 id="q1_text_response",
-                text=f"Regarding the policy situation: '{clean_prompt}', please provide your detailed thoughts and perspective in your own words.",
+                text=f"Regarding the policy situation: '{clean_prompt}', please provide your detailed thoughts and perspective in your own words."[:2000],
                 type="free_text",
                 options=[],
-                ask_rationale=False,
+                ask_rationale=True,
             )
         ]
     if domain == "transportation":
@@ -479,11 +495,11 @@ def synthesize_questions(
 
     else:
         # Default / general public policy
-        clean_prompt = prompt.strip().rstrip("?.")
+        clean_prompt = _safe_q_prompt(prompt)
         questions = [
             QuestionConfig(
                 id="q1_behavioral_response",
-                text=f"Regarding the policy situation: '{clean_prompt}', how would you personally respond?",
+                text=f"Regarding the policy situation: '{clean_prompt}', how would you personally respond?"[:2000],
                 type="single_choice",
                 options=[
                     QuestionOption(id="adapt_positively", label="Adapt positively and make use of the policy change"),
@@ -544,10 +560,12 @@ def compile_scenario_from_prompt_heuristic(prompt: str) -> ScenarioConfig:
     pct_str = f" (+{pct:.0f}%)" if pct and pct > 0 else (f" ({pct:.0f}%)" if pct else "")
     cat_label = category.replace("_", " ").title() if "_" in category else category.capitalize()
     title = f"{prov_name} {cat_label} Policy{pct_str}"[:160]
+    raw_prompt_trimmed = prompt.strip()
+    escaped_prompt = raw_prompt_trimmed.replace("{", "{{").replace("}", "}}")[:4700]
     description = (
-        f"A simulation scenario generated from user prompt: '{prompt.strip()}'. "
+        f"A simulation scenario generated from user prompt: '{escaped_prompt}'. "
         f"Evaluates the demographic and behavioral reactions of synthetic residents in {prov_name}."
-    )
+    )[:5000]
 
     custom_details: dict[str, Any] = {}
     source_note = "Compiled automatically from natural language prompt input."
@@ -566,7 +584,7 @@ def compile_scenario_from_prompt_heuristic(prompt: str) -> ScenarioConfig:
         new_fare=new_val,
         increase_percentage=pct,
         currency="TL",
-        policy_summary=prompt.strip(),
+        policy_summary=raw_prompt_trimmed[:2000],
         custom_details=custom_details,
     )
 

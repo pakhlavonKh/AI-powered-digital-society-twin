@@ -10,6 +10,7 @@ requires-python = ">=3.12,<3.13"
 # Lower bounds only; the tested environment is pinned in requirements-api.lock.
 dependencies = [
   "fastapi>=0.135",
+  "starlette>=0.40",
   "uvicorn>=0.37",
   "pydantic>=2.12",
   "PyYAML>=6.0",
@@ -19,6 +20,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8.4", "httpx>=0.28"]
+llm = ["openai>=1.0"]
 
 [tool.setuptools.packages.find]
 # The societytwin and scenarios packages are installed. The research-phase placeholder
@@ -34,6 +36,7 @@ include = ["societytwin*", "scenarios*"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+norecursedirs = ["*.egg", ".*", "_darcs", "CVS", "dist", "node_modules", ".venv", "venv", "{arch}"]
 addopts = "-ra --strict-markers"
 markers = [
   "local_fixture: regression checks against the supplied Ankara/run3 files; skipped when they are absent",

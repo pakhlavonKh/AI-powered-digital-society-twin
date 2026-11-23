@@ -2011,6 +2011,7 @@ def generate_combined_quality_report(
     simulation_results: Any = None,
     baseline_simulation_results: Any = None,
     benchmark_bundle: BenchmarkBundle | None = None,
+    cohort_metadata: Any = None,
     tolerances: CalibrationTolerances | None = None,
     households: Any = None,
     save_to_disk: bool = True,
@@ -2047,7 +2048,7 @@ def generate_combined_quality_report(
     if simulation_results is not None:
         sim_report = evaluate_simulation(
             simulation_results=simulation_results,
-            cohort_metadata=population,
+            cohort_metadata=cohort_metadata if cohort_metadata is not None else population,
             benchmark_bundle=benchmark_bundle,
             baseline_simulation_results=baseline_simulation_results,
         )

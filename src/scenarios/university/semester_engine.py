@@ -405,7 +405,12 @@ def run_university_simulation(
             total_earned_term += earned_term
 
             new_earned = s.earned_credits + earned_term
-            new_attempted = s.attempted_credits + sum(c.credits for c in enrolled)
+            repeated_credit_sum = sum(
+                c.credits
+                for c in enrolled
+                if base_ruleset.repeat_policy == "replace_highest" and c.course_id in s.course_best_grades
+            )
+            new_attempted = s.attempted_credits + max(0, sum(c.credits for c in enrolled) - repeated_credit_sum)
             if new_earned > new_attempted:
                 raise AssertionError("Earned credits cannot exceed attempted credits.")
 

@@ -1,7 +1,9 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { describeDetails, toApiError } from "@/lib/api/client";
 import { Notice } from "@/components/Notices";
 import { PageHeader } from "@/components/PageHeader";
 import { StatTile } from "@/components/StatTile";
@@ -14,6 +16,7 @@ import {
   v2,
   type PlacementProgramsCatalog,
   type PlacementRunResponse,
+  type UniversityRegistryStatus,
   type UniversityRunResponse,
   type UniversitySweepResponse,
 } from "@/lib/api/v2";
@@ -26,7 +29,92 @@ function fmtSigned(value: number | null | undefined, digits = 2, suffix = ""): s
   return `${sign}${value.toFixed(digits)}${suffix}`;
 }
 
+function formatErr(err: unknown): string {
+  const apiErr = toApiError(err);
+  const details = describeDetails(apiErr.details);
+  return `${apiErr.message}${details ? ` (${details})` : ""}`;
+}
+
+function NumField({
+  value,
+  onChange,
+  min,
+  max,
+  step,
+  disabled,
+  style,
+}: {
+  value: number;
+  onChange: (n: number) => void;
+  min?: number;
+  max?: number;
+  step?: number;
+  disabled?: boolean;
+  style?: React.CSSProperties;
+}) {
+  const [raw, setRaw] = useState<string>(String(value));
+  useEffect(() => {
+    setRaw(String(value));
+  }, [value]);
+  return (
+    <input
+      type="number"
+      min={min}
+      max={max}
+      step={step}
+      disabled={disabled}
+      style={style}
+      value={raw}
+      onChange={(e) => {
+        const nextRaw = e.target.value;
+        setRaw(nextRaw);
+        const parsed = Number(nextRaw);
+        if (nextRaw.trim() !== "" && Number.isFinite(parsed)) {
+          onChange(parsed);
+        }
+      }}
+      onBlur={() => {
+        const parsed = Number(raw);
+        if (raw.trim() === "" || !Number.isFinite(parsed)) {
+          setRaw(String(value));
+          return;
+        }
+        let clamped = parsed;
+        if (min !== undefined && clamped < min) clamped = min;
+        if (max !== undefined && clamped > max) clamped = max;
+        setRaw(String(clamped));
+        if (clamped !== value) onChange(clamped);
+      }}
+    />
+  );
+}
+
+type ScenarioDetail = {
+  scenario_id: string;
+  name: string;
+  policy?: {
+    category?: string;
+    parameters?: {
+      custom_details?: {
+        simulation_mode?: string;
+        university_intervention?: {
+          capacity_change_pct?: number | null;
+          tuition_change_pct?: number | null;
+          aid_budget_change_pct?: number | null;
+          installment_count?: number | null;
+          attendance_min_pct?: number | null;
+          grading_difficulty_shift?: number | null;
+          semester_count?: number | null;
+          replications?: number | null;
+          rank_threshold_overrides?: Record<string, number> | null;
+        };
+      };
+    };
+  };
+};
+
 function UniversitySimulatorWorkspace() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const initialScenario = searchParams.get("scenario") ?? "";
   const { population } = usePopulation();
@@ -35,6 +123,9 @@ function UniversitySimulatorWorkspace() {
   const [catalog, setCatalog] = useState<PlacementProgramsCatalog | null>(null);
   const [placementRuns, setPlacementRuns] = useState<PlacementRunResponse[]>([]);
   const [universityRuns, setUniversityRuns] = useState<UniversityRunResponse[]>([]);
+  const [activeScenarioId, setActiveScenarioId] = useState<string>(initialScenario);
+  const [linkedScenario, setLinkedScenario] = useState<ScenarioDetail | null>(null);
+  const [interventionDirty, setInterventionDirty] = useState<boolean>(false);
 
   // Placement form controls (Milestone 1)
   const [useTuikCohort, setUseTuikCohort] = useState(false);
@@ -62,22 +153,68 @@ function UniversitySimulatorWorkspace() {
   const [runningUniversity, setRunningUniversity] = useState(false);
   const [sweepData, setSweepData] = useState<UniversitySweepResponse | null>(null);
   const [runningSweep, setRunningSweep] = useState(false);
+  const [inspectingId, setInspectingId] = useState<string | null>(null);
+  const [regStatus, setRegStatus] = useState<UniversityRegistryStatus | null>(null);
 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    setActiveScenarioId(initialScenario);
+    setInterventionDirty(false);
+    if (!initialScenario) setLinkedScenario(null);
+  }, [initialScenario]);
 
   useEffect(() => {
     let cancelled = false;
     async function loadInitial() {
       try {
-        const [cat, pList, uList] = await Promise.all([
+        const [cat, pList, uList, reg, sc] = await Promise.all([
           v2<PlacementProgramsCatalog>("/placement/programs"),
           v2<{ items: PlacementRunResponse[] }>("/placement/runs"),
           v2<{ items: UniversityRunResponse[] }>("/university/runs"),
+          v2<UniversityRegistryStatus>("/university-registry/status").catch(() => null),
+          initialScenario
+            ? v2<ScenarioDetail>(`/scenarios/${encodeURIComponent(initialScenario)}`).catch(() => null)
+            : Promise.resolve(null),
         ]);
         if (cancelled) return;
         setCatalog(cat);
         setPlacementRuns(pList.items);
         setUniversityRuns(uList.items);
+        if (reg && typeof reg.available === "boolean") setRegStatus(reg);
+        if (sc) {
+          setLinkedScenario(sc);
+          const custom = sc.policy?.parameters?.custom_details;
+          const ui = custom?.university_intervention;
+          if (custom?.simulation_mode === "university_decision_hybrid") {
+            setTab("multiterm");
+          }
+          if (ui) {
+            if (typeof ui.capacity_change_pct === "number") {
+              setPlaceQuotaPct(ui.capacity_change_pct);
+              setUniCapacityPct(ui.capacity_change_pct);
+            }
+            if (typeof ui.tuition_change_pct === "number") {
+              setPlaceTuitionPct(ui.tuition_change_pct);
+              setUniTuitionPct(ui.tuition_change_pct);
+            }
+            if (typeof ui.aid_budget_change_pct === "number") {
+              setPlaceAidPct(ui.aid_budget_change_pct);
+              setUniAidPct(ui.aid_budget_change_pct);
+            }
+            if (typeof ui.installment_count === "number") {
+              setPlaceInstallments(ui.installment_count);
+              setUniInstallments(ui.installment_count);
+            }
+            if (typeof ui.attendance_min_pct === "number") setUniAttendanceMin(ui.attendance_min_pct);
+            if (typeof ui.grading_difficulty_shift === "number") setUniGradingShift(ui.grading_difficulty_shift);
+            if (typeof ui.semester_count === "number") setUniSemesters(ui.semester_count);
+            if (typeof ui.replications === "number") setUniReplications(ui.replications);
+            if (typeof ui.rank_threshold_overrides?.engineering === "number") {
+              setPlaceBarajEng(ui.rank_threshold_overrides.engineering);
+            }
+          }
+        }
         if (pList.items.length > 0) {
           const detail = await v2<PlacementRunResponse>(`/placement/runs/${pList.items[0].run_id}`);
           if (!cancelled) setActivePlacement(detail);
@@ -87,14 +224,14 @@ function UniversitySimulatorWorkspace() {
           if (!cancelled) setActiveUniversity(detail);
         }
       } catch (err) {
-        if (!cancelled) setErrorMsg(err instanceof Error ? err.message : "Failed to load university workspace.");
+        if (!cancelled) setErrorMsg(formatErr(err));
       }
     }
     loadInitial();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [initialScenario]);
 
   const handleRunPlacement = async () => {
     setErrorMsg(null);
@@ -103,25 +240,28 @@ function UniversitySimulatorWorkspace() {
       const res = await v2<PlacementRunResponse>("/placement/runs", {
         method: "POST",
         body: {
-          scenario_id: initialScenario || null,
+          scenario_id: activeScenarioId || null,
           population_id: useTuikCohort && population ? population.population_id : null,
           cohort_size: placeSize,
           seed: 42,
           compare_baseline: true,
-          intervention: {
-            capacity_change_pct: placeQuotaPct,
-            tuition_change_pct: placeTuitionPct,
-            aid_budget_change_pct: placeAidPct,
-            installment_count: placeInstallments,
-            affordability_filter_mode: placeTuitionPct !== 0 || placeAidPct !== 0 ? "hard_exclude" : "none",
-            rank_threshold_overrides: { engineering: placeBarajEng },
-          },
+          intervention:
+            activeScenarioId && !interventionDirty
+              ? null
+              : {
+                  capacity_change_pct: placeQuotaPct,
+                  tuition_change_pct: placeTuitionPct,
+                  aid_budget_change_pct: placeAidPct,
+                  installment_count: placeInstallments,
+                  affordability_filter_mode: placeTuitionPct !== 0 || placeAidPct !== 0 ? "hard_exclude" : "none",
+                  rank_threshold_overrides: { engineering: placeBarajEng },
+                },
         },
       });
       setActivePlacement(res);
       setPlacementRuns((prev) => [res, ...prev.filter((r) => r.run_id !== res.run_id)]);
     } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : "Placement run failed.");
+      setErrorMsg(formatErr(err));
     } finally {
       setRunningPlacement(false);
     }
@@ -135,29 +275,32 @@ function UniversitySimulatorWorkspace() {
       const res = await v2<UniversityRunResponse>("/university/runs", {
         method: "POST",
         body: {
-          scenario_id: initialScenario || null,
+          scenario_id: activeScenarioId || null,
           placement_run_id: chosenPlacementId || null,
           cohort_size: uniSize,
           semester_count: uniSemesters,
           replications: uniReplications,
           seed: 42,
           compare_baseline: true,
-          intervention: {
-            tuition_change_pct: uniTuitionPct,
-            aid_budget_change_pct: uniAidPct,
-            installment_count: uniInstallments,
-            attendance_min_pct: uniAttendanceMin,
-            grading_difficulty_shift: uniGradingShift,
-            capacity_change_pct: uniCapacityPct,
-            semester_count: uniSemesters,
-            replications: uniReplications,
-          },
+          intervention:
+            activeScenarioId && !interventionDirty
+              ? null
+              : {
+                  tuition_change_pct: uniTuitionPct,
+                  aid_budget_change_pct: uniAidPct,
+                  installment_count: uniInstallments,
+                  attendance_min_pct: uniAttendanceMin,
+                  grading_difficulty_shift: uniGradingShift,
+                  capacity_change_pct: uniCapacityPct,
+                  semester_count: uniSemesters,
+                  replications: uniReplications,
+                },
         },
       });
       setActiveUniversity(res);
       setUniversityRuns((prev) => [res, ...prev.filter((r) => r.run_id !== res.run_id)]);
     } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : "University multi-semester run failed.");
+      setErrorMsg(formatErr(err));
     } finally {
       setRunningUniversity(false);
     }
@@ -181,7 +324,7 @@ function UniversitySimulatorWorkspace() {
       });
       setSweepData(res);
     } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : "Tuition sensitivity sweep failed.");
+      setErrorMsg(formatErr(err));
     } finally {
       setRunningSweep(false);
     }
@@ -193,9 +336,21 @@ function UniversitySimulatorWorkspace() {
     await handleRunUniversity(placementRunId);
   };
 
+  const activeDisclaimer =
+    tab === "multiterm"
+      ? (activeUniversity?.disclaimer ??
+          activeUniversity?.comparison?.disclaimer ??
+          activeUniversity?.summary?.disclaimer)
+      : (activePlacement?.disclaimer ??
+          activePlacement?.result?.comparison?.disclaimer ??
+          activePlacement?.summary?.disclaimer);
+
   const disclaimerText =
+    activeDisclaimer ??
     activeUniversity?.disclaimer ??
+    activeUniversity?.summary?.disclaimer ??
     activePlacement?.disclaimer ??
+    activePlacement?.summary?.disclaimer ??
     catalog?.disclaimer ??
     "HYPOTHETICAL / UNCALIBRATED PROTOTYPE: Uses synthetic cohorts, general quotas, and uncalibrated default coefficients. Does not claim exact official ÖSYM placement reproduction.";
 
@@ -203,11 +358,36 @@ function UniversitySimulatorWorkspace() {
   const pComp = activePlacement?.result?.comparison;
   const uEffects = activeUniversity?.comparison?.policy_effects;
 
+  const clearLinkedScenario = () => {
+    setActiveScenarioId("");
+    setLinkedScenario(null);
+    setInterventionDirty(false);
+    const next = new URLSearchParams(searchParams.toString());
+    next.delete("scenario");
+    const qs = next.toString();
+    router.replace(qs ? `/university?${qs}` : "/university", { scroll: false });
+  };
+
   return (
     <div className="stack">
       <Notice tone="warn" title="Hypothetical / Uncalibrated Prototype (osym_verified = false):">
         {disclaimerText}
       </Notice>
+
+      {activeScenarioId ? (
+        <Notice tone="info" title={`Linked scenario: ${linkedScenario?.name ?? activeScenarioId}`}>
+          <div className="row" style={{ justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+            <span className="small">
+              {interventionDirty
+                ? "Using modified slider parameters alongside the linked scenario metadata."
+                : "Pre-filled from the linked scenario; untouched runs apply its full configured intervention."}
+            </span>
+            <button type="button" className="button small" onClick={clearLinkedScenario}>
+              Clear scenario
+            </button>
+          </div>
+        </Notice>
+      ) : null}
 
       {errorMsg ? (
         <Notice tone="crit" title="Simulation error:">
@@ -246,63 +426,72 @@ function UniversitySimulatorWorkspace() {
             <div className="grid-3">
               <label className="stack">
                 <span className="small muted">Candidate Cohort Size</span>
-                <input
-                  type="number"
+                <NumField
                   min={20}
                   max={2000}
                   value={placeSize}
-                  onChange={(e) => setPlaceSize(Number(e.target.value) || 200)}
+                  onChange={setPlaceSize}
                 />
               </label>
               <label className="stack">
                 <span className="small muted">Quota Change % (UNI-005)</span>
-                <input
-                  type="number"
+                <NumField
                   min={-90}
                   max={200}
                   value={placeQuotaPct}
-                  onChange={(e) => setPlaceQuotaPct(Number(e.target.value))}
+                  onChange={(n) => {
+                    setInterventionDirty(true);
+                    setPlaceQuotaPct(n);
+                  }}
                 />
               </label>
               <label className="stack">
                 <span className="small muted">Engineering Rank Baraj (≤)</span>
-                <input
-                  type="number"
+                <NumField
                   min={10000}
                   max={1000000}
                   step={10000}
                   value={placeBarajEng}
-                  onChange={(e) => setPlaceBarajEng(Number(e.target.value) || 300000)}
+                  onChange={(n) => {
+                    setInterventionDirty(true);
+                    setPlaceBarajEng(n);
+                  }}
                 />
               </label>
               <label className="stack">
                 <span className="small muted">Tuition Change % (UNI-001)</span>
-                <input
-                  type="number"
+                <NumField
                   min={-100}
                   max={300}
                   value={placeTuitionPct}
-                  onChange={(e) => setPlaceTuitionPct(Number(e.target.value))}
+                  onChange={(n) => {
+                    setInterventionDirty(true);
+                    setPlaceTuitionPct(n);
+                  }}
                 />
               </label>
               <label className="stack">
                 <span className="small muted">Need-Based Aid % (UNI-002)</span>
-                <input
-                  type="number"
+                <NumField
                   min={-100}
                   max={500}
                   value={placeAidPct}
-                  onChange={(e) => setPlaceAidPct(Number(e.target.value))}
+                  onChange={(n) => {
+                    setInterventionDirty(true);
+                    setPlaceAidPct(n);
+                  }}
                 />
               </label>
               <label className="stack">
                 <span className="small muted">Installment Count (UNI-006)</span>
-                <input
-                  type="number"
+                <NumField
                   min={1}
                   max={12}
                   value={placeInstallments}
-                  onChange={(e) => setPlaceInstallments(Math.max(1, Number(e.target.value) || 1))}
+                  onChange={(n) => {
+                    setInterventionDirty(true);
+                    setPlaceInstallments(n);
+                  }}
                 />
               </label>
             </div>
@@ -348,18 +537,18 @@ function UniversitySimulatorWorkspace() {
               <div className="tiles">
                 <StatTile
                   label="Placed Candidates"
-                  value={fmtInt(pMetrics?.placed_count ?? 0)}
-                  sub={`Rate: ${(((pMetrics?.placement_rate as number) ?? 0) * 100).toFixed(1)}%`}
+                  value={fmtInt(pMetrics?.placed_count ?? null)}
+                  sub={`Rate: ${typeof pMetrics?.placement_rate === "number" ? `${(pMetrics.placement_rate * 100).toFixed(1)}%` : "—"}`}
                 />
                 <StatTile
                   label="1st-Choice Placement"
-                  value={`${(((pMetrics?.first_choice_rate as number) ?? 0) * 100).toFixed(1)}%`}
-                  sub={`${fmtInt(pMetrics?.first_choice_count ?? 0)} first-choice matches`}
+                  value={typeof pMetrics?.first_choice_rate === "number" ? `${(pMetrics.first_choice_rate * 100).toFixed(1)}%` : "—"}
+                  sub={`${fmtInt(pMetrics?.first_choice_count ?? null)} first-choice matches`}
                 />
                 <StatTile
                   label="Seat Utilization"
-                  value={`${(((pMetrics?.seat_utilization_rate as number) ?? 0) * 100).toFixed(1)}%`}
-                  sub={`${fmtInt(pMetrics?.total_filled ?? 0)} / ${fmtInt(pMetrics?.total_capacity ?? 0)} seats`}
+                  value={typeof pMetrics?.seat_utilization_rate === "number" ? `${(pMetrics.seat_utilization_rate * 100).toFixed(1)}%` : "—"}
+                  sub={`${fmtInt(pMetrics?.total_filled ?? null)} / ${fmtInt(pMetrics?.total_capacity ?? null)} seats`}
                 />
                 <StatTile
                   label="Displaced / Newly Placed"
@@ -426,97 +615,112 @@ function UniversitySimulatorWorkspace() {
               </label>
               <label className="stack">
                 <span className="small muted">Semesters</span>
-                <input
-                  type="number"
+                <NumField
                   min={1}
                   max={8}
                   value={uniSemesters}
-                  onChange={(e) => setUniSemesters(Math.max(1, Number(e.target.value) || 4))}
+                  onChange={(n) => {
+                    setInterventionDirty(true);
+                    setUniSemesters(n);
+                  }}
                 />
               </label>
               <label className="stack">
                 <span className="small muted">CRN Replications</span>
-                <input
-                  type="number"
+                <NumField
                   min={1}
-                  max={50}
+                  max={100}
                   value={uniReplications}
-                  onChange={(e) => setUniReplications(Math.max(1, Number(e.target.value) || 8))}
+                  onChange={(n) => {
+                    setInterventionDirty(true);
+                    setUniReplications(n);
+                  }}
                 />
               </label>
               <label className="stack">
                 <span className="small muted">Tuition Change % (UNI-001)</span>
-                <input
-                  type="number"
+                <NumField
                   min={-100}
                   max={300}
                   value={uniTuitionPct}
-                  onChange={(e) => setUniTuitionPct(Number(e.target.value))}
+                  onChange={(n) => {
+                    setInterventionDirty(true);
+                    setUniTuitionPct(n);
+                  }}
                 />
               </label>
               <label className="stack">
                 <span className="small muted">Aid Budget % (UNI-002)</span>
-                <input
-                  type="number"
+                <NumField
                   min={-100}
                   max={500}
                   value={uniAidPct}
-                  onChange={(e) => setUniAidPct(Number(e.target.value))}
+                  onChange={(n) => {
+                    setInterventionDirty(true);
+                    setUniAidPct(n);
+                  }}
                 />
               </label>
               <label className="stack">
                 <span className="small muted">Installments (UNI-006)</span>
-                <input
-                  type="number"
+                <NumField
                   min={1}
                   max={12}
                   value={uniInstallments}
-                  onChange={(e) => setUniInstallments(Math.max(1, Number(e.target.value) || 1))}
+                  onChange={(n) => {
+                    setInterventionDirty(true);
+                    setUniInstallments(n);
+                  }}
                 />
               </label>
               <label className="stack">
                 <span className="small muted">Min Attendance % (UNI-003)</span>
-                <input
-                  type="number"
+                <NumField
                   min={0}
                   max={100}
                   value={uniAttendanceMin}
-                  onChange={(e) => setUniAttendanceMin(Number(e.target.value))}
+                  onChange={(n) => {
+                    setInterventionDirty(true);
+                    setUniAttendanceMin(n);
+                  }}
                 />
               </label>
               <label className="stack">
                 <span className="small muted">Grading Difficulty Shift (UNI-004)</span>
-                <input
-                  type="number"
+                <NumField
                   min={-2}
                   max={2}
                   step={0.1}
                   value={uniGradingShift}
-                  onChange={(e) => setUniGradingShift(Number(e.target.value))}
+                  onChange={(n) => {
+                    setInterventionDirty(true);
+                    setUniGradingShift(n);
+                  }}
                 />
               </label>
               <label className="stack">
                 <span className="small muted">Course Seats % (UNI-005)</span>
-                <input
-                  type="number"
+                <NumField
                   min={-90}
                   max={200}
                   value={uniCapacityPct}
-                  onChange={(e) => setUniCapacityPct(Number(e.target.value))}
+                  onChange={(n) => {
+                    setInterventionDirty(true);
+                    setUniCapacityPct(n);
+                  }}
                 />
               </label>
             </div>
             <div className="row" style={{ justifyContent: "space-between" }}>
               <label className="row small">
                 <span>Cohort Size (when not using Placement Handoff):</span>
-                <input
-                  type="number"
+                <NumField
                   min={20}
                   max={1000}
                   style={{ width: 90 }}
                   disabled={Boolean(linkedPlacementId)}
                   value={uniSize}
-                  onChange={(e) => setUniSize(Number(e.target.value) || 200)}
+                  onChange={setUniSize}
                 />
               </label>
               <div className="row">
@@ -552,8 +756,14 @@ function UniversitySimulatorWorkspace() {
                 <div className="tiles">
                   <StatTile
                     label="Retention Delta"
-                    value={fmtSigned((uEffects.cumulative_retention_rate?.mean ?? 0) * 100, 2, " pp")}
-                    sub={`Policy: ${((uEffects.cumulative_retention_rate?.policy_mean ?? 0) * 100).toFixed(2)}%`}
+                    value={fmtSigned(
+                      typeof uEffects.cumulative_retention_rate?.mean === "number"
+                        ? uEffects.cumulative_retention_rate.mean * 100
+                        : null,
+                      2,
+                      " pp",
+                    )}
+                    sub={`Policy: ${typeof uEffects.cumulative_retention_rate?.policy_mean === "number" ? `${(uEffects.cumulative_retention_rate.policy_mean * 100).toFixed(2)}%` : "—"}`}
                   />
                   <StatTile
                     label="Dropout Delta (Withdrawn)"
@@ -567,7 +777,13 @@ function UniversitySimulatorWorkspace() {
                   />
                   <StatTile
                     label="Net Revenue Delta"
-                    value={fmtSigned((uEffects.total_net_tuition_revenue?.mean ?? 0) / 1_000_000, 2, "M TL")}
+                    value={fmtSigned(
+                      typeof uEffects.total_net_tuition_revenue?.mean === "number"
+                        ? uEffects.total_net_tuition_revenue.mean / 1_000_000
+                        : null,
+                      2,
+                      "M TL",
+                    )}
                     sub={`${activeUniversity.comparison?.replications ?? 1} CRN replications`}
                   />
                 </div>
@@ -603,13 +819,22 @@ function UniversitySimulatorWorkspace() {
                     <button
                       type="button"
                       className="button small"
+                      disabled={inspectingId === r.run_id}
                       onClick={async () => {
-                        const detail = await v2<PlacementRunResponse>(`/placement/runs/${r.run_id}`);
-                        setActivePlacement(detail);
-                        setTab("placement");
+                        setErrorMsg(null);
+                        setInspectingId(r.run_id);
+                        try {
+                          const detail = await v2<PlacementRunResponse>(`/placement/runs/${r.run_id}`);
+                          setActivePlacement(detail);
+                          setTab("placement");
+                        } catch (err) {
+                          setErrorMsg(formatErr(err));
+                        } finally {
+                          setInspectingId(null);
+                        }
                       }}
                     >
-                      Inspect
+                      {inspectingId === r.run_id ? "Loading…" : "Inspect"}
                     </button>
                   </li>
                 ))}
@@ -624,13 +849,22 @@ function UniversitySimulatorWorkspace() {
                     <button
                       type="button"
                       className="button small"
+                      disabled={inspectingId === r.run_id}
                       onClick={async () => {
-                        const detail = await v2<UniversityRunResponse>(`/university/runs/${r.run_id}`);
-                        setActiveUniversity(detail);
-                        setTab("multiterm");
+                        setErrorMsg(null);
+                        setInspectingId(r.run_id);
+                        try {
+                          const detail = await v2<UniversityRunResponse>(`/university/runs/${r.run_id}`);
+                          setActiveUniversity(detail);
+                          setTab("multiterm");
+                        } catch (err) {
+                          setErrorMsg(formatErr(err));
+                        } finally {
+                          setInspectingId(null);
+                        }
                       }}
                     >
-                      Inspect
+                      {inspectingId === r.run_id ? "Loading…" : "Inspect"}
                     </button>
                   </li>
                 ))}
@@ -639,6 +873,30 @@ function UniversitySimulatorWorkspace() {
           </div>
         </section>
       ) : null}
+
+      <section className="card stack" aria-labelledby="uni-explorer-links">
+        <div className="card-head" style={{ marginBottom: 0 }}>
+          <h3 id="uni-explorer-links" style={{ margin: 0 }}>University Simulation Explorer &amp; SQLite Registry</h3>
+          <Badge tone={regStatus?.available ? "good" : "neutral"}>
+            {regStatus?.available
+              ? `SQLite registry: ${regStatus.snapshots.length} snapshot(s)`
+              : "SQLite registry: optional / not imported"}
+          </Badge>
+        </div>
+        <p className="small muted" style={{ margin: 0 }}>
+          This studio executes live counterfactual placement and multi-semester simulations via{" "}
+          <code>/api/v2/placement/*</code> and <code>/api/v2/university/*</code>. Browse institutional metadata, synthetic
+          candidates, and fixture comparisons in the sibling explorer views (read-only workbook SQLite APIs are at{" "}
+          <code>/api/v2/university-registry/*</code>):
+        </p>
+        <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
+          <Link className="button small" href="/university/programs">Programs</Link>
+          <Link className="button small" href="/university/candidates">Candidates</Link>
+          <Link className="button small" href="/university/scenarios">Scenario Setup</Link>
+          <Link className="button small" href="/university/results">Placement Results</Link>
+          <Link className="button small" href="/university/compare">Compare Scenarios</Link>
+        </div>
+      </section>
     </div>
   );
 }

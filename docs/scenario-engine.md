@@ -14,8 +14,8 @@ Policy analysts, researchers, municipal planners, and entrepreneurs rarely formu
 > *"How would university students in Istanbul respond to a 50% discount on transit passes?"*
 
 The **Scenario Engine** bridges the gap between natural language questions and persona-conditioned agent experiments. It automatically:
-1. **Extracts Geographic Context**: Identifies provinces across all 81 Turkish provinces (handling Turkish diacritics and suffixes like *Ankara'da*, *Bursa'da*, *İstanbul'da*).
-2. **Classifies Policy Domains**: Identifies domain types (`transportation`, `housing`, `energy`, `commerce`, `social_policy`, `labor_market`, `health`).
+1. **Extracts Geographic Context**: Identifies provinces across all 81 Turkish provinces (handling Turkish diacritics and apostrophized suffixes like *Ankara'da*, *Bursa'da*, *İstanbul'da*).
+2. **Classifies Policy Domains**: Identifies domain types (`transportation`, `university_placement`, `university_policy`, `housing`, `energy`, `economic`, `education`, `public_policy`).
 3. **Calibrates Economic & Policy Parameters**: Infers baseline tariffs, proposed tariffs, percentage shifts, currency units, or business feasibility constraints.
 4. **Determines Target Demographics**: Infers age ranges, income strata, or household types eligible for the scenario.
 5. **Synthesizes Question Formats**:
@@ -35,7 +35,7 @@ flowchart TD
     
     subgraph Compilation["1. Compilation & Autofill"]
         B --> B1["Location Extraction\n(81 Turkish Provinces)"]
-        B --> B2["Domain Classification\n(Commerce, Transport, Energy, Housing...)"]
+        B --> B2["Domain Classification\n(Transport, Energy, Housing, University, Public Policy...)"]
         B --> B3["Parameter Calibration\n(Tariffs, Percentages, Attributes)"]
         B --> B4["Target Population Rules\n(Age, Province, Adults)"]
         B --> B5["Question Synthesis\n(Single Choice or Free-Text Mode)"]
@@ -65,31 +65,32 @@ flowchart TD
 
 ## 3. Core Modules (`src/scenarios/`)
 
-The Scenario Engine core is implemented in [`src/scenarios/`](file:///d:/Uni/EngDesign/AI-powered-digital-society-twin/src/scenarios):
+The Scenario Engine core is implemented in [`src/scenarios/`](../src/scenarios):
 
 ### 3.1 `schema.py` — Strict Data Modeling
 Defines validated Pydantic models for policy configurations:
 - **`ScenarioConfig`**: Top-level model containing metadata, location, target population, policy parameters, and questionnaire.
 - **`PolicyParameters`**: Holds calibrated economic figures (`baseline_fare`, `new_fare`, `increase_percentage`, `currency`, `policy_summary`, `custom_details`). Non-transit scenarios cleanly set transport attributes (`fare_category`) to `None`.
-- **`TargetPopulation`**: Demographic screening bounds (`province_codes`, `age_min`, `age_max`, `adult_only`).
+- **`PopulationFilterConfig`**: Demographic screening bounds (`province_codes`, `minimum_age`, `maximum_age`, `sexes`, `marital_statuses`, `education_levels`, `adult_only`, `required_attributes`).
 - **`QuestionConfig`**:
   - `type="single_choice"`: Structured choice questions with balanced options.
   - `type="free_text"`: Open-ended qualitative questions with `options=[]` and length bounds (`min_length`, `max_length`).
 
 ### 3.2 `compiler.py` — Zero-Shot NLP & Parameter Calibration
 Transforms raw text prompts into a complete `ScenarioConfig`:
-- **`extract_location(text)`**: Turkish diacritic-aware normalization matching all 81 provinces (e.g. *İçel/Mersin*, *Afyonkarahisar*, suffixes like *-de/-da/-ye*).
-- **`detect_domain_and_category(...)`**: Classifies prompts into domains (`commerce`, `transportation`, `housing`, `energy`, `social_policy`, `labor_market`, `health`). For example, queries containing `cafe`, `restaurant`, `shop`, or `business` are categorized under `commerce`.
+- **`extract_location(text)`**: Turkish diacritic-aware normalization matching all 81 provinces (handles *İçel/Mersin*, *Afyonkarahisar*, and apostrophized suffixes such as *Bursa'da*).
+- **`detect_domain_and_category(...)`**: Classifies prompts into domains (`transportation`, `university_placement`, `university_policy`, `housing`, `energy`, `economic`, `education`, `public_policy`).
 - **`calculate_tariff_change(...)`**: Automatically computes relative percentages, absolute new tariffs, or baseline values from partial prompt mentions.
-- **`detect_target_population(...)`**: Detects demographic filters (e.g., student filters `age_min=18, age_max=25`, elderly discounts `age_min=65`).
+- **`detect_target_population(...)`**: Detects demographic filters (e.g., student filters `minimum_age=18, maximum_age=26`, elderly discounts `minimum_age=65`).
 - **`synthesize_questions(...)`**: Produces either calibrated single-choice questions or open-ended free-text questions based on prompt intent.
-- **LLM + Heuristic Fallback**: Utilizes OpenAI completion if credentials exist, falling back seamlessly to deterministic rule-based heuristic extraction.
+- **LLM + Heuristic Fallback**: Uses OpenAI completion only when `SOCIETYTWIN_ENABLE_LIVE_SCENARIO_LLM=1` and `OPENAI_API_KEY` (with optional `openai` extra installed) are set, otherwise falling back seamlessly to deterministic rule-based heuristic extraction.
 
 ### 3.3 `adapter.py` — Pipeline Transformation & Catalog
 Connects scenarios to the workbench experiment system:
 - **`scenario_to_experiment_definition(scenario, cohort_id, ...)`**: Maps a `ScenarioConfig` into an executable `ExperimentDefinition`. Supports both `single_choice` and `free_text` response types.
-- **`save_custom_scenario(scenario)`**: Persists custom scenarios to `experiments/policy_scenarios/scenarios/` as standardized YAML files.
-- **`get_scenario(scenario_id)`**: Retrieves built-in or custom scenarios from the catalog.
+- **`save_custom_scenario(scenario)`**: Persists custom scenarios as YAML files; API routes store runtime-created scenarios under `SOCIETYTWIN_STATE_DIR/scenarios/` so source directories stay clean, while built-in templates are read from `src/scenarios/builtin_scenarios/` (`uni_placement_quota_001`, `uni_tuition_hike_001`) and `experiments/policy_scenarios/scenarios/` (`transport_fare_001`, `energy_subsidy_001`).
+- **`get_scenario(scenario_id)`**: Retrieves built-in or saved custom scenarios from the catalog.
+- **`scenarios.placement` & `scenarios.university`**: Counterfactual university admission placement engine (`python -m scenarios.placement`) and multi-semester policy/financial ledger engine (`python -m scenarios.university`), integrated into `/api/v2/placement/*` and `/api/v2/university/*`.
 
 ### 3.4 `eligibility.py` — Deterministic Resident Screening
 Evaluates whether a synthetic persona qualifies for a scenario:
@@ -99,25 +100,19 @@ Evaluates whether a synthetic persona qualifies for a scenario:
   - `EXCLUDED`: Persona fails one or more criteria (with human-readable diagnostic reason).
   - `CANNOT_EVALUATE`: Missing persona attribute (fails closed to prevent corrupt experiments).
 
-### 3.5 `prompt_renderer.py` — Context & Persona Injection
-Renders standardized prompt envelopes:
-- Injects demographic persona card (age, occupation, income bracket, household composition).
-- Injects environmental context indicators (local inflation, TÜİK provincial indicators).
-- Injects policy scenario description and tariff change details.
-- Renders explicit instructions for open-ended free-text or single-choice JSON formats.
-- Guarantees generator seed independence (does not leak synthetic seeds into prompts).
+### 3.5 `prompt_renderer.py` — Standalone Scenario Prompt Helper
+Standalone template helper for scenario cards (the national pipeline executes via `societytwin.national.experiments.render_prompts` and `societytwin.national.runner`):
+- Renders persona summary fields alongside scenario description and options/free-text JSON format instructions without leaking synthetic IDs or seeds.
 
-### 3.6 `response_validator.py` — Anti-Hallucination Guard
-Ensures AI agents produce structured outputs matching controlled schemas:
+### 3.6 `response_validator.py` — Standalone Schema Validator
+Strict standalone response validation contract (parallel to `societytwin.national.experiments.parse_response` used by the runner):
 - Strips markdown code fences (````json ... ````).
-- For single-choice: validates the chosen option against declared option IDs, rejecting hallucinations.
-- For free-text: validates non-empty string responses against character and length bounds.
-- Captures agent rationale and explanation fields when enabled.
+- Validates `single_choice`, `multiple_choice`, and `free_text` (with `min_length`/`max_length` bounds) and captures rationale fields when enabled.
 
 ### 3.7 `summary.py` — Executive Result Text Summarizer
 Generates comprehensive narrative result summaries and executive briefings from simulation data:
-- **LLM Executive Synthesis**: When an LLM provider key (`OPENAI_API_KEY`) is active, it calls the LLM to synthesize the qualitative responses, identify key behavioral trends, extract representative quotes, and generate policy recommendations.
-- **Deterministic Rule-Based Fallback**: Generates structured reports with plurality/consensus percentages, response depth metrics, and verbatim quotes when offline.
+- **LLM Executive Synthesis**: When an experiment used `transport == "live"`, `backend != "stub"`, `OPENAI_API_KEY` is present, and `SOCIETYTWIN_ALLOW_LLM_SUMMARY=1` (or `allow_llm=True`), calls OpenAI to synthesize qualitative responses, key trends, representative quotes, and policy recommendations.
+- **Deterministic Rule-Based Fallback**: Generates structured reports with plurality/consensus percentages, response depth metrics, and verbatim quotes when offline or running fake/stub tests.
 - **Failure Diagnostics**: Provides clear diagnostic banners if agent calls fail (e.g. HTTP 401 invalid API key), avoiding confusing 0% graphs.
 
 ---
@@ -157,16 +152,15 @@ The scenario engine exposes REST endpoints registered under `/api/v2`:
 
 ## 6. Frontend User Experience (`frontend/src/app/experiments/new/page.tsx`)
 
-### Real-Time Autofill & Drawer Synchronization
-- **Immediate Input Sync**: Typing into the prompt input automatically keeps the underlying survey question and policy description populated. The drawer fields are never blank, and the run button is immediately enabled.
-- **Background Debounced Compilation**: A 700ms background debouncer invokes `/scenarios/from-prompt` while typing, auto-detecting the province, classifying the domain, and configuring the question format without requiring extra clicks.
-- **Single-Click Simulation**: Clicking **`Simulate Policy`** compiles the prompt, matches or generates a compatible adult cohort, builds the plan, runs the agents, and routes directly to the results dashboard.
-- **Customization Drawer**: Clicking **`Customize Question & Templates`** opens the drawer with all fields pre-filled from your prompt, allowing toggling between **Single Choice** and **Free-Text Answer**.
-- **Optional Template Catalog**: The *"Saved Policy Templates"* dropdown is clearly separated as an optional benchmark catalog. Pre-saved transportation templates are only loaded if the user explicitly clicks *"Load Template"*.
+### Prompt-First Builder + Reviewed Execution Plan
+- **Prompt Compilation & Auto-Selection**: Enter a natural language policy question and click **`Compile & review plan`** (or **`Preview & Edit Question ↓`** to inspect/edit before creating a plan). Selecting a template in `#scenario-select` immediately populates the scenario, question, and parameters.
+- **Graceful Backend Default & Model Controls**: Automatically selects `stub:fake` when MatrAIx runtime is unavailable, and exposes a live `provider/model` selector (`openai/*`, `anthropic/*`, `gemini/*`) when `matraix:live` is chosen.
+- **Cohort, Parameters & Budget Controls**: Supports choosing a saved cohort (`#cohort-select`, including URL `?cohort=` handoff from `/cohorts`) or auto-creating a matching adult cohort, editing scenario parameters, sampling method/seed, temperature, call cap, and cost cap inside the customization drawer.
+- **Explicit Plan Review & Confirmation Gate**: Clicking **`Compile & review plan`** or **`Save and review plan`** runs `POST /api/v2/experiments` and `POST /api/v2/experiments/{id}/plan`, displaying active personas, estimated calls/tokens/cost, blockers, warnings, and an example prompt before enabling **`Run experiment`** behind the confirmation checkbox.
 
 ### Results Dashboard (`frontend/src/app/results/[id]/page.tsx`)
 - **Executive Result Summary Card**: Displays an executive headline, bulleted key behavioral findings, a copy-to-clipboard button, and an expandable full analytical Markdown report.
-- **Citizen Free-Text Responses (Qualitative Findings)**: When open-ended free-text mode is selected, displays quote cards showing verbatim citizen feedback with synthetic ID and province badges.
+- **Citizen Free-Text Responses (Qualitative Findings)**: When open-ended free-text mode is selected, displays quote cards showing verbatim citizen feedback and synthetic IDs.
 - **Weighted Response Distribution**: Renders statistical choice distribution bars with 95% Wilson score confidence intervals and Kish effective sample sizes.
 
 ---
@@ -175,9 +169,9 @@ The scenario engine exposes REST endpoints registered under `/api/v2`:
 
 ### Backend Unit & Integration Tests:
 ```powershell
-.\.venv\Scripts\python.exe -m pytest tests/test_scenarios/ tests/national/test_scenario_pipeline.py tests/national/test_api_v2.py -v
+.\.venv\Scripts\python.exe -m pytest tests/test_scenarios/ tests/national/test_scenario_pipeline.py tests/national/test_api_v2.py tests/national/test_university_api_v2.py -v
 ```
-*Executes all 81 scenario and national pipeline test cases, verifying location extraction, tariff math, domain classification, free-text schemas, LLM result synthesis, demographic screening, and API endpoints.*
+*Executes the scenario engine, university placement API, and national pipeline test suites, verifying location extraction, tariff math, domain classification, free-text schemas, deterministic/LLM summaries, demographic screening, and API endpoints.*
 
 ### Frontend Typecheck:
 ```powershell

@@ -81,11 +81,13 @@ class Settings:
     model_price_table: Path | None = None
     # Optional internal override; absent uses the checkout's versioned registry.
     dependency_registry_path: Path | None = None
+    university_db_path: Path | None = None
 
     def __post_init__(self):
         data = self.repo_root / "data"
         defaults = {"national_controls_dir": data / "processed" / "national", "populations_dir": data / "populations",
-                    "tuik_package_dir": data / "raw" / "tuik_package", "tuik_mapping_path": data / "tuik_package_mapping.yaml"}
+                    "tuik_package_dir": data / "raw" / "tuik_package", "tuik_mapping_path": data / "tuik_package_mapping.yaml",
+                    "university_db_path": data / "processed" / "university" / "university.sqlite3"}
         for name, default in defaults.items():
             if getattr(self, name) is None:
                 object.__setattr__(self, name, default)
@@ -122,7 +124,7 @@ class Settings:
 
 
 def _load_dotenv_files(*paths: Path) -> None:
-    if "PYTEST_CURRENT_TEST" in os.environ:
+    if "PYTEST_CURRENT_TEST" in os.environ or _env_flag("SOCIETYTWIN_DISABLE_DOTENV", False):
         return
     for path in paths:
         if not path.is_file():
@@ -190,4 +192,5 @@ def load_settings() -> Settings:
         max_agents_per_run=int(os.environ.get("SOCIETYTWIN_MAX_AGENTS", "200")),
         model_price_table=_env_path("SOCIETYTWIN_MODEL_PRICES"),
         dependency_registry_path=_env_path("SOCIETYTWIN_DEPENDENCY_REGISTRY"),
+        university_db_path=_env_path("SOCIETYTWIN_UNIVERSITY_DB"),
     )

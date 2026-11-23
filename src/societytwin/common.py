@@ -65,7 +65,14 @@ def utc_now() -> str:
     return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
-_HOME = str(Path.home())
+def _home_dir() -> str:
+    try:
+        return str(Path.home())
+    except RuntimeError:
+        return ""
+
+
+_HOME = _home_dir()
 _ABS_PATH = re.compile(r"(?:[A-Za-z]:\\|/)(?:Users|home|private|var|tmp|opt|Volumes|mnt)[^\s'\"<>|]*")
 _SECRETISH = re.compile(r"(?i)\b([A-Z0-9_]*(?:KEY|TOKEN|SECRET|PASSWORD)[A-Z0-9_]*)\s*=\s*\S+")
 
@@ -74,7 +81,7 @@ def redact(text: str | None, *, max_length: int = 2000) -> str:
     """Remove host paths and anything that looks like an assigned secret from user-facing text."""
     if not text:
         return ""
-    cleaned = text.replace(_HOME, "~")
+    cleaned = text.replace(_HOME, "~") if _HOME else text
     cleaned = _ABS_PATH.sub("<path>", cleaned)
     cleaned = _SECRETISH.sub(lambda m: f"{m.group(1)}=<redacted>", cleaned)
     if len(cleaned) > max_length:

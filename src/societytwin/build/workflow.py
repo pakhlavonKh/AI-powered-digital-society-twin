@@ -27,8 +27,9 @@ def _inventory(directory):
 
 def _output(config):
     output = resolve(config.output_root)
-    if not output.is_relative_to((REPO_ROOT/'data/results').resolve()):
-        raise BuildError('unified output must be under ignored feature-worktree data/results')
+    repo = REPO_ROOT.resolve()
+    if output.is_relative_to(repo) and not output.is_relative_to((repo/'data/results').resolve()):
+        raise BuildError('unified output inside repository must be under ignored data/results')
     for parent in (output, *output.parents):
         if any((parent/name).exists() for name in ('records.parquet','households.parquet','attributes.parquet','build-manifest.json')):
             raise BuildError('unified output cannot be inside an existing artifact')
@@ -220,8 +221,8 @@ def build(config):
         if manifest['identity'] != prepared['identity']:raise BuildError('unified build identity collision')
         return target
     output.mkdir(parents=True,exist_ok=True)
-    with TemporaryDirectory(prefix='.unified-staging-',dir=output) as temporary:
-        stage = Path(temporary)/prepared['build_id']
+    with TemporaryDirectory(prefix=".s-", dir=output) as temporary:
+        stage = Path(temporary) / prepared["build_id"]
         stage.mkdir()
         _execute(stage,config,prepared)
         inspect_build(stage)

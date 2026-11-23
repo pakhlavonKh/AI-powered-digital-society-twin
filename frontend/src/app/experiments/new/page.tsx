@@ -2,12 +2,16 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { describeDetails, toApiError } from "@/lib/api/client";
 import { PopulationGate, useCapabilities } from "@/components/national/common";
 import { Notice } from "@/components/Notices";
 import { PageHeader } from "@/components/PageHeader";
+import { StatTile } from "@/components/StatTile";
+import { Badge } from "@/components/StatusBadge";
 import {
   v2,
+  type Capabilities,
   type Cohort,
   type CompiledScenarioResponse,
   type Experiment,
@@ -17,8 +21,40 @@ import {
   type RunView,
   type ScenarioList,
 } from "@/lib/api/v2";
+import { fmtInt, fmtUsd } from "@/lib/format";
 import { useLinkPop, withPop } from "@/lib/population";
 import { useApi } from "@/lib/useApi";
+
+const MODEL_PRESETS = [
+  "openai/gpt-4o-mini",
+  "openai/gpt-4o",
+  "anthropic/claude-3-5-sonnet-latest",
+  "gemini/gemini-2.5-flash",
+];
+
+const STRATA_OPTIONS = [
+  "province_code",
+  "sex",
+  "age_group",
+  "marital_status",
+  "education_level",
+  "labour_status",
+  "urbanicity",
+];
+
+function formatApiError(err: unknown): string {
+  const apiErr = toApiError(err);
+  const details = describeDetails(apiErr.details);
+  return `Error [${apiErr.code}]: ${apiErr.message}${details ? ` (${details})` : ""}`;
+}
+
+function defaultLiveModel(caps?: Capabilities): string {
+  const keys = caps?.provider_key_present ?? {};
+  if (keys.openai) return "openai/gpt-4o-mini";
+  if (keys.anthropic) return "anthropic/claude-3-5-sonnet-latest";
+  if (keys.gemini || keys.google) return "gemini/gemini-2.5-flash";
+  return "openai/gpt-4o-mini";
+}
 
 function blank(cohortId: string): ExperimentDefinition {
   return {
@@ -26,6 +62,7 @@ function blank(cohortId: string): ExperimentDefinition {
     scenario: { title: "", description: "", parameters: [], hypothetical: true, source_note: null },
     task: {
       instruction: "",
+      response_type: "single_choice",
       options: [
         { id: "option_a", label: "" },
         { id: "option_b", label: "" },
@@ -47,6 +84,7 @@ function Builder({ populationId }: { populationId: string }) {
   const router = useRouter();
   const pop = useLinkPop();
   const caps = useCapabilities();
+  const urlCohort = params.get("cohort") ?? "";
   const cohorts = useApi("v2:cohorts", (signal) => v2<{ items: Cohort[] }>("/cohorts", { signal }));
   const geo = useApi(`v2:geo:${populationId}`, (signal) =>
     v2<Geography>("/geography/provinces", { query: { population_id: populationId }, signal }),
@@ -57,17 +95,58 @@ function Builder({ populationId }: { populationId: string }) {
   const [selectedQuestionId, setSelectedQuestionId] = useState<string>("");
   const [showCustomize, setShowCustomize] = useState<boolean>(false);
   const [promptText, setPromptText] = useState<string>("");
-  const [compilingPrompt, setCompilingPrompt] = useState<boolean>(false);
-  const [promptFeedback, setPromptFeedback] = useState<string | null>(null);
-  const [d, setD] = useState<ExperimentDefinition>(() => blank(params.get("cohort") ?? ""));
+  const [busy, setBusy] = useState<boolean>(false);
+  const [feedback, setFeedback] = useState<string | null>(null);
+  const [engineTouched, setEngineTouched] = useState<boolean>(false);
+  const [callCapEdited, setCallCapEdited] = useState<boolean>(false);
+  const [explicitCohort, setExplicitCohort] = useState<boolean>(Boolean(urlCohort));
+  const [d, setD] = useState<ExperimentDefinition>(() => blank(urlCohort));
+  const [reviewed, setReviewed] = useState<{ experimentId: string; plan: Plan } | null>(null);
+  const [confirmed, setConfirmed] = useState<boolean>(false);
+  const [running, setRunning] = useState<boolean>(false);
+  const numericParamNames = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    for (const p of d.scenario.parameters) {
+      if (typeof p.value === "number") numericParamNames.current.add(p.name);
+    }
+  }, [d.scenario.parameters]);
 
   const valid = cohorts.data?.items.filter((c) => c.status === "valid" && c.population_id === populationId) ?? [];
-
-  const patch = <K extends keyof ExperimentDefinition>(key: K, value: Partial<ExperimentDefinition[K]>) =>
-    setD((cur) => ({ ...cur, [key]: { ...(cur[key] as object), ...(value as object) } }));
-
   const activeScenario =
     scenarios.data?.items.find((s) => s.scenario_id === selectedScenarioId) ?? scenarios.data?.items[0];
+
+  useEffect(() => {
+    if (!caps.data || engineTouched) return;
+    if (d.model.backend === "matraix" && d.model.transport === "fake" && !caps.data.backends.matraix_fake.available) {
+      setD((cur) => ({
+        ...cur,
+        model: { ...cur.model, backend: "stub", transport: "fake", model: null },
+      }));
+    }
+  }, [caps.data, engineTouched, d.model.backend, d.model.transport]);
+
+  const invalidatePlan = () => {
+    setReviewed(null);
+    setConfirmed(false);
+  };
+
+  const patch = <K extends keyof ExperimentDefinition>(key: K, value: Partial<ExperimentDefinition[K]>) => {
+    invalidatePlan();
+    setD((cur) => ({ ...cur, [key]: { ...(cur[key] as object), ...(value as object) } }));
+  };
+
+  const resolveModelConfig = (cur: ExperimentDefinition["model"]): ExperimentDefinition["model"] => {
+    const backend =
+      cur.backend === "matraix" && cur.transport === "fake" && caps.data && !caps.data.backends.matraix_fake.available && !engineTouched
+        ? "stub"
+        : cur.backend;
+    return {
+      ...cur,
+      backend,
+      model: cur.transport === "live" ? cur.model || defaultLiveModel(caps.data) : null,
+    };
+  };
 
   const ensureCompatibleCohort = async (
     provinces?: string[] | null,
@@ -75,6 +154,10 @@ function Builder({ populationId }: { populationId: string }) {
     ageMax?: number | null,
     provinceName?: string,
   ): Promise<string> => {
+    if (explicitCohort && d.cohort.cohort_id) {
+      return d.cohort.cohort_id;
+    }
+
     const wantProvs = provinces && provinces.length > 0 ? [...provinces].sort() : null;
     const wantMin = ageMin ?? 18;
     const wantMax = ageMax ?? null;
@@ -91,10 +174,20 @@ function Builder({ populationId }: { populationId: string }) {
       return true;
     };
 
-    const current = valid.find((c) => c.cohort_id === d.cohort.cohort_id);
+    let pool = valid;
+    if (pool.length === 0) {
+      try {
+        const fresh = await v2<{ items: Cohort[] }>("/cohorts");
+        pool = fresh.items.filter((c) => c.status === "valid" && c.population_id === populationId);
+      } catch {
+        // Ignore transient refetch failure and fall through to cohort creation
+      }
+    }
+
+    const current = pool.find((c) => c.cohort_id === d.cohort.cohort_id);
     if (current && matches(current)) return current.cohort_id;
 
-    const existing = valid.find(matches);
+    const existing = pool.find(matches);
     if (existing) return existing.cohort_id;
 
     const provLabel = provinceName || (wantProvs ? wantProvs.join(", ") : "National");
@@ -103,7 +196,7 @@ function Builder({ populationId }: { populationId: string }) {
     if (wantMax !== null) filters.age_max = wantMax;
     if (wantProvs) filters.province_codes = wantProvs;
 
-    setPromptFeedback(`Sampling matching cohort (${provLabel} · ${ageLabel})…`);
+    setFeedback(`Sampling matching cohort (${provLabel} · ${ageLabel})…`);
     try {
       const createdCohort = await v2<Cohort>("/cohorts", {
         method: "POST",
@@ -113,10 +206,10 @@ function Builder({ populationId }: { populationId: string }) {
           filters,
         },
       });
-      await cohorts.reload();
+      cohorts.reload();
       return createdCohort.cohort_id;
     } catch {
-      if (valid[0]) return valid[0].cohort_id;
+      if (pool[0]) return pool[0].cohort_id;
       const fallback = await v2<Cohort>("/cohorts", {
         method: "POST",
         body: {
@@ -125,45 +218,56 @@ function Builder({ populationId }: { populationId: string }) {
           filters: { age_min: 18 },
         },
       });
-      await cohorts.reload();
+      cohorts.reload();
       return fallback.cohort_id;
     }
   };
 
-  const executeDefinition = async (fullDef: ExperimentDefinition) => {
-    setPromptFeedback("Building execution plan & persona prompts…");
+  const buildPlanForDefinition = async (fullDef: ExperimentDefinition) => {
+    setFeedback("Saving experiment and generating reviewed execution plan (0 backend calls)…");
     const created = await v2<Experiment>("/experiments", { method: "POST", body: fullDef });
     const planRes = await v2<Plan>(`/experiments/${created.experiment_id}/plan`, { method: "POST", body: {} });
-    if (!planRes.executable || planRes.blockers.length > 0) {
-      const reasons = planRes.blockers.map((b) => `${b.code}: ${b.message}`).join(" | ");
-      throw new Error(reasons || "Execution plan has blockers.");
-    }
-
-    setPromptFeedback("Simulating persona responses across cohort…");
-    const out = await v2<{ run: RunView }>(`/experiments/${created.experiment_id}/runs`, {
-      method: "POST",
-      body: {
-        plan_hash: planRes.plan_hash,
-        idempotency_key: `ui-${planRes.plan_hash.slice(0, 24)}`,
-        confirm: true,
-      },
-    });
-
-    router.push(withPop(`/results/${out.run.run_id}`, pop));
+    setReviewed({ experimentId: created.experiment_id, plan: planRes });
+    setConfirmed(false);
+    setFeedback(
+      planRes.executable
+        ? "Execution plan ready below. Review calls, cost, and prompt details, then check confirmation to run."
+        : "Execution plan created with blockers. Resolve the blockers below before running.",
+    );
   };
 
-  const handleSimulateDirectly = async (customPrompt?: string) => {
+  const handleRunConfirmed = async () => {
+    if (!reviewed || !reviewed.plan.executable || !confirmed) return;
+    setRunning(true);
+    setFeedback("Simulating persona responses across cohort…");
+    try {
+      const out = await v2<{ run: RunView }>(`/experiments/${reviewed.experimentId}/runs`, {
+        method: "POST",
+        body: {
+          plan_hash: reviewed.plan.plan_hash,
+          idempotency_key: `ui-${reviewed.plan.plan_hash.slice(0, 24)}-${Date.now()}`,
+          confirm: true,
+        },
+      });
+      router.push(withPop(`/results/${out.run.run_id}`, pop));
+    } catch (err: unknown) {
+      setFeedback(formatApiError(err));
+      setRunning(false);
+    }
+  };
+
+  const handleCompileAndReview = async (customPrompt?: string) => {
     const raw = (customPrompt ?? promptText).trim();
     if (raw.length < 3) return;
-    setCompilingPrompt(true);
-    setPromptFeedback("Analyzing prompt and compiling policy parameters…");
+    setBusy(true);
+    invalidatePlan();
+    setFeedback("Analyzing prompt and compiling policy parameters…");
     try {
-      setPromptFeedback("Synthesizing scenario and calibrated questions…");
       const res = await v2<CompiledScenarioResponse>("/scenarios/from-prompt", {
         method: "POST",
         body: { prompt: raw, save: true },
       });
-      await scenarios.reload();
+      scenarios.reload();
       setSelectedScenarioId(res.scenario_id);
       setSelectedQuestionId("");
 
@@ -176,48 +280,52 @@ function Builder({ populationId }: { populationId: string }) {
         res.location.province_name,
       );
 
-      setPromptFeedback("Preparing experiment definition…");
+      setFeedback("Preparing experiment definition…");
       const ex = await v2<ExperimentDefinition>(`/scenarios/${res.scenario_id}/experiment-definition`, {
-        query: { cohort_id: cohortId },
+        query: { cohort_id: cohortId, seed: d.cohort.seed },
       });
 
-      const liveModel = d.model.transport === "live" ? d.model.model || "openai/gpt-4o-mini" : null;
       const sampleSize = d.cohort.sample_size || ex.cohort.sample_size;
-
+      const reps = d.execution.repetitions || ex.execution.repetitions;
       const fullDef: ExperimentDefinition = {
         ...ex,
         cohort: {
           ...ex.cohort,
           cohort_id: cohortId,
           sample_size: sampleSize,
+          sampling_method: d.cohort.sampling_method,
+          seed: d.cohort.seed,
+          strata_field: d.cohort.sampling_method === "stratified" ? d.cohort.strata_field || "province_code" : null,
         },
         execution: {
-          ...ex.execution,
-          max_calls: Math.max(ex.execution.max_calls, sampleSize * ex.execution.repetitions),
+          ...d.execution,
+          repetitions: reps,
+          max_calls: callCapEdited
+            ? d.execution.max_calls
+            : Math.max(d.execution.max_calls, sampleSize * reps * d.execution.max_attempts),
         },
-        model: {
-          ...ex.model,
-          backend: d.model.backend,
-          transport: d.model.transport,
-          model: liveModel,
-        },
+        model: resolveModelConfig(d.model),
         environment: {
           ...ex.environment,
-          province_code: ex.environment.province_code ?? d.environment.province_code,
+          province_code: d.environment.province_code ?? ex.environment.province_code,
+          context_indicators:
+            d.environment.context_indicators.length > 0 ? d.environment.context_indicators : ex.environment.context_indicators,
         },
-        persona: { visible_fields: null },
+        persona: d.persona ?? { visible_fields: null },
       };
       setD(fullDef);
-
-      await executeDefinition(fullDef);
+      await buildPlanForDefinition(fullDef);
     } catch (err: unknown) {
-      setPromptFeedback(`Error: ${err instanceof Error ? err.message : String(err)}`);
-      setCompilingPrompt(false);
+      setFeedback(formatApiError(err));
+    } finally {
+      setBusy(false);
     }
   };
 
   const loadPolicyScenario = async (scenarioId: string, qId?: string, syncPrompt: boolean = true) => {
-    const baseCohortId = d.cohort.cohort_id || valid.find((c) => !c.minors)?.cohort_id || valid[0]?.cohort_id || "";
+    invalidatePlan();
+    const baseCohortId =
+      d.cohort.cohort_id || valid.find((c) => !c.minors)?.cohort_id || valid[0]?.cohort_id || "";
     const query: Record<string, string> = {};
     if (baseCohortId) query.cohort_id = baseCohortId;
     if (qId) query.question_id = qId;
@@ -228,31 +336,32 @@ function Builder({ populationId }: { populationId: string }) {
       : ex.environment.province_code
         ? [ex.environment.province_code]
         : null;
-    const matchedCohortId = await ensureCompatibleCohort(
-      targetProvs,
-      ref?.minimum_age ?? 18,
-      ref?.maximum_age ?? null,
-    );
+    const matchedCohortId = explicitCohort && d.cohort.cohort_id
+      ? d.cohort.cohort_id
+      : await ensureCompatibleCohort(targetProvs, ref?.minimum_age ?? 18, ref?.maximum_age ?? null);
+
     setD((cur) => {
       const sampleSize = cur.cohort.sample_size || ex.cohort.sample_size;
+      const reps = cur.execution.repetitions || ex.execution.repetitions;
       return {
         ...ex,
         cohort: {
           ...ex.cohort,
           cohort_id: matchedCohortId || cur.cohort.cohort_id || ex.cohort.cohort_id || baseCohortId,
           sample_size: sampleSize,
+          sampling_method: cur.cohort.sampling_method,
+          seed: cur.cohort.seed,
+          strata_field: cur.cohort.sampling_method === "stratified" ? cur.cohort.strata_field || "province_code" : null,
         },
         execution: {
-          ...ex.execution,
-          max_calls: Math.max(ex.execution.max_calls, sampleSize * ex.execution.repetitions),
+          ...cur.execution,
+          repetitions: reps,
+          max_calls: callCapEdited
+            ? cur.execution.max_calls
+            : Math.max(cur.execution.max_calls, sampleSize * reps * cur.execution.max_attempts),
         },
-        model: {
-          ...ex.model,
-          backend: cur.model.backend,
-          transport: cur.model.transport,
-          model: cur.model.transport === "live" ? cur.model.model || "openai/gpt-4o-mini" : null,
-        },
-        persona: { visible_fields: null },
+        model: resolveModelConfig(cur.model),
+        persona: cur.persona ?? { visible_fields: null },
       };
     });
     if (syncPrompt) {
@@ -266,45 +375,47 @@ function Builder({ populationId }: { populationId: string }) {
   const handleCompilePrompt = async (customPrompt?: string) => {
     const raw = (customPrompt ?? promptText).trim();
     if (raw.length < 3) return;
-    setCompilingPrompt(true);
-    setPromptFeedback(null);
+    setBusy(true);
+    setFeedback(null);
+    invalidatePlan();
     try {
       const res = await v2<CompiledScenarioResponse>("/scenarios/from-prompt", {
         method: "POST",
         body: { prompt: raw, save: true },
       });
-      await scenarios.reload();
+      scenarios.reload();
       setSelectedScenarioId(res.scenario_id);
       setSelectedQuestionId("");
       await loadPolicyScenario(res.scenario_id, undefined, false);
       setShowCustomize(true);
-      setPromptFeedback(
-        `Compiled "${res.name}" (${res.location.province_name}). You can review or edit the question and options below before running.`,
+      setFeedback(
+        `Compiled "${res.name}" (${res.location.province_name}). Review or edit parameters, question, and controls below, then click Save & review plan.`,
       );
     } catch (err: unknown) {
-      setPromptFeedback(`Error: ${err instanceof Error ? err.message : String(err)}`);
+      setFeedback(formatApiError(err));
     } finally {
-      setCompilingPrompt(false);
+      setBusy(false);
     }
   };
 
   const handleLoadTemplate = async () => {
     if (!activeScenario) return;
-    setCompilingPrompt(true);
-    setPromptFeedback(null);
+    setBusy(true);
+    setFeedback(null);
     try {
       await loadPolicyScenario(activeScenario.scenario_id, selectedQuestionId || undefined);
-      setPromptFeedback(`Loaded template "${activeScenario.name}".`);
+      setFeedback(`Loaded template "${activeScenario.name}".`);
     } catch (err: unknown) {
-      setPromptFeedback(`Error: ${err instanceof Error ? err.message : String(err)}`);
+      setFeedback(formatApiError(err));
     } finally {
-      setCompilingPrompt(false);
+      setBusy(false);
     }
   };
 
-  const handleRunCustomized = async () => {
-    setCompilingPrompt(true);
-    setPromptFeedback("Preparing customized simulation…");
+  const handleReviewCustomized = async () => {
+    setBusy(true);
+    invalidatePlan();
+    setFeedback("Preparing experiment definition & plan…");
     try {
       const ref = d.scenario_ref;
       const targetProvs = ref?.province_codes?.length
@@ -312,13 +423,13 @@ function Builder({ populationId }: { populationId: string }) {
         : d.environment.province_code
           ? [d.environment.province_code]
           : null;
-      const cohortId = await ensureCompatibleCohort(
-        targetProvs,
-        ref?.minimum_age ?? 18,
-        ref?.maximum_age ?? null,
-      );
+      const cohortId =
+        explicitCohort && d.cohort.cohort_id
+          ? d.cohort.cohort_id
+          : await ensureCompatibleCohort(targetProvs, ref?.minimum_age ?? 18, ref?.maximum_age ?? null);
+
       const sampleSize = d.cohort.sample_size || 20;
-      const liveModel = d.model.transport === "live" ? d.model.model || "openai/gpt-4o-mini" : null;
+      const reps = d.execution.repetitions || 1;
       const fullDef: ExperimentDefinition = {
         ...d,
         title: d.title.trim() || d.scenario.title.trim() || "Custom Policy Simulation",
@@ -331,27 +442,34 @@ function Builder({ populationId }: { populationId: string }) {
           ...d.cohort,
           cohort_id: cohortId,
           sample_size: sampleSize,
+          strata_field: d.cohort.sampling_method === "stratified" ? d.cohort.strata_field || "province_code" : null,
         },
         execution: {
           ...d.execution,
-          max_calls: Math.max(d.execution.max_calls, sampleSize * d.execution.repetitions),
+          repetitions: reps,
+          max_calls: d.execution.max_calls,
         },
-        model: {
-          ...d.model,
-          model: liveModel,
-        },
+        model: resolveModelConfig(d.model),
       };
       setD(fullDef);
-      await executeDefinition(fullDef);
+      await buildPlanForDefinition(fullDef);
     } catch (err: unknown) {
-      setPromptFeedback(`Error: ${err instanceof Error ? err.message : String(err)}`);
-      setCompilingPrompt(false);
+      setFeedback(formatApiError(err));
+    } finally {
+      setBusy(false);
     }
   };
 
+  const matraixFakeReason = caps.data?.backends.matraix_fake.available
+    ? null
+    : caps.data?.backends.matraix_fake.reasons[0] ?? null;
+  const matraixLiveReason = caps.data?.backends.matraix_live.available
+    ? null
+    : caps.data?.backends.matraix_live.reasons[0] ?? null;
+
   return (
     <div className="stack" style={{ gap: 18 }}>
-      {/* 1. HERO CARD: Minimal Prompt-First Policy Simulator */}
+      {/* 1. HERO CARD: Prompt-First Policy Simulator */}
       <section
         className="card"
         style={{
@@ -388,45 +506,21 @@ function Builder({ populationId }: { populationId: string }) {
                 Policy Simulation Prompt
               </h2>
               <span className="small muted" style={{ fontSize: "0.8rem" }}>
-                Zero-shot scenario engine · Calibrates parameters, selects target populations &amp; simulates citizen agent responses
+                Scenario engine · Compiles scenario, builds reviewed call/cost plan, and runs after explicit confirmation
               </span>
             </div>
           </div>
           <div className="row" style={{ gap: 6, alignItems: "center" }}>
-            <span
-              style={{
-                fontSize: "0.72rem",
-                background: "var(--info-bg)",
-                color: "var(--info-ink)",
-                padding: "2px 8px",
-                borderRadius: "10px",
-                fontWeight: 600,
-                border: "1px solid #264a70",
-              }}
-            >
-              Natural Language (TR / EN)
-            </span>
-            <span
-              style={{
-                fontSize: "0.72rem",
-                background: "var(--fake-bg)",
-                color: "var(--fake-ink)",
-                padding: "2px 8px",
-                borderRadius: "10px",
-                fontWeight: 600,
-                border: "1px solid #483974",
-              }}
-            >
-              AI Citizen Agents
-            </span>
+            <Badge tone="info">Natural Language (TR / EN)</Badge>
+            <Badge tone="fake">Reviewed Plan Required</Badge>
           </div>
         </div>
 
-        {/* Big Search-like Input Bar */}
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <div
             style={{
               display: "flex",
+              flexWrap: "wrap",
               gap: 8,
               alignItems: "stretch",
               background: "var(--surface-1)",
@@ -438,9 +532,11 @@ function Builder({ populationId }: { populationId: string }) {
           >
             <textarea
               id="prompt-scenario-input"
+              aria-label="Policy simulation prompt"
               rows={2}
               style={{
-                flex: 1,
+                flex: "1 1 220px",
+                minWidth: 0,
                 padding: "8px 12px",
                 fontSize: "0.95rem",
                 lineHeight: 1.4,
@@ -452,11 +548,14 @@ function Builder({ populationId }: { populationId: string }) {
                 boxShadow: "none",
               }}
               value={promptText}
-              onChange={(e) => setPromptText(e.target.value)}
+              onChange={(e) => {
+                setPromptText(e.target.value);
+                invalidatePlan();
+              }}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
                   e.preventDefault();
-                  handleSimulateDirectly();
+                  handleCompileAndReview();
                 }
               }}
               placeholder="e.g. What if bus and subway fares in Ankara increase by 30%? Will people switch to walking or driving?"
@@ -465,10 +564,10 @@ function Builder({ populationId }: { populationId: string }) {
               <button
                 type="button"
                 className="button primary"
-                disabled={compilingPrompt || promptText.trim().length < 3}
-                onClick={() => handleSimulateDirectly()}
+                disabled={busy || running || promptText.trim().length < 3}
+                onClick={() => handleCompileAndReview()}
                 style={{
-                  minWidth: "160px",
+                  minWidth: "170px",
                   padding: "8px 16px",
                   fontWeight: 600,
                   fontSize: "0.9rem",
@@ -480,13 +579,12 @@ function Builder({ populationId }: { populationId: string }) {
                   gap: 6,
                 }}
               >
-                {compilingPrompt ? <span>Simulating…</span> : <span>Simulate Policy</span>}
+                {busy ? "Planning…" : "Compile & review plan"}
               </button>
             </div>
           </div>
 
           <div className="row" style={{ justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
-            {/* Prompt Suggestion Chips */}
             <div className="row" style={{ gap: 6, alignItems: "center", flexWrap: "wrap" }}>
               <span className="small muted" style={{ fontSize: "0.76rem" }}>
                 Examples:
@@ -511,7 +609,8 @@ function Builder({ populationId }: { populationId: string }) {
                   }}
                   onClick={() => {
                     setPromptText(example);
-                    setPromptFeedback(null);
+                    setFeedback(null);
+                    invalidatePlan();
                   }}
                   title="Click to populate prompt input"
                 >
@@ -523,55 +622,65 @@ function Builder({ populationId }: { populationId: string }) {
             <button
               type="button"
               className="button small"
-              disabled={compilingPrompt || promptText.trim().length < 3}
+              disabled={busy || running || promptText.trim().length < 3}
               onClick={() => handleCompilePrompt()}
               style={{ fontSize: "0.78rem" }}
-              title="Compile prompt into a survey question so you can preview or edit the options before running"
+              title="Compile prompt into a survey question so you can preview or edit the options before planning"
             >
               Preview &amp; Edit Question ↓
             </button>
           </div>
         </div>
 
-        {/* Live Feedback Banner */}
-        {promptFeedback ? (
+        {feedback ? (
           <div
-            className={`notice ${promptFeedback.startsWith("Error") ? "crit" : "info"}`}
-            style={{
-              fontSize: "0.85rem",
-              padding: "10px 14px",
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-            }}
+            className={`notice ${feedback.startsWith("Error") ? "crit" : "info"}`}
+            style={{ fontSize: "0.85rem", padding: "10px 14px", display: "flex", alignItems: "center", gap: 8 }}
           >
-            {compilingPrompt ? <span style={{ animation: "spin 1s linear infinite" }}>⏳</span> : null}
-            <span>{promptFeedback}</span>
+            <span>{feedback}</span>
           </div>
         ) : null}
       </section>
 
-      {/* 2. QUICK SETTINGS BAR & OPTIONAL QUESTION CUSTOMIZER TOGGLE */}
+      {/* 2. QUICK SETTINGS BAR */}
       <div
-        className="card"
+        className="card stack"
         style={{
           padding: "12px 18px",
           background: showCustomize ? "var(--surface-2)" : "var(--surface-1)",
           borderColor: showCustomize ? "var(--border-strong)" : "var(--border)",
-          transition: "all 0.15s ease",
+          gap: 10,
         }}
       >
         <div
           className="row"
-          style={{
-            justifyContent: "space-between",
-            alignItems: "center",
-            flexWrap: "wrap",
-            gap: 14,
-            fontSize: "0.84rem",
-          }}
+          style={{ justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, fontSize: "0.84rem" }}
         >
-          <div className="row" style={{ gap: 16, alignItems: "center", flexWrap: "wrap" }}>
+          <div className="row" style={{ gap: 14, alignItems: "center", flexWrap: "wrap" }}>
+            <div className="row" style={{ alignItems: "center", gap: 6 }}>
+              <label htmlFor="cohort-select" className="small muted">
+                Saved cohort:
+              </label>
+              <select
+                id="cohort-select"
+                className="small"
+                value={explicitCohort ? d.cohort.cohort_id : ""}
+                onChange={(e) => {
+                  const id = e.target.value;
+                  setExplicitCohort(Boolean(id));
+                  patch("cohort", { cohort_id: id });
+                }}
+              >
+                <option value="">Auto-create matching adult cohort</option>
+                {valid.map((c) => (
+                  <option key={c.cohort_id} value={c.cohort_id}>
+                    {c.name} ({fmtInt(c.eligible_records)}
+                    {c.minors ? `, ${c.minors} minors` : ""})
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <div className="row" style={{ alignItems: "center", gap: 6 }}>
               <label htmlFor="quick-sample-size" className="small muted">
                 Sample Size:
@@ -579,13 +688,21 @@ function Builder({ populationId }: { populationId: string }) {
               <select
                 id="quick-sample-size"
                 className="small"
-                value={d.cohort.sample_size}
-                onChange={(e) => patch("cohort", { sample_size: Number(e.target.value) })}
+                value={[10, 20, 50, 100].includes(d.cohort.sample_size) ? String(d.cohort.sample_size) : "custom"}
+                onChange={(e) => {
+                  if (e.target.value !== "custom") {
+                    const sz = Number(e.target.value);
+                    patch("cohort", { sample_size: sz });
+                  }
+                }}
               >
-                <option value={10}>10 personas (fastest)</option>
-                <option value={20}>20 personas (standard)</option>
-                <option value={50}>50 personas (balanced)</option>
-                <option value={100}>100 personas (deep)</option>
+                <option value="10">10 personas (fastest)</option>
+                <option value="20">20 personas (standard)</option>
+                <option value="50">50 personas (balanced)</option>
+                <option value="100">100 personas (deep)</option>
+                {![10, 20, 50, 100].includes(d.cohort.sample_size) ? (
+                  <option value="custom">{d.cohort.sample_size} personas (custom)</option>
+                ) : null}
               </select>
             </div>
 
@@ -598,21 +715,63 @@ function Builder({ populationId }: { populationId: string }) {
                 className="small"
                 value={`${d.model.backend}:${d.model.transport}`}
                 onChange={(e) => {
+                  setEngineTouched(true);
                   const [backend, transport] = e.target.value.split(":") as ["stub" | "matraix", "fake" | "live"];
                   patch("model", {
                     backend,
                     transport,
-                    model: transport === "live" ? d.model.model || "openai/gpt-4o-mini" : null,
+                    model: transport === "live" ? d.model.model || defaultLiveModel(caps.data) : null,
                   });
                 }}
               >
-                <option value="matraix:fake" disabled={!caps.data?.backends.matraix_fake.available}>
-                  AI Citizen Agents (Zero-cost simulation)
+                <option
+                  value="matraix:fake"
+                  disabled={!caps.data?.backends.matraix_fake.available}
+                  title={matraixFakeReason ?? undefined}
+                >
+                  AI Citizen Agents (Zero-cost simulation){matraixFakeReason ? " — unavailable" : ""}
                 </option>
-                <option value="matraix:live">AI Citizen Agents (Live LLM provider)</option>
-                <option value="stub:fake">Pipeline Test (No AI / Offline)</option>
+                <option
+                  value="matraix:live"
+                  disabled={caps.data ? !caps.data.backends.matraix_live.available : false}
+                  title={matraixLiveReason ?? undefined}
+                >
+                  AI Citizen Agents (Live LLM provider){matraixLiveReason ? " — unavailable" : ""}
+                </option>
+                <option value="stub:fake">Pipeline Test (No AI / Offline stub)</option>
               </select>
             </div>
+
+            {d.model.transport === "live" ? (
+              <div className="row" style={{ alignItems: "center", gap: 6 }}>
+                <label htmlFor="live-model-select" className="small muted">
+                  Model:
+                </label>
+                <select
+                  id="live-model-select"
+                  className="small"
+                  value={MODEL_PRESETS.includes(d.model.model ?? "") ? d.model.model ?? "" : "__custom__"}
+                  onChange={(e) => {
+                    if (e.target.value !== "__custom__") patch("model", { model: e.target.value });
+                  }}
+                >
+                  {MODEL_PRESETS.map((m) => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
+                  <option value="__custom__">Custom provider/model…</option>
+                </select>
+                <input
+                  id="live-model-input"
+                  aria-label="Live model identifier"
+                  type="text"
+                  className="small"
+                  style={{ width: 190 }}
+                  placeholder="provider/model"
+                  value={d.model.model ?? ""}
+                  onChange={(e) => patch("model", { model: e.target.value || null })}
+                />
+              </div>
+            ) : null}
 
             <div className="row" style={{ alignItems: "center", gap: 6 }}>
               <label htmlFor="quick-province" className="small muted">
@@ -622,9 +781,7 @@ function Builder({ populationId }: { populationId: string }) {
                 id="quick-province"
                 className="small"
                 value={d.environment.province_code ?? ""}
-                onChange={(e) =>
-                  patch("environment", { province_code: e.target.value || null, context_indicators: [] })
-                }
+                onChange={(e) => patch("environment", { province_code: e.target.value || null })}
               >
                 <option value="">Auto / Detected from prompt</option>
                 {geo.data?.provinces
@@ -653,12 +810,17 @@ function Builder({ populationId }: { populationId: string }) {
             {showCustomize ? "▲ Hide Question & Templates" : "▼ Customize Question & Templates"}
           </button>
         </div>
+
+        {matraixFakeReason && d.model.backend === "stub" ? (
+          <p className="small muted" style={{ margin: 0 }}>
+            Defaulting to <strong>stub</strong> pipeline test mode because MatrAIx runtime is unavailable here: {matraixFakeReason}
+          </p>
+        ) : null}
       </div>
 
-      {/* 3. SIMPLIFIED SINGLE-CARD QUESTION & TEMPLATE DRAWER */}
+      {/* 3. QUESTION, PARAMETERS & EXECUTION CUSTOMIZER */}
       {showCustomize ? (
         <section className="card stack" aria-label="Customize question and policy template" style={{ gap: 16 }}>
-          {/* Built-in / Saved Template Picker */}
           <div
             className="row"
             style={{
@@ -673,7 +835,7 @@ function Builder({ populationId }: { populationId: string }) {
             <div>
               <strong style={{ fontSize: "0.95rem" }}>Saved Policy Templates &amp; Survey Question</strong>
               <p className="small muted" style={{ margin: "2px 0 0 0" }}>
-                Load a benchmark scenario template or customize the survey question and multiple-choice options below.
+                Load a benchmark scenario template or customize scenario fields, parameters, cohort sampling, and execution caps.
               </p>
             </div>
             <div className="row" style={{ alignItems: "center", gap: 8, flexWrap: "wrap" }}>
@@ -683,12 +845,21 @@ function Builder({ populationId }: { populationId: string }) {
               <select
                 id="scenario-select"
                 className="small"
+                disabled={busy || running}
                 value={activeScenario?.scenario_id ?? selectedScenarioId}
                 onChange={async (e) => {
                   const newId = e.target.value;
                   setSelectedScenarioId(newId);
                   setSelectedQuestionId("");
-                  await loadPolicyScenario(newId, undefined, true);
+                  setBusy(true);
+                  setFeedback(null);
+                  try {
+                    await loadPolicyScenario(newId, undefined, true);
+                  } catch (err: unknown) {
+                    setFeedback(formatApiError(err));
+                  } finally {
+                    setBusy(false);
+                  }
                 }}
               >
                 {scenarios.data?.items.map((s) => (
@@ -716,22 +887,39 @@ function Builder({ populationId }: { populationId: string }) {
                 type="button"
                 className="button small primary"
                 onClick={handleLoadTemplate}
-                disabled={!activeScenario || compilingPrompt}
+                disabled={!activeScenario || busy || running}
               >
                 Load Template
               </button>
               {activeScenario && activeScenario.category.startsWith("university_") ? (
-                <Link
-                  className="button small"
-                  href={withPop("/university", pop, { scenario: activeScenario.scenario_id })}
-                >
+                <Link className="button small" href={withPop("/university", pop, { scenario: activeScenario.scenario_id })}>
                   Open in University Sim →
                 </Link>
               ) : null}
             </div>
           </div>
 
-          {/* Scenario Summary & Question Editor */}
+          <div className="grid-2">
+            <div className="field">
+              <label htmlFor="sc-title">Scenario title</label>
+              <input
+                id="sc-title"
+                type="text"
+                value={d.scenario.title}
+                onChange={(e) => patch("scenario", { title: e.target.value })}
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="sc-source">Source note {d.scenario.hypothetical ? "(optional)" : "(required for non-hypothetical)"}</label>
+              <input
+                id="sc-source"
+                type="text"
+                value={d.scenario.source_note ?? ""}
+                onChange={(e) => patch("scenario", { source_note: e.target.value || null })}
+              />
+            </div>
+          </div>
+
           <div className="field">
             <label htmlFor="sc-desc">Policy Context / Description (shown to AI citizen personas)</label>
             <textarea
@@ -742,6 +930,39 @@ function Builder({ populationId }: { populationId: string }) {
               onChange={(e) => patch("scenario", { description: e.target.value })}
             />
           </div>
+
+          {d.scenario.parameters.length > 0 ? (
+            <fieldset>
+              <legend>Scenario parameters (must match text if referenced)</legend>
+              <div className="stack" style={{ gap: 6 }}>
+                {d.scenario.parameters.map((p, idx) => (
+                  <div key={p.name} className="row" style={{ gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                    <code style={{ minWidth: 150 }}>{p.name}</code>
+                    <span className="small muted" style={{ minWidth: 160 }}>{p.label}</span>
+                    <input
+                      aria-label={`Parameter ${p.name} value`}
+                      type="text"
+                      style={{ width: 120 }}
+                      value={String(p.value)}
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        const wasNumeric = numericParamNames.current.has(p.name) || typeof p.value === "number";
+                        if (wasNumeric) numericParamNames.current.add(p.name);
+                        const num = Number(raw);
+                        const nextVal = wasNumeric && raw.trim() !== "" && Number.isFinite(num) ? num : raw;
+                        patch("scenario", {
+                          parameters: d.scenario.parameters.map((item, j) =>
+                            j === idx ? { ...item, value: nextVal } : item,
+                          ),
+                        });
+                      }}
+                    />
+                    {p.unit ? <span className="small muted">{p.unit}</span> : null}
+                  </div>
+                ))}
+              </div>
+            </fieldset>
+          ) : null}
 
           <div className="field">
             <label htmlFor="t-ins">Survey Question</label>
@@ -754,7 +975,33 @@ function Builder({ populationId }: { populationId: string }) {
             />
           </div>
 
-          {/* Question Format Toggle */}
+          <div className="row" style={{ gap: 18, flexWrap: "wrap" }}>
+            <label className="check">
+              <input
+                type="checkbox"
+                checked={d.scenario.hypothetical}
+                onChange={(e) => patch("scenario", { hypothetical: e.target.checked })}
+              />
+              Hypothetical scenario
+            </label>
+            <label className="check">
+              <input
+                type="checkbox"
+                checked={d.task.ask_rationale}
+                onChange={(e) => patch("task", { ask_rationale: e.target.checked })}
+              />
+              Ask rationale
+            </label>
+            <label className="check">
+              <input
+                type="checkbox"
+                checked={d.task.adult_only}
+                onChange={(e) => patch("task", { adult_only: e.target.checked })}
+              />
+              Adult-only task (age ≥ 18)
+            </label>
+          </div>
+
           <div className="field">
             <label style={{ fontWeight: 600 }}>Question Response Format</label>
             <div className="row" style={{ gap: 20, marginTop: 4 }}>
@@ -787,10 +1034,11 @@ function Builder({ populationId }: { populationId: string }) {
                     patch("task", {
                       response_type: "free_text",
                       options: [],
+                      ask_rationale: true,
                     });
                   }}
                 />
-                <span><strong>Free-Text Answer</strong> (Open-ended text in citizen's own words)</span>
+                <span><strong>Free-Text Answer</strong> (Open-ended text in citizen&apos;s own words)</span>
               </label>
             </div>
           </div>
@@ -849,19 +1097,245 @@ function Builder({ populationId }: { populationId: string }) {
             </fieldset>
           )}
 
+          <details>
+            <summary>Sampling, Model &amp; Execution Budget Controls</summary>
+            <div className="details-body stack" style={{ gap: 12 }}>
+              <div className="form-grid">
+                <div className="field">
+                  <label htmlFor="adv-sample-size">Sample size (active personas)</label>
+                  <input
+                    id="adv-sample-size"
+                    type="number"
+                    min={1}
+                    max={caps.data?.max_agents_per_run ?? 200}
+                    value={d.cohort.sample_size}
+                    onChange={(e) => patch("cohort", { sample_size: Math.max(1, Number(e.target.value) || 1) })}
+                  />
+                </div>
+                <div className="field">
+                  <label htmlFor="adv-sampling">Sampling method</label>
+                  <select
+                    id="adv-sampling"
+                    value={d.cohort.sampling_method}
+                    onChange={(e) => {
+                      const method = e.target.value;
+                      patch("cohort", {
+                        sampling_method: method,
+                        strata_field: method === "stratified" ? d.cohort.strata_field || "province_code" : null,
+                      });
+                    }}
+                  >
+                    <option value="weighted">weighted</option>
+                    <option value="simple_random">simple_random</option>
+                    <option value="stratified">stratified</option>
+                  </select>
+                </div>
+                {d.cohort.sampling_method === "stratified" ? (
+                  <div className="field">
+                    <label htmlFor="adv-strata">Strata field</label>
+                    <select
+                      id="adv-strata"
+                      value={d.cohort.strata_field ?? "province_code"}
+                      onChange={(e) => patch("cohort", { strata_field: e.target.value })}
+                    >
+                      {STRATA_OPTIONS.map((f) => (
+                        <option key={f} value={f}>{f}</option>
+                      ))}
+                    </select>
+                  </div>
+                ) : null}
+                <div className="field">
+                  <label htmlFor="adv-seed">Cohort sampling seed</label>
+                  <input
+                    id="adv-seed"
+                    type="number"
+                    min={0}
+                    value={d.cohort.seed}
+                    onChange={(e) => patch("cohort", { seed: Math.max(0, Number(e.target.value) || 0) })}
+                  />
+                </div>
+                <div className="field">
+                  <label htmlFor="adv-call-cap">Call cap (budget guard)</label>
+                  <input
+                    id="adv-call-cap"
+                    type="number"
+                    min={1}
+                    max={5000}
+                    value={d.execution.max_calls}
+                    onChange={(e) => {
+                      setCallCapEdited(true);
+                      patch("execution", { max_calls: Math.max(1, Number(e.target.value) || 1) });
+                    }}
+                  />
+                </div>
+                <div className="field">
+                  <label htmlFor="adv-reps">Repetitions</label>
+                  <input
+                    id="adv-reps"
+                    type="number"
+                    min={1}
+                    max={5}
+                    value={d.execution.repetitions}
+                    onChange={(e) => patch("execution", { repetitions: Math.min(5, Math.max(1, Number(e.target.value) || 1)) })}
+                  />
+                </div>
+                <div className="field">
+                  <label htmlFor="adv-temp">Temperature</label>
+                  <input
+                    id="adv-temp"
+                    type="number"
+                    min={0}
+                    max={2}
+                    step={0.1}
+                    value={d.model.temperature}
+                    onChange={(e) => patch("model", { temperature: Number(e.target.value) || 0 })}
+                  />
+                </div>
+                <div className="field">
+                  <label htmlFor="adv-max-tokens">Max output tokens</label>
+                  <input
+                    id="adv-max-tokens"
+                    type="number"
+                    min={16}
+                    max={4096}
+                    value={d.model.max_output_tokens ?? 512}
+                    onChange={(e) => patch("model", { max_output_tokens: Math.max(16, Number(e.target.value) || 512) })}
+                  />
+                </div>
+                <div className="field">
+                  <label htmlFor="adv-cost-cap">Max cost cap (USD, optional)</label>
+                  <input
+                    id="adv-cost-cap"
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    placeholder="No cap"
+                    value={d.execution.max_cost_usd ?? ""}
+                    onChange={(e) => patch("execution", { max_cost_usd: e.target.value === "" ? null : Number(e.target.value) })}
+                  />
+                </div>
+                <div className="field">
+                  <label htmlFor="adv-env-indicators">Context indicators (comma-separated)</label>
+                  <input
+                    id="adv-env-indicators"
+                    type="text"
+                    placeholder="total_population, population_density"
+                    value={d.environment.context_indicators.join(", ")}
+                    onChange={(e) =>
+                      patch("environment", {
+                        context_indicators: e.target.value.split(",").map((s) => s.trim()).filter(Boolean),
+                      })
+                    }
+                  />
+                </div>
+              </div>
+            </div>
+          </details>
+
           <div className="row" style={{ justifyContent: "flex-end", gap: 10 }}>
             <button
               type="button"
               className="button primary"
               disabled={
-                compilingPrompt ||
+                busy ||
+                running ||
                 !d.task.instruction.trim() ||
                 (d.task.response_type !== "free_text" &&
                   (d.task.options.length < 2 || d.task.options.some((o) => !o.id.trim() || !o.label.trim())))
               }
-              onClick={handleRunCustomized}
+              onClick={handleReviewCustomized}
             >
-              {compilingPrompt ? "Running Simulation…" : "Run Customized Simulation"}
+              {busy ? "Building plan…" : "Save and review plan"}
+            </button>
+          </div>
+        </section>
+      ) : null}
+
+      {/* 4. REVIEWED EXECUTION PLAN & EXPLICIT CONFIRMATION */}
+      {reviewed ? (
+        <section id="reviewed-plan" className="card stack" aria-label="Reviewed execution plan">
+          <div className="card-head" style={{ marginBottom: 0 }}>
+            <h2 style={{ margin: 0 }}>Reviewed execution plan</h2>
+            <Badge tone={reviewed.plan.executable ? "good" : "crit"} glyph={reviewed.plan.executable ? "✓" : "×"}>
+              {reviewed.plan.executable ? "Executable after confirmation" : "Blocked"}
+            </Badge>
+          </div>
+
+          <div className="tiles">
+            <StatTile
+              label="Active personas"
+              value={fmtInt(reviewed.plan.active_personas)}
+              sub={`of ${fmtInt(reviewed.plan.eligible_records)} eligible records`}
+            />
+            <StatTile
+              label="Estimated calls"
+              value={fmtInt(reviewed.plan.calls.planned)}
+              sub={`Max ${fmtInt(reviewed.plan.calls.maximum_with_retries)} · Cap ${fmtInt(reviewed.plan.calls.cap)}`}
+            />
+            <StatTile
+              label="Input tokens est."
+              value={fmtInt(reviewed.plan.tokens.input_estimate_per_repetition)}
+              sub={reviewed.plan.tokens.method}
+            />
+            <StatTile
+              label="Estimated cost"
+              value={fmtUsd(reviewed.plan.cost.estimate_usd)}
+              sub={reviewed.plan.cost.basis}
+            />
+          </div>
+
+          {reviewed.plan.blockers.length > 0 ? (
+            <div className="notice crit" role="alert">
+              <strong>Execution is blocked:</strong>
+              <ul style={{ margin: "6px 0 0", paddingLeft: 18 }}>
+                {reviewed.plan.blockers.map((b) => (
+                  <li key={b.code}>
+                    <code>{b.code}</code>: {b.message}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          {reviewed.plan.warnings.length > 0 ? (
+            <div className="notice warn">
+              <ul style={{ margin: 0, paddingLeft: 18 }}>
+                {reviewed.plan.warnings.map((w) => (
+                  <li key={w}>{w}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          {reviewed.plan.example_prompt ? (
+            <details>
+              <summary>Inspect example prompt for {reviewed.plan.example_prompt.synthetic_id}</summary>
+              <div className="details-body stack">
+                <strong>System prompt</strong>
+                <pre className="prompt">{reviewed.plan.example_prompt.system}</pre>
+                <strong>User prompt</strong>
+                <pre className="prompt">{reviewed.plan.example_prompt.user}</pre>
+              </div>
+            </details>
+          ) : null}
+
+          <div className="row" style={{ justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+            <label className="check">
+              <input
+                type="checkbox"
+                checked={confirmed}
+                disabled={!reviewed.plan.executable || running}
+                onChange={(e) => setConfirmed(e.target.checked)}
+              />
+              I reviewed this plan, persona sample, and call/cost budget
+            </label>
+            <button
+              type="button"
+              className="button primary"
+              disabled={!reviewed.plan.executable || !confirmed || running}
+              onClick={handleRunConfirmed}
+            >
+              {running ? "Running experiment…" : "Run experiment"}
             </button>
           </div>
         </section>
@@ -874,7 +1348,7 @@ export default function NewExperimentPage() {
   return (
     <>
       <PageHeader title="New Experiment">
-        Controlled persona-conditioned AI experiment: describe a policy scenario in natural language or load a benchmark template.
+        Controlled persona-conditioned AI experiment: describe a policy scenario in natural language or load a benchmark template, review the plan, then confirm execution.
       </PageHeader>
       <Notice tone="info">
         Experiments test the pipeline and explore hypotheses. Their outputs are not predictions of what real residents of Türkiye would do.

@@ -1,10 +1,8 @@
-# Experiments (placeholder)
+# Experiments
 
-**Status:** Placeholder from the research phase. No experiments have been run.
+**Status:** Active experiment tracks alongside the `configs/` & `data/results/` architecture notes:
 
-In the PROPOSED v2 architecture, experiments are configured in the Playground and recorded in the experiment registry ([experiment-system.md](../docs/experiment-system.md)):
+- `experiments/matraix_simulation/`: Historical recorded Ankara MatrAIx A/B and smoke runs (served read-only under `/api/v1` and `/historical`).
+- `experiments/policy_scenarios/`: YAML scenario catalog & mobility evidence notes (`src/scenarios/`; custom API runs persist outside git under `SOCIETYTWIN_STATE_DIR/scenarios`).
 
-- **Instruments and experiment presets** (versioned, tracked in Git) move to `configs/`.
-- **Trial records, raw responses, and aggregates** (generated, git-ignored) are written to `data/results/`.
-
-This folder will be removed once its role has moved ([migration plan](../docs/migration-plan.md)). Generated outputs in `experiments/outputs/` and `experiments/results/` are git-ignored.
+Generated trial outputs under `experiments/outputs/`, `experiments/results/`, and `experiments/policy_scenarios/scenarios/prompt_*.yaml` remain git-ignored.

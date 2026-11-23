@@ -3,12 +3,12 @@
 import json
 from pathlib import Path
 
-from src.scenarios.eligibility import (
+from scenarios.eligibility import (
     EligibilityStatus,
     evaluate_resident,
     filter_population,
 )
-from src.scenarios.schema import PopulationFilterConfig
+from scenarios.schema import PopulationFilterConfig
 
 FIXTURES_DIR = Path(__file__).resolve().parents[1] / "fixtures" / "scenarios"
 RESIDENTS_FIXTURE_PATH = FIXTURES_DIR / "sample_residents.json"

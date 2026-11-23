@@ -68,10 +68,11 @@ def apply_university_economic_policy(
         grants = {s.student_id: 0.0 for s in students}
         remaining = pool
         if ordered and remaining > 0.0:
-            if existing_aid > 0.0 and intervention.max_grant_per_student is None:
-                scale = pool / existing_aid
+            eligible_existing = math.fsum(max(0.0, s.need_aid_grant) for s in ordered)
+            if eligible_existing > 0.0 and intervention.max_grant_per_student is None:
+                scale = pool / eligible_existing
                 for s in ordered:
-                    base_g = s.need_aid_grant if s.need_aid_grant > 0 else round(pool / len(ordered), 2)
+                    base_g = max(0.0, s.need_aid_grant)
                     award = min(remaining, round(base_g * scale, 2))
                     grants[s.student_id] = award
                     remaining = round(max(0.0, remaining - award), 2)

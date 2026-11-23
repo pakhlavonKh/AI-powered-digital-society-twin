@@ -3,8 +3,8 @@
 import json
 from pathlib import Path
 
-from src.scenarios.loader import load_scenario
-from src.scenarios.response_validator import (
+from scenarios.loader import load_scenario
+from scenarios.response_validator import (
     ResponseStatus,
     validate_agent_response,
 )

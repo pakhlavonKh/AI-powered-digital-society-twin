@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { AnswerCell } from "@/components/AnswerCell";
 import { SafeMarkdown } from "@/components/Markdown";
 import { ErrorState } from "@/components/States";
+import { FilterControls } from "@/components/FilterControls";
 import { HashBadge, RunStateBadge } from "@/components/StatusBadge";
 import { UsageTable } from "@/components/UsageTable";
 import { ApiError } from "@/lib/api/client";
@@ -80,5 +81,30 @@ describe("error state", () => {
     expect(screen.getByText("size: too large")).toBeInTheDocument();
     render(<ErrorState error={new ApiError(503, "runtime_unavailable", "Unavailable.", { reasons: ["No MatrAIx checkout found."] })} />);
     expect(screen.getByText("No MatrAIx checkout found.")).toBeInTheDocument();
+  });
+});
+
+describe("filter controls", () => {
+  it("syncs the resident ID search box when person_ids changes from URL params", () => {
+    const { rerender } = render(
+      <FilterControls
+        filters={{ person_ids: ["ANK2025_000001"] }}
+        onChange={vi.fn()}
+        categories={{ age_group: ["18-24"], gender: ["female"], marital_status: ["single"] }}
+        availableFields={["age_group", "gender", "marital_status"]}
+        idSearch
+      />
+    );
+    expect(screen.getByLabelText("Resident ID (exact)")).toHaveValue("ANK2025_000001");
+    rerender(
+      <FilterControls
+        filters={{}}
+        onChange={vi.fn()}
+        categories={{ age_group: ["18-24"], gender: ["female"], marital_status: ["single"] }}
+        availableFields={["age_group", "gender", "marital_status"]}
+        idSearch
+      />
+    );
+    expect(screen.getByLabelText("Resident ID (exact)")).toHaveValue("");
   });
 });

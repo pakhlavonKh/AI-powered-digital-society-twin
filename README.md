@@ -91,7 +91,8 @@ What the current data supports: for all 81 provinces, the 2025 population by age
 0 constraint violations and national record shares within sampling noise. Marital status and education are published
 by sex only, so their relationship with age is inferred, not observed. Labour status, household size and type have no
 person-level table; socioeconomic status, income and district are not modelled. No model has been called: the stub
-backend and MatrAIx's fake transport test the pipeline only, and live provider runs are disabled by default.
+backend and MatrAIx's fake transport test the pipeline only, and live provider runs are off when no provider key is
+configured (or when `SOCIETYTWIN_ENABLE_LIVE_EXECUTION=0`).
 
 ## MatrAIx Simulation Experiment
 
@@ -115,19 +116,19 @@ flowchart LR
 | `src/runtime/` | Smoke runner (no API calls) and two-persona A/B runner |
 | `processed/`, `synthetic/`, `personas/` | Small reproducibility fixtures |
 
-Quick start (Windows, Python 3.12, MatrAIx checked out next to this repository as `../MatrAIx-Persona-8B`):
+Quick start (Windows, Python 3.12, MatrAIx in a separate venv from the API per [docs/research-workbench.md](docs/research-workbench.md#optional-the-matraix-runtime)):
 
 ```powershell
-py -3.12 -m venv .venv
-.\.venv\Scripts\python -m pip install -r experiments\matraix_simulation\requirements.txt
+py -3.12 -m venv ..\matraix-runtime
+..\matraix-runtime\Scripts\python -m pip install -r experiments\matraix_simulation\requirements.txt
 $env:MATRAIX_ROOT = (Resolve-Path ..\MatrAIx-Persona-8B).Path
-.\.venv\Scripts\python -m pip install -e "$env:MATRAIX_ROOT" -e "$env:MATRAIX_ROOT\packages\playground"
+..\matraix-runtime\Scripts\python -m pip install -e "$env:MATRAIX_ROOT" -e "$env:MATRAIX_ROOT\packages\playground"
 
 # No API calls: verify persona/task wiring
-.\.venv\Scripts\python experiments\matraix_simulation\src\runtime\run_matraix_smoke.py --matraix-root "$env:MATRAIX_ROOT"
+..\matraix-runtime\Scripts\python experiments\matraix_simulation\src\runtime\run_matraix_smoke.py --matraix-root "$env:MATRAIX_ROOT"
 
 # Prepare the A/B run (no calls); add --execute for exactly two live calls
-.\.venv\Scripts\python experiments\matraix_simulation\src\runtime\run_matraix_ab.py --matraix-root "$env:MATRAIX_ROOT" --model <provider/model>
+..\matraix-runtime\Scripts\python experiments\matraix_simulation\src\runtime\run_matraix_ab.py --matraix-root "$env:MATRAIX_ROOT" --model <provider/model>
 ```
 
 Live runs need a provider key in `experiments/matraix_simulation/.env` (copy `.env.example`; the file is git-ignored). Full setup, model selection, and verification notes: [experiments/matraix_simulation/README.md](experiments/matraix_simulation/README.md).
@@ -141,7 +142,7 @@ Current limitations of this experiment:
 
 ## Research Workbench
 
-The local web UI and API. The main pages (Dashboard, Population, Cohorts, Personas, New Experiment, Experiments, Results, Validation, Data Sources, Settings) serve the national pipeline through `/api/v2`; the Dashboard is the Türkiye-wide overview (summary, province coverage map, population snapshot, pipeline status). The original Ankara workbench (fixture builds, two fixture personas, recorded MatrAIx runs including run3) is kept under **Historical Run3** through `/api/v1`, as an experiment detail and reproducibility page. Everything works offline; MatrAIx-backed runs need an external runtime; live provider runs are disabled by default.
+The local web UI and API. The main pages (Dashboard, Population, Cohorts, Personas, New Experiment, University Sim, Experiments, Results, Validation, Data Sources, Settings) serve the national pipeline and placement simulator through `/api/v2`, while the **University Simulation** explorer subpages (`/university/programs`, `/candidates`, `/scenarios`, `/results`, `/compare`) run on browser fixtures alongside read-only SQLite registry APIs (`/api/v2/university-registry/*`); the Dashboard is the Türkiye-wide overview (summary, province coverage map, population snapshot, university track card, pipeline status). The original Ankara workbench (fixture builds, two fixture personas, recorded MatrAIx runs including run3) is kept under **Historical Run3** through `/api/v1`, as an experiment detail and reproducibility page. Everything works offline; MatrAIx-backed runs need an external runtime; live provider runs require a configured key (and `SOCIETYTWIN_ENABLE_LIVE_EXECUTION` unset or `1`).
 
 ```bash
 python3.12 -m venv .venv && .venv/bin/pip install -r requirements-api.lock && .venv/bin/pip install -e . --no-deps
@@ -179,7 +180,7 @@ Details and justifications: [docs/architecture.md](docs/architecture.md).
 | [Data handling](data/README.md) | Rules for the data folder |
 | [National pipeline](docs/national-pipeline.md) | Türkiye-wide generator, data workflow, validation, cohorts, personas, experiments, API, limitations |
 | [Research workbench](docs/research-workbench.md) | Local UI and API setup, configuration, the historical Ankara workbench, gated execution |
-| [University simulation UI](docs/university-simulation-ui.md) | University program, candidate, scenario, results and comparison dashboard (fixture data until the registry and placement APIs exist) |
+| [University simulation UI](docs/university-simulation-ui.md) | University program, candidate, scenario, results and comparison dashboard (UI fixtures alongside `/university` Placement Studio and read-only `/api/v2/university-registry/*`) |
 | [MatrAIx simulation experiment](experiments/matraix_simulation/README.md) | Setup and running of the Ankara proof-of-concept experiment |
 | [Experiment results](experiments/matraix_simulation/EXPERIMENT_RESULTS.md) | Results of the two-persona A/B run (gpt-4o) |
 

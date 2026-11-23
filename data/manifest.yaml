@@ -4,16 +4,11 @@
 # stay out of Git (see data/README.md). Fields the project never recorded are null (or omitted), not guessed.
 # Reuse terms for TÜİK portal tables are an OPEN DECISION (docs/data-strategy.md).
 #
-# Entries 1–3 are the TÜİK-derived Ankara extracts shipped with the historical MatrAIx experiment. Their raw
-# TÜİK downloads are NOT in this repository, so the checksums are of the processed extracts (LF bytes as checked
-# out here; the historical persona files recorded CRLF variants). With the package loaded they are
-# corroborating evidence: every value equals the package's, and the package is cited.
-#
-# The tuik_pkg:* entries are the 33 datasets of the team's TÜİK province package, integrated locally in
-# data/raw/tuik_package/ (git-ignored; received 2026-10-18 as data/raw/tuik_province_data/, kept unchanged).
-# They were generated from the control-store manifest (data/processed/national/manifest.json), which also holds
-# the per-indicator metadata, value-status counts and the package audit. Checksums are of the long-format CSV
-# and its _wide twin as received. See docs/national-pipeline.md §3 for the verified findings and discrepancies.
+# Entries (`datasets:`) contain 37 datasets total: 1 `tuik:*` (marital seed metadata), 3 `legacy:*` TÜİK-derived
+# Ankara extracts shipped with the historical MatrAIx experiment, and 33 `tuik_pkg:*` datasets from the team's
+# TÜİK province package. Checksums in `manifest.yaml` (as well as `household_linkage_evidence.yaml` and
+# `resident_extension_registry.yaml`) reflect LF-normalized extract bytes; Windows on-disk CRLF variants are pinned
+# separately in `src/societytwin/evidence/registry.py`. See `docs/national-pipeline.md` §3 for verified findings.
 #
 # Entry template:
 #   - id, source, title (official Turkish title or null), title_en, url, identifier, publication_date,

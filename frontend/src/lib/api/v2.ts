@@ -32,7 +32,17 @@ export async function v2<T>(path: string, opts: { query?: Query; body?: unknown;
     throw toApiError(err);
   }
   const text = await response.text();
-  const data = text ? JSON.parse(text) : undefined;
+  let data: unknown;
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      if (!response.ok) {
+        throw new ApiError(response.status, `http_${response.status}`, text.slice(0, 200) || `Request failed (${response.status})`);
+      }
+      throw new ApiError(response.status, "invalid_json", "The server returned a non-JSON response.");
+    }
+  }
   if (!response.ok) {
     const env = (data ?? {}) as { error?: { code?: string; message?: string; details?: unknown; request_id?: string } };
     throw new ApiError(response.status, env.error?.code ?? `http_${response.status}`, env.error?.message ?? `Request failed (${response.status})`,
@@ -163,7 +173,19 @@ export type ExperimentDefinition = {
   cohort: { cohort_id: string; sample_size: number; sampling_method: string; seed: number; strata_field?: string | null };
   model: { backend: "stub" | "matraix"; transport: "fake" | "live"; model?: string | null; temperature: number; seed?: number | null; max_output_tokens?: number };
   execution: { repetitions: number; max_attempts: number; max_calls: number; max_cost_usd?: number | null };
-  persona?: { visible_fields: string[] | null };
+  persona?: {
+    visible_fields?: string[] | null;
+    field_selection?: {
+      schema_version?: "persona-field-selection-1";
+      allowlist: string[];
+      required?: string[];
+      optional?: string[];
+      max_attributes?: number;
+      missingness?: "omit" | "error";
+      sidecar_root?: string | null;
+      sidecar_id?: string | null;
+    } | null;
+  };
   scenario_ref?: {
     scenario_id: string;
     scenario_version: string;
@@ -239,6 +261,35 @@ export type TableFit = {
 };
 export type ProvinceCalibration = { province_code: string; calibrated: boolean; margins: string[]; weight_ratio_bounds?: [number, number];
   margins_not_calibrated?: { margin: string; records: number; converged?: boolean; reason: string }[] };
+export type DependencyJointCheck = {
+  check_id: string;
+  name: string;
+  dimensions: string[];
+  category: string;
+  status: string;
+  scope: string;
+  scope_label: string;
+  reason: string;
+  reference_dataset_id?: string | null;
+  reference_title?: string | null;
+  evaluated_records: number;
+  overall_tvd_records?: number | null;
+  overall_tvd_weighted?: number | null;
+  max_abs_z?: number | null;
+  structural_zero_violations?: string[];
+  notes?: string[];
+};
+export type DependencyValidation = {
+  report_schema_version: string;
+  validator_version: string;
+  geography_code: string;
+  overall_status: string;
+  status_counts: Record<string, number>;
+  summary_reason: string;
+  supported_joint_checks: DependencyJointCheck[];
+  unverified_relationships: DependencyJointCheck[];
+  documented_discrepancies: string[];
+};
 export type ValidationReport = {
   method_version: string; population_id: string; statement: string; tolerances: Record<string, number>; tolerance_justification: Record<string, string>;
   national: { scope: string; province_count: number; province_reference_count: number; tables: TableFit[]; note?: string | null };
@@ -247,6 +298,7 @@ export type ValidationReport = {
     cross_source_checks: { name: string; year: number; root_table: number; context: number; difference: number; passed: boolean; detail: string }[] }[];
   constraints: { rule_id: string; kind: string; description: string; checked: number; violations: number; examples: { synthetic_id: string; detail: string }[] }[];
   constraint_violations: number; weights: Weights; not_validated: string[];
+  dependency_validation?: DependencyValidation;
 };
 
 export type Discrepancy = { dataset: string | null; field: string; claimed: unknown; actual: unknown; note: string };
@@ -285,8 +337,15 @@ export type ControlsStatus = { status: "built" | "not_built" | "invalid"; detail
   tables?: ControlTable[]; sources?: Source[]; inputs?: { path: string; role: string; sha256: string; bytes: number }[]; warnings?: string[];
   context_indicators?: number; context_observations?: number; context_domains?: Record<string, number>; multi_year_observations?: number;
   projection_observations?: number; audits?: (PackageAudit | CrossSourceAudit)[]; package_dir_present: boolean; builder_version: string };
+export type OptionalModules = {
+  marital_strategy: { configured: boolean; registry_version?: string; enabled: boolean; strategy?: string | null; seed_present: boolean };
+  resident_enrichment: { configured: boolean; registry_version?: string; enabled: boolean; attributes: string[]; sources_present: Record<string, boolean> };
+  households: { configured: boolean; size_enabled: boolean; type_size_enabled: boolean; linkage_supported: boolean; linkage_evidence_present: boolean; sources_present: Record<string, boolean> };
+  k1_k7_validation: { district_csv_present: boolean; built_reference_package_present: boolean; joint_dependency_checks_active: boolean; note: string };
+};
 export type DataSources = { controls: ControlsStatus; root_manifest: { path: string; status: string; datasets: unknown[]; note: string; error: string | null };
-  package: { directory: string; present: boolean; files?: number; mapping_file: string; mapping_present: boolean } };
+  package: { directory: string; present: boolean; files?: number; mapping_file: string; mapping_present: boolean };
+  optional_modules?: OptionalModules };
 
 export type Overview = {
   controls: { status: string; built_at: string | null; tables: string[] }; populations: PopulationListItem[]; default_population_id: string | null;
@@ -311,7 +370,7 @@ export type ScenarioListItem = {
   type: string;
   location: { province_code: string; province_name: string };
   questions_count: number;
-  questions: { id: string; text: string }[];
+  questions: { id: string; text: string; type?: "single_choice" | "multiple_choice" | "free_text" | string }[];
 };
 export type ScenarioList = { items: ScenarioListItem[] };
 
@@ -320,23 +379,30 @@ export type CreateScenarioPayload = {
   version?: string;
   name: string;
   description: string;
-  location: { province_code: string; province_name: string };
-  metadata?: { hypothetical?: boolean; source_note?: string | null };
+  location: { province_code: string; province_name: string; nuts2_code?: string | null };
+  metadata?: { hypothetical?: boolean; source_note?: string | null; author?: string | null; reference_year?: number | null };
   policy: {
     category: string;
     type: string;
     parameters: {
-      baseline_fare?: number;
-      new_fare?: number;
-      increase_percentage?: number;
+      baseline_fare?: number | null;
+      new_fare?: number | null;
+      increase_percentage?: number | null;
       currency?: string;
-      fare_category?: string;
+      fare_category?: string | null;
+      effective_date?: string | null;
+      subsidized_exemptions_note?: string | null;
+      policy_summary?: string | null;
+      custom_details?: Record<string, unknown>;
     };
   };
   target_population?: {
-    minimum_age?: number;
+    minimum_age?: number | null;
     maximum_age?: number | null;
     province_codes?: string[] | null;
+    sexes?: string[] | null;
+    marital_statuses?: string[] | null;
+    education_levels?: string[] | null;
     adult_only?: boolean;
     required_attributes?: string[];
   };
@@ -345,6 +411,8 @@ export type CreateScenarioPayload = {
     text: string;
     type?: "single_choice" | "multiple_choice" | "free_text";
     options: { id: string; label: string }[];
+    min_length?: number | null;
+    max_length?: number | null;
     allow_other?: boolean;
     ask_rationale?: boolean;
   }[];
@@ -373,6 +441,7 @@ export type ResultTextSummary = {
   is_free_text: boolean;
   total_responses: number;
   valid_responses: number;
+  generated_by?: string;
 };
 
 // ---------------------------------------------------------------- university placement & policy
@@ -383,7 +452,7 @@ export type UniversityInterventionPayload = {
   capacity_rounding?: "floor" | "nearest" | "largest_remainder";
   installment_count?: number | null;
   installment_upfront_share?: number | null;
-  affordability_filter_mode?: "none" | "warn" | "hard_exclude";
+  affordability_filter_mode?: "none" | "hard_exclude" | "utility_rerank";
   attendance_min_pct?: number | null;
   grading_difficulty_shift?: number | null;
   semester_count?: number;
@@ -541,6 +610,7 @@ export type UniversityRunResponse = {
       mean_gpa: number;
       total_waitlisted_requests: number;
       total_net_tuition_revenue: number;
+      course_pass_rate?: number | null;
     }[];
     final_summary: Record<string, number>;
   };
@@ -581,5 +651,20 @@ export type UniversitySweepResponse = {
     mean_net_tuition_revenue: number;
     mean_aid_disbursed: number;
   }[];
+};
+
+export type UniversityRegistryStatus = {
+  available: boolean;
+  db_path: string;
+  schema_version: number | null;
+  snapshots: {
+    snapshot_id: string;
+    source_filename: string;
+    imported_at: string;
+    verification_status: string;
+    counts: { universities: number; programs: number; open_quality_issues: number };
+    admission_years: number[];
+  }[];
+  note: string;
 };
 

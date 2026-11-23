@@ -225,6 +225,8 @@ def get_placement_run_workbench(service: NationalService, run_id: str) -> dict[s
     row = service.db.placement_run(run_id)
     if row is None:
         raise not_found("unknown_placement_run", f"No placement run '{run_id}'.")
+    summary_disc = (row.get("summary") or {}).get("disclaimer")
+    row.setdefault("disclaimer", summary_disc or PlacementRuleset().disclosure_banner())
     return row
 
 
@@ -349,6 +351,9 @@ def get_university_run_workbench(service: NationalService, run_id: str) -> dict[
     row = service.db.university_run(run_id)
     if row is None:
         raise not_found("unknown_university_run", f"No university simulation run '{run_id}'.")
+    comp_disc = (row.get("comparison") or {}).get("disclaimer")
+    summary_disc = (row.get("summary") or {}).get("disclaimer")
+    row.setdefault("disclaimer", comp_disc or summary_disc or UniversityRuleset().disclosure_banner())
     return row
 
 

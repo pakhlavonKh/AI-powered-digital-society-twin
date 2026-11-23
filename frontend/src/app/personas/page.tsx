@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { PopulationGate } from "@/components/national/common";
 import { Notice, SyntheticNotice } from "@/components/Notices";
 import { PageHeader } from "@/components/PageHeader";
@@ -16,10 +16,10 @@ import { useApi } from "@/lib/useApi";
 const CARD_FIELDS: [string, string][] = [["province_name", "Province"], ["age_group", "Age group"], ["sex", "Sex"], ["marital_status", "Marital status"],
   ["education_level", "Education"], ["labour_status", "Labour status"]];
 
-function SamplePicker({ value, onChange }: { value: string | null; onChange: (id: string) => void }) {
+function SamplePicker({ value, onChange, pop }: { value: string | null; onChange: (id: string) => void; pop: string | null }) {
   const cohorts = useApi("v2:cohorts", (signal) => v2<{ items: Cohort[] }>("/cohorts", { signal }));
   const options = cohorts.data?.items.flatMap((c) => c.samples.map((s) => ({ id: s.sample_id, label: `${c.name} · ${s.config.method} · n=${s.selected} · seed ${s.config.seed}` }))) ?? [];
-  if (cohorts.data && options.length === 0) return <EmptyState title="No cohort samples yet.">Draw a seeded sample on the <Link href="/cohorts">Cohorts</Link> page; its members become personas here.</EmptyState>;
+  if (cohorts.data && options.length === 0) return <EmptyState title="No cohort samples yet.">Draw a seeded sample on the <Link href={withPop("/cohorts", pop)}>Cohorts</Link> page; its members become personas here.</EmptyState>;
   return (
     <div className="field"><label htmlFor="sample-pick">Cohort sample</label>
       <select id="sample-pick" value={value ?? ""} onChange={(e) => onChange(e.target.value)}>
@@ -36,10 +36,11 @@ function Personas() {
   const pop = useLinkPop();
   const sampleId = params.get("sample");
   const [page, setPage] = useState(0);
+  useEffect(() => { setPage(0); }, [sampleId, pop]);
   const data = useApi(sampleId ? `v2:sp:${sampleId}:${page}` : null, (signal) => v2<SamplePersonas>(`/samples/${sampleId}/personas`, { query: { offset: page * 24, limit: 24 }, signal }));
   return (
     <div className="stack">
-      <section className="card"><SamplePicker value={sampleId} onChange={(id) => { setPage(0); const n = new URLSearchParams(params.toString()); n.set("sample", id); router.replace(`${pathname}?${n}`); }} /></section>
+      <section className="card"><SamplePicker value={sampleId} pop={pop} onChange={(id) => { setPage(0); const n = new URLSearchParams(params.toString()); n.set("sample", id); router.replace(`${pathname}?${n}`); }} /></section>
       <Notice tone="info" title="Synthetic record ≠ persona ≠ AI agent.">A <strong>synthetic record</strong> is a row of the population. A <strong>persona</strong> is a
         template-based view of one record (the attributes a model may see). An <strong>AI agent</strong> exists only while an experiment runs the persona. Nothing here calls a model.</Notice>
       {data.error ? <ErrorState error={data.error} onRetry={data.reload} /> : null}

@@ -4,7 +4,7 @@ import tempfile
 from pathlib import Path
 import pytest
 
-from src.scenarios.loader import (
+from scenarios.loader import (
     ScenarioNotFoundError,
     ScenarioParseError,
     ScenarioValidationError,

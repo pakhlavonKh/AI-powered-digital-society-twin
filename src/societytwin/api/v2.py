@@ -89,6 +89,14 @@ def _svc(request: Request) -> NationalService:
     return request.app.state.workbench.national
 
 
+def _state_dir(request: Request):
+    wb = getattr(request.app.state, "workbench", None)
+    if wb is not None:
+        return wb.national.settings.state_dir
+    from societytwin.config import load_settings
+    return load_settings().state_dir
+
+
 S = Annotated[NationalService, Depends(_svc)]
 F = Annotated[PopulationFilter, Depends(_filters)]
 
@@ -127,7 +135,8 @@ def build_router() -> APIRouter:
                 "package": {"directory": "data/raw/tuik_package", "present": s.settings.tuik_package_dir.is_dir(),
                             "files": sum(1 for p in s.settings.tuik_package_dir.iterdir() if p.is_file() and not p.name.startswith("."))
                             if s.settings.tuik_package_dir.is_dir() else 0,
-                            "mapping_file": "data/tuik_package_mapping.yaml", "mapping_present": s.settings.tuik_mapping_path.is_file()}}
+                            "mapping_file": "data/tuik_package_mapping.yaml", "mapping_present": s.settings.tuik_mapping_path.is_file()},
+                "optional_modules": s.optional_modules_status()}
 
     @r.get("/populations", tags=["population"])
     def populations(s: S):
@@ -197,18 +206,21 @@ def build_router() -> APIRouter:
     @r.get("/scenarios", tags=["experiments"],
            description="List all available policy scenarios from registered scenario directories.")
     def list_scenarios(
+        request: Request,
         category: Annotated[str | None, Query(description="Filter scenarios by policy category")] = None,
         province: Annotated[str | None, Query(description="Filter scenarios by province code or name")] = None,
     ):
-        from scenarios.adapter import list_available_scenarios
-        return {"items": list_available_scenarios(category=category, province=province)}
+        from scenarios.adapter import list_available_scenarios, scenario_dirs_for_state
+        search_dirs, _ = scenario_dirs_for_state(_state_dir(request))
+        return {"items": list_available_scenarios(custom_dirs=search_dirs, category=category, province=province)}
 
     @r.get("/scenarios/{scenario_id}", tags=["experiments"],
            description="Retrieve full scenario configuration by scenario_id.")
-    def get_scenario_detail(scenario_id: str):
-        from scenarios.adapter import get_scenario
+    def get_scenario_detail(scenario_id: str, request: Request):
+        from scenarios.adapter import get_scenario, scenario_dirs_for_state
+        search_dirs, _ = scenario_dirs_for_state(_state_dir(request))
         try:
-            return get_scenario(scenario_id).model_dump(mode="json")
+            return get_scenario(scenario_id, custom_dirs=search_dirs).model_dump(mode="json")
         except KeyError as exc:
             raise not_found("scenario_not_found", str(exc))
 
@@ -216,14 +228,16 @@ def build_router() -> APIRouter:
            description="Transform a scenario into an experiment definition for a given cohort.")
     def get_scenario_experiment_definition(
         scenario_id: str,
+        request: Request,
         cohort_id: Annotated[str | None, Query()] = None,
         question_id: Annotated[str | None, Query()] = None,
         seed: Annotated[int, Query()] = 7,
     ):
-        from scenarios.adapter import get_scenario, scenario_to_experiment_definition, UnsupportedQuestionTypeError
+        from scenarios.adapter import get_scenario, scenario_dirs_for_state, scenario_to_experiment_definition, UnsupportedQuestionTypeError
         from scenarios.schema import UnknownQuestionError
+        search_dirs, _ = scenario_dirs_for_state(_state_dir(request))
         try:
-            scenario = get_scenario(scenario_id)
+            scenario = get_scenario(scenario_id, custom_dirs=search_dirs)
             return scenario_to_experiment_definition(scenario, cohort_id or "", question_id, seed)
         except KeyError as exc:
             raise not_found("scenario_not_found", str(exc))
@@ -234,10 +248,11 @@ def build_router() -> APIRouter:
 
     @r.post("/scenarios", status_code=201, tags=["experiments"],
            description="Create and register a custom policy scenario definition.")
-    def create_scenario(body: ScenarioConfig):
-        from scenarios.adapter import save_custom_scenario, ScenarioConflictError
+    def create_scenario(body: ScenarioConfig, request: Request):
+        from scenarios.adapter import save_custom_scenario, scenario_dirs_for_state, ScenarioConflictError
+        search_dirs, save_dir = scenario_dirs_for_state(_state_dir(request))
         try:
-            saved = save_custom_scenario(body)
+            saved = save_custom_scenario(body, target_dir=save_dir, search_dirs=search_dirs)
             return saved.model_dump(mode="json")
         except ScenarioConflictError as exc:
             raise conflict("scenario_conflict", str(exc))
@@ -246,24 +261,30 @@ def build_router() -> APIRouter:
 
     @r.post("/scenarios/from-prompt", status_code=201, tags=["experiments"],
            description="Compile a natural language prompt into a validated policy scenario.")
-    def create_scenario_from_prompt(body: ScenarioPromptRequest):
+    def create_scenario_from_prompt(body: ScenarioPromptRequest, request: Request):
         from scenarios.compiler import compile_scenario_from_prompt
-        from scenarios.adapter import save_custom_scenario
+        from scenarios.adapter import ScenarioConflictError, save_custom_scenario, scenario_dirs_for_state
+        search_dirs, save_dir = scenario_dirs_for_state(_state_dir(request))
         try:
             scenario = compile_scenario_from_prompt(body.prompt, model=body.model)
             if body.save:
-                saved = save_custom_scenario(scenario)
+                saved = save_custom_scenario(scenario, target_dir=save_dir, search_dirs=search_dirs)
                 return saved.model_dump(mode="json")
             return scenario.model_dump(mode="json")
-        except Exception as exc:
-            raise invalid("scenario_compilation_failed", str(exc))
+        except WorkbenchError:
+            raise
+        except ScenarioConflictError as exc:
+            raise conflict("scenario_conflict", str(exc)) from exc
+        except (ValueError, KeyError, RuntimeError) as exc:
+            raise invalid("scenario_compilation_failed", str(exc)) from exc
 
     @r.get("/examples/fare-experiment", tags=["experiments"],
            description="The demonstration design with explicitly HYPOTHETICAL fare parameters.")
-    def example(cohort_id: str):
+    def example(cohort_id: str, request: Request):
         try:
-            from scenarios.adapter import get_scenario, scenario_to_experiment_definition
-            scenario = get_scenario("transport_fare_001")
+            from scenarios.adapter import get_scenario, scenario_dirs_for_state, scenario_to_experiment_definition
+            search_dirs, _ = scenario_dirs_for_state(_state_dir(request))
+            scenario = get_scenario("transport_fare_001", custom_dirs=search_dirs)
             return scenario_to_experiment_definition(scenario, cohort_id)
         except KeyError:
             return example_fare_definition(cohort_id)
@@ -363,5 +384,57 @@ def build_router() -> APIRouter:
             description="Sweep tuition percentage sensitivity curves with paired CRN replications.")
     def university_sweep_run(body: UniversitySweepRequest, s: S):
         return s.run_university_sweep(body)
+
+    # ------------------------------------------------------------------ read-only university SQLite registry & candidates
+    @r.get("/university-registry/status", tags=["university-registry"],
+           description="Availability and snapshot metadata for the local university SQLite registry.")
+    def university_registry_status(s: S):
+        return s.university_registry_status()
+
+    @r.get("/university-registry/snapshots", tags=["university-registry"],
+           description="List imported university workbook snapshots from SQLite.")
+    def university_registry_snapshots(s: S):
+        return s.list_university_registry_snapshots()
+
+    @r.get("/university-registry/snapshots/{snapshot_id}/programs", tags=["university-registry"],
+           description="Query programs, universities, and latest admissions/tuition for an imported SQLite snapshot.")
+    def university_registry_programs(
+        snapshot_id: str,
+        s: S,
+        university_key: str | None = None,
+        score_type: str | None = None,
+        degree_level: str | None = None,
+        q: str | None = None,
+        offset: Annotated[int, Query(ge=0)] = 0,
+        limit: Annotated[int, Query(ge=1, le=MAX_PAGE)] = 50,
+    ):
+        return s.query_university_registry_programs(snapshot_id, university_key, score_type, degree_level, q, offset, limit)
+
+    @r.get("/university-registry/snapshots/{snapshot_id}/programs/{program_code}", tags=["university-registry"],
+           description="Retrieve full multi-year admissions, tuition, and quality issues for one registry program.")
+    def university_registry_program_detail(snapshot_id: str, program_code: str, s: S):
+        return s.get_university_registry_program(snapshot_id, program_code)
+
+    @r.get("/university-registry/snapshots/{snapshot_id}/issues", tags=["university-registry"],
+           description="List importer data quality issues recorded for a university registry snapshot.")
+    def university_registry_issues(
+        snapshot_id: str,
+        s: S,
+        severity: str | None = None,
+        review_status: str | None = None,
+        offset: Annotated[int, Query(ge=0)] = 0,
+        limit: Annotated[int, Query(ge=1, le=200)] = 100,
+    ):
+        return s.list_university_registry_issues(snapshot_id, severity, review_status, offset, limit)
+
+    @r.get("/university-registry/candidates/preview", tags=["university-registry"],
+           description="Generate a deterministic synthetic applicant cohort preview (candidate-development-v1).")
+    def university_registry_candidates_preview(
+        s: S,
+        seed: Annotated[int, Query(ge=0, le=MAX_SEED)] = 42,
+        size: Annotated[int, Query(ge=1, le=500)] = 50,
+        snapshot_id: str | None = None,
+    ):
+        return s.preview_university_candidates(seed=seed, size=size, snapshot_id=snapshot_id)
 
     return r

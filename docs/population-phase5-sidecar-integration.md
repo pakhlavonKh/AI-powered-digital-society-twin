@@ -219,8 +219,7 @@ Results:
 The default full suite was not repeated in this phase: its six historical
 Windows/fixture failures were reproduced at baseline during the Phase 4 checkpoint
 and lie outside changed code. Those six are not newly reclassified by this run.
-Build tests must continue to be selected explicitly because default pytest
-discovery excludes directories named `build`.
+*(Historical note: `pyproject.toml` later replaced `pytest.ini` so `tests/build` is collected by default.)*
 
 Ignored regression logs are in `data/results/phase5-regression.txt` and
 `data/results/phase5-base-build.txt`. The runtime, archive and logs are left intact;

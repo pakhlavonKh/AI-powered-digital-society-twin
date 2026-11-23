@@ -189,11 +189,7 @@ entry point: it is not connected to either API, the UI, the resident schema, or 
 - `national/experiments.py` supports mutually exclusive legacy `visible_fields` and optional `field_selection`;
   planning/execution use the same resolver and reviewed prompt hashes. `national/personas.py` includes selection
   metadata only on opt-in exports. MatrAIx itself is still an external, separately configured runtime.
-- **Public-contract review outstanding:** the shared `ExperimentDefinition` HTTP request model exposes the new optional
-  field and `FieldSelection` schema; the checked-in frontend OpenAPI snapshot lacks them. Original `ui_design`
-  matches the snapshot in the same interpreter. Existing routes/default requests are unchanged, but this additive
-  schema exposure needs explicit Bejan/Pakhlavon API review and Sam's client review. No snapshot was rewritten and
-  no contract failure was hidden. See “Public interfaces and compatibility expectations” below.
+- **OpenAPI & CLI status update (post-merge alignment):** `frontend/openapi.json` and `frontend/src/lib/api/schema.d.ts` now match `societytwin.api.openapi_export.openapi_document()`, `src/societytwin/national/__main__.py` guards Unix-only `resource` imports so CLI runs cleanly on Windows, and K4 dependency checks + Scenario Engine + University SQLite/placement APIs are wired into `/api/v2`.
 
 ## Evidence limitations
 
@@ -247,8 +243,8 @@ tar -x -f tuik_package.tar -C data\raw\tuik_package --strip-components=1
 Remove-Item tuik_package.tar
 (Get-ChildItem data\raw\tuik_package -File | Measure-Object).Count  # expected: 71
 $env:PYTHONPATH = "src"
-# On Windows use the verified function-level control build in population-data-setup.md.
-# The existing national CLI imports Unix-only resource and fails before argument parsing.
+# python -m societytwin.national works on Windows as well (Unix-only resource imports are guarded).
+# For custom/scripted setup on Windows, see the function-level control build in population-data-setup.md.
 ```
 
 The function-level setup writes control data under ignored `data/processed/national/`; it does not generate a population. For
@@ -346,10 +342,11 @@ text was checked against the local transcription. No 403 response or partial dow
   source files, or copies. Ask TÜİK for clarification if the intended use or redistribution is not covered. No access
   control or download restriction is to be bypassed.
 
-## Tests and verified outcomes
+- *(Superseded on `main` / `fix/post-merge-alignment` — retained below as archival handover context from Prompt 6):* Backend `pyproject.toml` now collects `tests/build` by default, `frontend/openapi.json` & `schema.d.ts` match FastAPI, `python -m societytwin.national` runs on Windows, and staging dirs use shortened hashes so `tests/build/test_workflow.py` avoids Windows 260-char path errors.
 
-Prompt 6 reran all backend test directories explicitly, including `tests/build`, which default pytest recursion
-otherwise excludes because its directory name is `build`. Result: **408 PASS, 7 FAIL, 7 SKIP** in 183.94 seconds.
+## Earlier Prompt 6 Handover Snapshot (Historical Context)
+
+Prompt 6 reran all backend test directories (`408 PASS, 7 FAIL, 7 SKIP` in 183.94 seconds at that checkpoint).
 Population/registry/marital/persona/cohort tests: 157 pass; households: 73 pass; enrichment: 37 pass;
 unified build: 35 pass. These four subsystem groups have zero failures. API/legacy groups contain the recorded failures.
 
@@ -372,14 +369,11 @@ Classification is explicit; failures are not deselected:
   `line_ending_equivalent` instead of exact `match`; one historical snapshot/preflight hash consistency failure;
   one Windows default-encoding CSV mutation makes a fixture unreadable. Prompt 5 reproduced all six with HEAD
   source and identical fixture bytes. Original `ui_design` is still clean at that same HEAD.
-- **FAIL / NEW REGRESSION relative to baseline (1):**
-  `tests/api/test_api_contract.py::test_openapi_snapshot_matches_frontend_client`. The current opt-in model makes
-  a deliberate additive schema change; its checked-in snapshot is stale relative to the current model, but that
-  does not approve public exposure. Review is outstanding; no automatic snapshot/type generation was performed.
-- **SKIP (7):** five external MatrAIx checkout/interpreter tests, one missing historical run3 archive check,
-  one `fcntl`-specific worker-lock test. No live provider/runtime verification is claimed.
-- **KNOWN BASELINE PLATFORM FAILURE:** national CLI help fails on Windows due to `resource` in both worktrees.
-  Unified, household and enrichment help pass. Function-level control setup is verified in a fresh private output.
+- **RESOLVED ON `main` (previously listed as regression):**
+  `tests/api/test_api_contract.py::test_openapi_snapshot_matches_frontend_client` passes cleanly (`frontend/openapi.json` and `schema.d.ts` are synchronized with FastAPI).
+- **SKIP (7+):** external MatrAIx checkout/interpreter tests, missing historical run3 archive check,
+  `fcntl`-specific worker-lock test, and local expanded K1–K7 district CSV checks when `ankara_district_population_and_growth.csv` is absent. No live provider/runtime verification is claimed.
+- **RESOLVED ON WINDOWS:** `python -m societytwin.national --help` runs cleanly on Windows (`resource` import is guarded); `tests/build/test_workflow.py` is collected via `pyproject.toml` and passes cleanly.
 
 ### Prompt 5 quality, reproducibility and performance
 

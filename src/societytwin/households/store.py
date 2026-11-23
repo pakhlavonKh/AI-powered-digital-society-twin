@@ -82,9 +82,8 @@ class HouseholdStore:
             return directory
         self.root.mkdir(parents=True,exist_ok=True)
         # Stage inside this output root; publishing never rewrites an existing build.
-        with TemporaryDirectory(prefix=".household-staging-",dir=self.root) as temporary:
-            stage = Path(temporary)/build_id
-            stage.mkdir()
+        with TemporaryDirectory(prefix=".hh-", dir=self.root) as temporary:
+            stage = Path(temporary)
             pq.write_table(pa.Table.from_pylist([asdict(r) for r in population.records],schema=self.schema),stage/"households.parquet")
             _json(stage/"validation.json",checked)
             manifest = population.manifest | {"files":{name:{"sha256":sha256_file(stage/name)}
