@@ -18,8 +18,8 @@ test("sidebar groups the recorded run with experiments, and the empty dashboard 
   await page.goto("/");
   await heading(page, "SocietyTwin Dashboard");
   const links = page.getByRole("navigation", { name: "Workbench" }).getByRole("link");
-  await expect(links).toHaveText([/Dashboard/, /Population/, /Cohorts/, /Personas/, /New Experiment/, /Experiments/, /Results/, /Historical Run3/,
-    /Validation/, /Data Sources/, /Settings/]);
+  await expect(links).toHaveText([/Dashboard/, /Population/, /Cohorts/, /Personas/, /New Experiment/, /University Sim/, /Experiments/, /Results/, /Historical Run3/,
+    /Programs/, /Candidates/, /Scenario Setup/, /Placement Results/, /Compare Scenarios/, /Validation/, /Data Sources/, /Settings/]);
   await expect(page.getByText("No experiment results yet.")).toBeVisible();
   await expect(page.locator(".tile").filter({ hasText: "Province coverage" })).toContainText("0 / 81");
   await expect(page.getByText(/supports all 81 provinces\. No official source data is loaded yet\./)).toBeVisible();

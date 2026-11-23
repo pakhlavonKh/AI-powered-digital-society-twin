@@ -18,6 +18,8 @@ type Props = {
   tableExtra?: { header: string; render: (row: ChartRow) => React.ReactNode }[];
   /** Shares in [0, 1]: fractional ticks on a fixed 0–100% axis (counts keep integer ticks). */
   share?: boolean;
+  /** Optional label drawn on the numeric axis (horizontal bars only), e.g. "Candidates (count)". */
+  valueAxisLabel?: string;
 };
 
 type TooltipPayload = { dataKey?: string | number; value?: number; color?: string; name?: string };
@@ -44,14 +46,15 @@ function ChartTooltip({ active, payload, label, series, format }: {
 }
 
 /** Horizontal bars (thin, rounded data end, 2px gap) with a legend for 2+ series and a table-view twin. */
-export function BarChartCard({ title, subtitle, rows, series, valueLabel, format, tableExtra = [], orientation = "rows", share = false }: Props) {
+export function BarChartCard({ title, subtitle, rows, series, valueLabel, format, tableExtra = [], orientation = "rows", share = false, valueAxisLabel }: Props) {
   const tokens = useChartTokens();
   const [asTable, setAsTable] = useState(false);
   const id = useId();
   const data = rows.map((r) => ({ label: r.label, ...Object.fromEntries(series.map((s) => [s.key, r.values[s.key] ?? 0])) }));
   const barSize = series.length > 1 ? 9 : 14;
   const columns = orientation === "columns";
-  const height = columns ? 230 : Math.max(120, rows.length * (series.length * (barSize + 2) + 10) + 44);
+  const axisLabel = !columns && valueAxisLabel ? valueAxisLabel : undefined;
+  const height = columns ? 230 : Math.max(120, rows.length * (series.length * (barSize + 2) + 10) + 44) + (axisLabel ? 20 : 0);
   const longest = Math.max(...rows.map((r) => r.label.length), 4);
   const summary = `${title}. ${rows.length} categories, ${series.map((s) => s.label).join(" and ")}. Use the table view for exact values.`;
 
@@ -99,9 +102,10 @@ export function BarChartCard({ title, subtitle, rows, series, valueLabel, format
         ) : (
           <div className="chart-box" role="group" aria-label={summary} style={{ height }}>
             <ResponsiveContainer width="100%" height={height} minWidth={0} initialDimension={{ width: 600, height }}>
-              <BarChart data={data} layout={columns ? "horizontal" : "vertical"} margin={{ top: 4, right: 12, bottom: columns ? 20 : 4, left: 4 }} barGap={columns ? 0 : 2} barCategoryGap={columns ? "22%" : 8}>
+              <BarChart data={data} layout={columns ? "horizontal" : "vertical"} margin={{ top: 4, right: 12, bottom: columns ? 20 : axisLabel ? 18 : 4, left: 4 }} barGap={columns ? 0 : 2} barCategoryGap={columns ? "22%" : 8}>
                 <CartesianGrid horizontal={columns} vertical={!columns} stroke={tokens.grid} />
-                {columns ? <><XAxis type="category" dataKey="label" interval={0} angle={-45} textAnchor="end" tick={{fill:tokens["text-muted"],fontSize:9}} axisLine={{stroke:tokens.axis}} tickLine={false}/><YAxis type="number" width={30} tick={{fill:tokens["text-muted"],fontSize:10}} axisLine={false} tickLine={false}/></> : <><XAxis type="number" tickFormatter={(v: number) => format(v)} tick={{ fill: tokens["text-muted"], fontSize: 12 }} axisLine={{ stroke: tokens.axis }} tickLine={false} allowDecimals={share} domain={share ? [0, 1] : undefined} ticks={share ? [0, 0.25, 0.5, 0.75, 1] : undefined} /><YAxis type="category" dataKey="label" width={Math.min(170, 8 + longest * 7)} interval={0} tick={{ fill: tokens["text-secondary"], fontSize: 12 }} axisLine={{ stroke: tokens.axis }} tickLine={false} /></>}
+                {columns ? <><XAxis type="category" dataKey="label" interval={0} angle={-45} textAnchor="end" tick={{fill:tokens["text-muted"],fontSize:9}} axisLine={{stroke:tokens.axis}} tickLine={false}/><YAxis type="number" width={30} tick={{fill:tokens["text-muted"],fontSize:10}} axisLine={false} tickLine={false}/></> : <><XAxis type="number" tickFormatter={(v: number) => format(v)} tick={{ fill: tokens["text-muted"], fontSize: 12 }} axisLine={{ stroke: tokens.axis }} tickLine={false} allowDecimals={share} domain={share ? [0, 1] : undefined} ticks={share ? [0, 0.25, 0.5, 0.75, 1] : undefined}
+                  label={axisLabel ? { value: axisLabel, position: "insideBottom", offset: -14, fill: tokens["text-secondary"], fontSize: 11 } : undefined} /><YAxis type="category" dataKey="label" width={Math.min(170, 8 + longest * 7)} interval={0} tick={{ fill: tokens["text-secondary"], fontSize: 12 }} axisLine={{ stroke: tokens.axis }} tickLine={false} /></>}
                 <Tooltip cursor={{ fill: tokens["surface-2"] }}
                   content={(props) => <ChartTooltip {...(props as object)} series={series} format={format} />} />
                 {series.map((s) => (

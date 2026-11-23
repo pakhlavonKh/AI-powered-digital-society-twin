@@ -23,8 +23,10 @@ function RoundedEnd(props: ShapeProps) {
 }
 
 /** Differences from a reference (percentage points): two opposite hues and a neutral zero line, plus a table twin. */
-export function DivergingBars({ title, subtitle, rows, positiveLabel, negativeLabel, format }: {
+export function DivergingBars({ title, subtitle, rows, positiveLabel, negativeLabel, format, rowHeight = 22 }: {
   title: string; subtitle?: string; rows: DivergingRow[]; positiveLabel: string; negativeLabel: string; format: (v: number | null) => string;
+  /** Pixels per category; raise it for long labels that wrap onto two lines. */
+  rowHeight?: number;
 }) {
   const tokens = useChartTokens();
   const [asTable, setAsTable] = useState(false);
@@ -32,7 +34,7 @@ export function DivergingBars({ title, subtitle, rows, positiveLabel, negativeLa
   const extent = Math.max(0.5, ...rows.map((r) => Math.abs(r.value ?? 0)));
   const domain: [number, number] = [-Math.ceil(extent), Math.ceil(extent)];
   const data = rows.map((r) => ({ label: r.label, value: r.value ?? 0 }));
-  const height = Math.max(120, rows.length * 22 + 44);
+  const height = Math.max(120, rows.length * rowHeight + 44);
   const longest = Math.max(...rows.map((r) => r.label.length), 4);
 
   return (

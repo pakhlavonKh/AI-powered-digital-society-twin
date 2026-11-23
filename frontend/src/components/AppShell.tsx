@@ -5,9 +5,11 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { withBuild } from "@/lib/urls";
 import { withPop } from "@/lib/population";
+import { uniHref } from "@/lib/university/context";
 import { BuildBar } from "./BuildBar";
 import { Icon } from "./Icon";
 import { PopulationBar } from "./PopulationBar";
+import { UniversityBar } from "./university/UniversityBar";
 
 // Historical Run3 sits with the experiments it belongs to; its "Recorded" tag marks it as preserved output, not a live run.
 export const NAV: { href: string; label: string; icon: string; group: string; tag?: string; title?: string }[] = [
@@ -21,6 +23,11 @@ export const NAV: { href: string; label: string; icon: string; group: string; ta
   { href: "/results", label: "Results", icon: "results", group: "Experiments" },
   { href: "/historical", label: "Historical Run3", icon: "archive", group: "Experiments", tag: "Recorded proof of concept",
     title: "Historical Ankara proof of concept (recorded MatrAIx run3)" },
+  { href: "/university/programs", label: "Programs", icon: "university", group: "University Simulation", title: "University & Program Explorer (registry data)" },
+  { href: "/university/candidates", label: "Candidates", icon: "persona", group: "University Simulation", title: "Synthetic Candidate Explorer" },
+  { href: "/university/scenarios", label: "Scenario Setup", icon: "experiment", group: "University Simulation", title: "University placement scenario setup" },
+  { href: "/university/results", label: "Placement Results", icon: "results", group: "University Simulation", title: "Placement results explorer" },
+  { href: "/university/compare", label: "Compare Scenarios", icon: "compare", group: "University Simulation", title: "Scenario comparison" },
   { href: "/validation", label: "Validation", icon: "validation", group: "Research" },
   { href: "/data-sources", label: "Data Sources", icon: "sources", group: "Research" },
   { href: "/settings", label: "Settings", icon: "network", group: "" },
@@ -29,6 +36,7 @@ export const NAV: { href: string; label: string; icon: string; group: string; ta
 function isCurrent(href: string, pathname: string): boolean {
   if (href === "/") return pathname === "/";
   if (href === "/experiments") return pathname === "/experiments";
+  if (href === "/university") return pathname === "/university";
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
@@ -36,8 +44,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const params = useSearchParams();
   const historical = pathname.startsWith("/historical");
+  const university = pathname.startsWith("/university/");
   const pop = params.get("pop");
   const build = params.get("build");
+  const snapshot = params.get("snapshot");
+  const hrefFor = (href: string) => href === "/historical" ? withBuild(href, build) : href.startsWith("/university/") ? uniHref(href, snapshot) : withPop(href, pop);
   const [open, setOpen] = useState(false);
   return (
     <div className="shell" data-page={pathname.split("/")[1] || "dashboard"}>
@@ -55,7 +66,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <li key={item.href}>
               {item.group && (i === 0 || NAV[i - 1].group !== item.group) ? <span className="nav-group">{item.group}</span> : null}
               {!item.group && i > 0 ? <span className="nav-divider" aria-hidden="true" /> : null}
-              <Link className="nav-link" href={item.href === "/historical" ? withBuild(item.href, build) : withPop(item.href, pop)} title={item.title}
+              <Link className="nav-link" href={hrefFor(item.href)} title={item.title}
                     aria-current={isCurrent(item.href, pathname) ? "page" : undefined} onClick={() => setOpen(false)}>
                 <Icon name={item.icon} size={17}/><span>{item.label}{item.tag ? <> <small className="nav-tag">{item.tag}</small></> : null}</span>
               </Link>
@@ -65,7 +76,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="sidebar-foot"><span className="workspace-indicator"/><span>Local workspace<small>Fictional synthetic residents only</small></span></div>
       </nav>
       <div className="main">
-        {historical ? <BuildBar /> : <PopulationBar />}
+        {historical ? <BuildBar /> : university ? <UniversityBar /> : <PopulationBar />}
         <main id="main" className="content" tabIndex={-1}>{children}</main>
       </div>
     </div>
