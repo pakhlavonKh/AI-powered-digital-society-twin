@@ -259,3 +259,47 @@ def test_scenarios_catalog_and_experiment_definition(national_client):
     bad_res = c.post("/api/v2/scenarios", json={"scenario_id": "123_invalid_id"})
     assert bad_res.status_code in (400, 422)
 
+
+def test_alignment_regression_guards(national_client, population_id):
+    c = national_client
+
+    # Unknown province on validation returns 404, not 500
+    bad_prov = c.get(f"/api/v2/populations/{population_id}/validation?province_code=99")
+    assert bad_prov.status_code == 404
+    assert bad_prov.json()["error"]["code"] == "unknown_province"
+
+    # Unknown visible_fields on sample personas returns 422, not 500
+    cid = _cohort(c, population_id, {"adult_only": True})
+    smp = c.post(f"/api/v2/cohorts/{cid}/samples", json={"size": 5, "method": "simple_random", "seed": 7})
+    assert smp.status_code == 201
+    sid = smp.json()["sample_id"]
+    bad_fields = c.get(f"/api/v2/samples/{sid}/personas?visible_fields=telepathic_power")
+    assert bad_fields.status_code == 422
+    assert bad_fields.json()["error"]["code"] == "invalid_persona_fields"
+
+    # Prompt with curly braces, >2000 chars, and extreme numbers compiles and creates valid experiment definition
+    long_prompt = ("Public policy {test} from 0 TL to 20 TL cut by 150% attendance threshold 120% " + "detail " * 350).strip()
+    comp = c.post("/api/v2/scenarios/from-prompt", json={"prompt": long_prompt, "save": True})
+    assert comp.status_code == 201, comp.text
+    scen_id = comp.json()["scenario_id"]
+    exp_def = c.get(f"/api/v2/scenarios/{scen_id}/experiment-definition", params={"cohort_id": cid})
+    assert exp_def.status_code == 200, exp_def.text
+    created_exp = c.post("/api/v2/experiments", json=exp_def.json())
+    assert created_exp.status_code == 201, created_exp.text
+
+    # generate_result_text_summary handles explicit None shares cleanly
+    from scenarios.summary import generate_result_text_summary
+
+    res_summary = generate_result_text_summary(
+        definition=created_exp.json(),
+        agg={"overall": {"options": [{"option_id": "adapt_positively", "weighted_share": None, "unweighted_share": None}]}},
+        responses=[{"status": "valid", "choice": "adapt_positively", "rationale": "ok"}],
+    )
+    assert res_summary["valid_responses"] == 1
+
+    # Stratified sampling redistributes spare capacity across under-capacity strata
+    from societytwin.national.cohorts import stratified
+
+    members, _ = stratified(["a", "b", "c", "d", "e"], [100.0, 1.0, 1.0, 1.0, 1.0], ["S1", "S2", "S2", "S2", "S2"], 3, seed=42)
+    assert len(members) == 3
+

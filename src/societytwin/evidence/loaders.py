@@ -183,8 +183,11 @@ def _extract_tuik_long_provincial(
         val_str = str(row["value"]).strip() if row["value"] is not None else ""
 
         # Capture extra context metrics on the same province/year (e.g., average_household_size)
-        if ind == "average_household_size" and val_str:
-            extra_metrics["average_household_size"] = float(val_str)
+        if ind == "average_household_size" and val_str and val_str not in {"-", "..", "...", "c", "C"}:
+            try:
+                extra_metrics["average_household_size"] = float(val_str)
+            except ValueError:
+                pass
 
         # Check total patterns first
         matched_total = False
@@ -192,7 +195,7 @@ def _extract_tuik_long_provincial(
             m_tot = t_re.match(ind)
             if m_tot:
                 matched_total = True
-                if val_str:
+                if val_str and val_str not in {"-", "..", "...", "c", "C"}:
                     val_num = float(val_str)
                     val_clean: float | int = int(val_num) if val_num.is_integer() else val_num
                     groups = m_tot.groupdict()
@@ -245,7 +248,7 @@ def _extract_tuik_long_provincial(
 
             if target_prov is None and "province_code" not in entry.dimensions:
                 # National sum across 81 provinces
-                if val_str:
+                if val_str and val_str not in {"-", "..", "...", "c", "C"}:
                     k = tuple(sorted(dims.items()))
                     agg_cells[k] = agg_cells.get(k, 0.0) + float(val_str)
                     agg_indicators[k] = ind

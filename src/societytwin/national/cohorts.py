@@ -125,10 +125,31 @@ def stratified(ids: list[str], weights: list[float], strata: list, size: int, se
         groups.setdefault("∅" if s is None else s, []).append(i)
     shares = {k: math.fsum(weights[i] for i in v) for k, v in groups.items()}
     alloc = largest_remainder(shares, size)
+    drawn_counts = {k: min(alloc[k], len(groups[k])) for k in groups}
+    deficit = size - sum(drawn_counts.values())
+    if deficit > 0:
+        spare_shares = {
+            k: shares[k] if shares[k] > 0 else float(len(groups[k]) - drawn_counts[k])
+            for k in groups
+            if len(groups[k]) > drawn_counts[k]
+        }
+        while deficit > 0 and spare_shares:
+            extra = largest_remainder(spare_shares, deficit)
+            added = 0
+            for k in list(spare_shares):
+                cap_left = len(groups[k]) - drawn_counts[k]
+                take = min(extra.get(k, 0), cap_left)
+                drawn_counts[k] += take
+                added += take
+                deficit -= take
+                if len(groups[k]) <= drawn_counts[k]:
+                    spare_shares.pop(k, None)
+            if added == 0:
+                break
     members, report = [], []
     for key in sorted(groups):
         members_idx = groups[key]
-        n_h = min(alloc[key], len(members_idx))
+        n_h = drawn_counts[key]
         report.append({"stratum": key, "eligible": len(members_idx), "weighted": shares[key], "allocated": alloc[key], "drawn": n_h})
         if n_h == 0:
             continue

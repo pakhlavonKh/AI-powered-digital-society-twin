@@ -209,10 +209,11 @@ def generate_result_text_summary(
         agg_options = (agg.get("overall", {}).get("options", [])) if agg else []
         if agg_options:
             for ao in agg_options:
-                val = ao.get("weighted_share")
-                if val is None:
-                    val = ao.get("unweighted_share", ao.get("share", 0.0))
-                shares_dict[ao["option_id"]] = round(val * 100.0, 1)
+                val = next(
+                    (ao[k] for k in ("weighted_share", "unweighted_share", "share") if ao.get(k) is not None),
+                    0.0,
+                )
+                shares_dict[ao["option_id"]] = round(float(val) * 100.0, 1)
         else:
             denom = total_valid or 1
             for opt_id, cnt in option_counts.items():

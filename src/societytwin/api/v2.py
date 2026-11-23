@@ -263,7 +263,7 @@ def build_router() -> APIRouter:
            description="Compile a natural language prompt into a validated policy scenario.")
     def create_scenario_from_prompt(body: ScenarioPromptRequest, request: Request):
         from scenarios.compiler import compile_scenario_from_prompt
-        from scenarios.adapter import save_custom_scenario, scenario_dirs_for_state
+        from scenarios.adapter import ScenarioConflictError, save_custom_scenario, scenario_dirs_for_state
         search_dirs, save_dir = scenario_dirs_for_state(_state_dir(request))
         try:
             scenario = compile_scenario_from_prompt(body.prompt, model=body.model)
@@ -271,15 +271,20 @@ def build_router() -> APIRouter:
                 saved = save_custom_scenario(scenario, target_dir=save_dir, search_dirs=search_dirs)
                 return saved.model_dump(mode="json")
             return scenario.model_dump(mode="json")
-        except Exception as exc:
-            raise invalid("scenario_compilation_failed", str(exc))
+        except WorkbenchError:
+            raise
+        except ScenarioConflictError as exc:
+            raise conflict("scenario_conflict", str(exc)) from exc
+        except (ValueError, KeyError, RuntimeError) as exc:
+            raise invalid("scenario_compilation_failed", str(exc)) from exc
 
     @r.get("/examples/fare-experiment", tags=["experiments"],
            description="The demonstration design with explicitly HYPOTHETICAL fare parameters.")
-    def example(cohort_id: str):
+    def example(cohort_id: str, request: Request):
         try:
-            from scenarios.adapter import get_scenario, scenario_to_experiment_definition
-            scenario = get_scenario("transport_fare_001")
+            from scenarios.adapter import get_scenario, scenario_dirs_for_state, scenario_to_experiment_definition
+            search_dirs, _ = scenario_dirs_for_state(_state_dir(request))
+            scenario = get_scenario("transport_fare_001", custom_dirs=search_dirs)
             return scenario_to_experiment_definition(scenario, cohort_id)
         except KeyError:
             return example_fare_definition(cohort_id)

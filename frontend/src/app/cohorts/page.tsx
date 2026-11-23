@@ -23,14 +23,19 @@ function SampleForm({ cohort, onDone }: { cohort: Cohort; onDone: () => void }) 
   const [seed, setSeed] = useState(7);
   const [strata, setStrata] = useState("province_code");
   const [error, setError] = useState<ApiError | null>(null);
+  const [saving, setSaving] = useState(false);
   const [sample, setSample] = useState<Sample | null>(null);
   return (
     <form className="stack" onSubmit={async (e) => {
-      e.preventDefault(); setError(null);
+      e.preventDefault();
+      if (saving) return;
+      setSaving(true);
+      setError(null);
       try {
         const s = await v2<Sample>(`/cohorts/${cohort.cohort_id}/samples`, { body: { size, method, seed, strata_field: method === "stratified" ? strata : null } });
         setSample(s); onDone();
       } catch (err) { setError(toApiError(err)); }
+      finally { setSaving(false); }
     }}>
       <div className="form-grid">
         <div className="field"><label htmlFor={`sz-${cohort.cohort_id}`}>Sample size</label>
@@ -47,7 +52,7 @@ function SampleForm({ cohort, onDone }: { cohort: Cohort; onDone: () => void }) 
         <div className="field"><label htmlFor={`sd-${cohort.cohort_id}`}>Seed</label>
           <input id={`sd-${cohort.cohort_id}`} type="number" min={0} value={seed} onChange={(e) => setSeed(Number(e.target.value))} /></div>
       </div>
-      <div><button className="button small" type="submit">Draw sample</button></div>
+      <div><button className="button small" type="submit" disabled={saving}>{saving ? "Drawing…" : "Draw sample"}</button></div>
       {error ? <ErrorState error={error} /> : null}
       {sample ? <p className="small">Sample <code>{sample.sample_id}</code>: {fmtInt(sample.selected)} of {fmtInt(sample.eligible_records)} eligible records ·{" "}
         <Link href={withPop("/personas", pop, { sample: sample.sample_id })}>View personas</Link></p> : null}
@@ -86,6 +91,7 @@ function Cohorts({ populationId }: { populationId: string }) {
   const prefill = (() => { try { return JSON.parse(params.get("prefill") ?? "{}") as Filters; } catch { return {}; } })();
   const [filters, setFilters] = useState<Filters>(prefill);
   const [name, setName] = useState("");
+  const [savingCohort, setSavingCohort] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
   const geo = useApi(`v2:geo:${populationId}`, (signal) => v2<Geography>("/geography/provinces", { query: { population_id: populationId }, signal }));
   const list = useApi("v2:cohorts", (signal) => v2<{ items: Cohort[] }>("/cohorts", { signal }));
@@ -109,13 +115,17 @@ function Cohorts({ populationId }: { populationId: string }) {
             </div>
           ) : <Loading what="preview" />}
           <form className="row" onSubmit={async (e) => {
-            e.preventDefault(); setError(null);
-            try { await v2("/cohorts", { body: { name: name || "Untitled cohort", population_id: populationId, filters } }); setName(""); list.reload(); }
+            e.preventDefault();
+            if (savingCohort) return;
+            setSavingCohort(true);
+            setError(null);
+            try { await v2("/cohorts", { body: { name: name.trim() || "Untitled cohort", population_id: populationId, filters } }); setName(""); list.reload(); }
             catch (err) { setError(toApiError(err)); }
+            finally { setSavingCohort(false); }
           }}>
             <div className="field" style={{ flex: 1 }}><label htmlFor="cohort-name">Cohort name</label>
-              <input id="cohort-name" type="text" value={name} placeholder="e.g. Ankara adults" onChange={(e) => setName(e.target.value)} /></div>
-            <button type="submit" className="button primary" style={{ alignSelf: "end" }} disabled={!preview.data?.eligible_records}>Save cohort</button>
+              <input id="cohort-name" type="text" maxLength={120} value={name} placeholder="e.g. Ankara adults" onChange={(e) => setName(e.target.value)} /></div>
+            <button type="submit" className="button primary" style={{ alignSelf: "end" }} disabled={savingCohort || !preview.data?.eligible_records}>{savingCohort ? "Saving…" : "Save cohort"}</button>
           </form>
           {error ? <ErrorState error={error} /> : null}
         </section>

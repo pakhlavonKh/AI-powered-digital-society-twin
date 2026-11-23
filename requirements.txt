@@ -4,8 +4,8 @@
 # dependencies in pyproject.toml, and the tested environment is pinned in requirements-api.lock
 # (install from those rather than this file).
 #
-# Target Python version: 3.11+ (tested on 3.11/3.12). The notes below preserve the original
-# v2 architecture stack proposal for reference alongside the implemented dependencies in pyproject.toml.
+# Target Python version: 3.12 (requires-python >=3.12,<3.13 in pyproject.toml). The list below preserves
+# the original PROPOSED v2 stack for reference alongside the implemented dependencies in pyproject.toml.
 #
 # PROPOSED v2 Python stack:
 #   - numpy                      vectorised population generation

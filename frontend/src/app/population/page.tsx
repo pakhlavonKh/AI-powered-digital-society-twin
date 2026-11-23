@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { DistributionChart, PopulationPyramid } from "@/components/national/charts";
 import { GenerateForm, PopulationGate, useCapabilities, useLabels } from "@/components/national/common";
 import { FilterPanel } from "@/components/national/FilterPanel";
@@ -31,6 +31,7 @@ function Explorer({ populationId }: { populationId: string }) {
   const filters = filtersFromParams(params);
   const [page, setPage] = useState(0);
   const key = filtersToParams(filters).toString();
+  useEffect(() => { setPage(0); }, [populationId, key]);
   const geo = useApi(`v2:geo:${populationId}`, (signal) => v2<Geography>("/geography/provinces", { query: { population_id: populationId }, signal }));
   const summary = useApi(`v2:summary:${populationId}:${key}`, (signal) => v2<Summary>(`/populations/${populationId}/summary`, { query: filtersToQuery(filters), signal }));
   const records = useApi(`v2:records:${populationId}:${key}:${page}`, (signal) => v2<RecordsPage>(`/populations/${populationId}/records`,

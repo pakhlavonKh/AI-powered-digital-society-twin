@@ -359,7 +359,7 @@ src/scenarios/
     ├── interventions.py               # Pure scenario delta engine (tuition, aid, general quotas, baraj, installments)
     ├── engine.py                      # Candidate-Proposing DA (general quotas), tie-breaks, invariant checks
     ├── comparison.py                  # Paired counterfactual diff, migration matrix, CRN quantile helpers
-    └── cli.py                         # Offline CLI (`python -m scenarios.placement run | compare | validate`)
+    └── cli.py                         # Offline CLI (`python -m scenarios.placement run | compare | demo`)
 ```
 
 ### 9.2 Phased Roadmap Across Milestones
@@ -388,4 +388,4 @@ All Milestone 1 tests run **100% offline** via `pytest` without network calls, A
 | `tests/test_scenarios/test_placement_interventions.py` | `UNI-001` tuition $+20\%$, `UNI-002` aid $+25\%$ budget cap allocation, `UNI-005` seats $-15\%$ deterministic rounding, `UNI-006` installment upfront liquidity relief, `OSYM-BARAJ` threshold overrides, `kırık OBP` penalty; verifies pure copy semantics (zero mutation of input objects). |
 | `tests/test_scenarios/test_placement_comparison.py` | Paired baseline vs intervention comparison; migration matrix conservation (`sum(transitions) == total_candidates`); mismatched `candidates_sha256` rejected with `ComparisonMismatchError`; CRN quantile summary math verified. |
 | `tests/test_scenarios/test_university_compiler_and_adapter.py` | Compiles university placement & tuition/aid prompts; `"university students transit pass"` continues compiling to `"transportation"`; verifies `placement_result_to_student_cohort` produces clean handoff records for Milestone 2's `src/scenarios/university/`; all existing `tests/test_scenarios/` and `tests/national/test_scenario_pipeline.py` remain green. |
-| `tests/test_scenarios/test_placement_cli.py` | Offline CLI execution (`run`, `compare`, `validate`) producing deterministic JSON/Markdown outputs with zero external network access. |
+| `tests/test_scenarios/test_placement_cli.py` | Offline CLI execution (`run`, `compare`, `demo`) producing deterministic JSON/Markdown outputs with zero external network access. |

@@ -241,7 +241,10 @@ class NationalService:
             report = validate(loaded.columns(), loaded.manifest, self.store())
         report = dict(report)
         if province_code:
-            code = geo.normalize_code(province_code)
+            try:
+                code = geo.normalize_code(province_code)
+            except geo.UnknownProvince as exc:
+                raise not_found("unknown_province", str(exc)) from exc
             report["provinces"] = [p for p in report["provinces"] if p["province_code"] == code]
         if "dependency_validation" not in report and loaded.table.num_rows > 0:
             report["dependency_validation"] = self._dependency_validation(loaded)
@@ -432,7 +435,10 @@ class NationalService:
             rec = loaded.record(m["synthetic_id"])
             if rec is None:
                 continue
-            p = build_persona(rec, loaded.manifest, visible_fields)
+            try:
+                p = build_persona(rec, loaded.manifest, visible_fields)
+            except ValueError as exc:
+                raise invalid("invalid_persona_fields", str(exc)) from exc
             personas.append({**{k: p[k] for k in ("persona_id", "synthetic_id", "province_code", "province_name", "model_visible",
                                                   "eligibility", "persona_card_sha256")},
                              "attributes": {a["field"]: a["display"] for a in p["attributes"]},
@@ -625,6 +631,9 @@ class NationalService:
                         + planned_calls * d.model.max_output_tokens * price["output_per_mtok"]) / 1e6
                 cost_basis = (f"Upper bound from the configured price table ({price.get('source', 'source not stated')}, "
                               f"{price.get('as_of', 'date not stated')}): input ≈ characters ÷ 4, output = max_output_tokens per call.")
+                if d.execution.max_cost_usd is not None and cost > d.execution.max_cost_usd:
+                    block("cost_cap_exceeded",
+                          f"Estimated upper-bound cost (${cost:.4f}) exceeds max_cost_usd (${d.execution.max_cost_usd:.4f}).")
             else:
                 cost, cost_basis = None, "Unknown: no verified price for this model is configured (SOCIETYTWIN_MODEL_PRICES)."
                 if d.execution.max_cost_usd is not None:

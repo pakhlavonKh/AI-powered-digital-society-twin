@@ -45,7 +45,9 @@ export function useApi<T>(key: string | null, load: (signal: AbortSignal) => Pro
     return () => controller.abort();
   }, [key, nonce]);
 
-  const reload = useCallback(() => setNonce((n) => n + 1), []);
+  const reload = useCallback(() => {
+    setNonce((n) => n + 1);
+  }, []);
   return {
     data: state.data,
     error: state.error,

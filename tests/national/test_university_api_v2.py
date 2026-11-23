@@ -115,11 +115,13 @@ def test_placement_and_university_api_persistence_and_handoff(national_settings,
         assert p1_data["run_id"] in {item["run_id"] for item in p_list["items"]}
         p_detail = restarted.get(f"/api/v2/placement/runs/{p1_data['run_id']}").json()
         assert p_detail["result_sha256"] == p1_data["result_sha256"]
+        assert p_detail["disclaimer"]
 
         u_list = restarted.get("/api/v2/university/runs").json()
         assert u1_data["run_id"] in {item["run_id"] for item in u_list["items"]}
         u_detail = restarted.get(f"/api/v2/university/runs/{u1_data['run_id']}").json()
         assert u_detail["result_sha256"] == u1_data["result_sha256"]
+        assert u_detail["disclaimer"]
 
         # 8. Built-in scenario YAML executes directly via /api/v2/university/runs & 404/422 errors are structured
         u_sc = restarted.post(
@@ -204,3 +206,41 @@ def test_university_registry_sqlite_endpoints_query_imported_snapshot(make_setti
         assert issues["total"] == 1 and issues["items"][0]["issue_code"] == "missing_quota"
         assert c.get("/api/v2/university-registry/snapshots/snap-2026/programs/999999").status_code == 404
         assert c.get("/api/v2/university-registry/snapshots/nope/programs").status_code == 404
+
+
+def test_corrupt_sqlite_and_university_engine_regression_guards(make_settings, tmp_path):
+    # 1. Corrupt SQLite file returns 503 rather than HTTP 500
+    bad_db = tmp_path / "corrupt.sqlite3"
+    bad_db.write_bytes(b"not a valid sqlite database")
+    with make_client(make_settings(university_db_path=bad_db)) as c:
+        res = c.get("/api/v2/university-registry/status")
+        assert res.status_code == 503
+        assert res.json()["error"]["code"] == "university_registry_invalid"
+
+    # 2. Repeated courses under replace_highest do not inflate attempted_credits denominator
+    from scenarios.university.cohort import build_synthetic_university_cohort
+    from scenarios.university.financial_ledger import apply_university_economic_policy
+    from scenarios.university.models import UniversityRuleset
+    from scenarios.university.semester_engine import run_university_simulation
+    from scenarios.schema import UniversityPolicyIntervention
+
+    students, courses = build_synthetic_university_cohort(size=10, seed=42)
+    sim = run_university_simulation(
+        students=students,
+        courses=courses,
+        ruleset=UniversityRuleset(repeat_policy="replace_highest"),
+        intervention=UniversityPolicyIntervention(),
+        semester_count=4,
+        seed=42,
+    )
+    for st in sim.final_students:
+        assert st.earned_credits <= st.attempted_credits
+
+    # 3. Aid allocation does not double-scale eligible zero-aid students
+    s_inelig = students[0].model_copy(update={"income_band": "high", "need_aid_grant": 5000.0})
+    s_elig_zero = students[1].model_copy(update={"income_band": "low", "need_aid_grant": 0.0})
+    _, info = apply_university_economic_policy(
+        [s_inelig, s_elig_zero],
+        UniversityPolicyIntervention(aid_budget_change_pct=20.0),
+    )
+    assert info["aid_allocated"] <= 5000.0 * 1.2 + 1e-6

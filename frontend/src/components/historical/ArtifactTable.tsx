@@ -25,7 +25,8 @@ function ArtifactRow({ artifact }: { artifact: Schemas["Artifact"] }) {
           <a className="button small" href={`${href}?download=true`} download>Download</a>
           {isMarkdown ? (
             <button type="button" className="button small" onClick={async () => {
-              if (preview !== null) { setPreview(null); return; }
+              if (preview !== null) { setPreview(null); setFailed(false); return; }
+              setFailed(false);
               try {
                 const res = await fetch(href);
                 if (!res.ok) throw new Error(String(res.status));

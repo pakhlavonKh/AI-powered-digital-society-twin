@@ -197,4 +197,70 @@ describe("University Decision & Placement Studio page", () => {
       expect(screen.getByText(/Tuition Sensitivity Sweep/i)).toBeInTheDocument();
     });
   });
+
+  it("handles null telemetry without coercing to zero and renders Tuition sweep table", async () => {
+    v2Mock.mockImplementation(async (path: string) => {
+      if (path === "/placement/programs") {
+        return {
+          osym_verified: false,
+          rule_fidelity: "hypothetical_simplified",
+          disclaimer: "SIMPLIFIED HYPOTHETICAL RULES: test disclaimer.",
+          score_types: ["SAY"],
+          rank_thresholds: {},
+          programs: [],
+        };
+      }
+      if (path === "/university/runs") {
+        return {
+          items: [{
+            run_id: "univ-nulls",
+            scenario_id: null,
+            placement_run_id: null,
+            osym_verified: false,
+            coefficients_calibrated: false,
+            result_sha256: "b".repeat(64),
+            created_at: "2026-10-20T00:00:00Z",
+            summary: {
+              title: "Partial", headline: "Partial metrics test", key_findings: [], summary_markdown: "Partial",
+              osym_verified: false, coefficients_calibrated: false, disclaimer: "M2_DISCLAIMER",
+            },
+          }],
+          total: 1,
+        };
+      }
+      if (path === "/university/runs/univ-nulls") {
+        return {
+          run_id: "univ-nulls",
+          scenario_id: null,
+          placement_run_id: null,
+          osym_verified: false,
+          coefficients_calibrated: false,
+          result_sha256: "b".repeat(64),
+          created_at: "2026-10-20T00:00:00Z",
+          summary: {
+            title: "Partial", headline: "Partial metrics test", key_findings: [], summary_markdown: "Partial",
+            osym_verified: false, coefficients_calibrated: false, disclaimer: "M2_DISCLAIMER",
+          },
+          comparison: {
+            replications: 2, osym_verified: false, coefficients_calibrated: false, disclaimer: "M2_DISCLAIMER",
+            policy_effects: {
+              cumulative_retention_rate: { baseline_mean: null, policy_mean: null, mean: null, std: null, p05: null, p50: null, p95: null },
+              total_net_tuition_revenue: { baseline_mean: null, policy_mean: null, mean: null, std: null, p05: null, p50: null, p95: null },
+            },
+            baseline_trajectory: [],
+            policy_trajectory: [],
+          },
+        };
+      }
+      return { items: [], total: 0 };
+    });
+
+    render(<UniversityPage />);
+    await userEvent.click(screen.getByRole("tab", { name: /2\. Multi-Semester Policy Dynamics/i }));
+    await waitFor(() => {
+      expect(screen.getByText(/Multi-Semester Policy Impact \(univ-nulls\)/)).toBeInTheDocument();
+    });
+    expect(screen.getByText("M2_DISCLAIMER")).toBeInTheDocument();
+    expect(screen.queryByText("+0.00 pp")).not.toBeInTheDocument();
+  });
 });

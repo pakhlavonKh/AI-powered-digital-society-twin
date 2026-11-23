@@ -19,15 +19,17 @@ function TrajectoryTooltip({
   active,
   payload,
   label,
+  labelPrefix = "Semester",
 }: {
   active?: boolean;
   payload?: TooltipEntry[];
   label?: string | number;
+  labelPrefix?: string;
 }) {
   if (!active || !payload?.length) return null;
   return (
     <div className="chart-tooltip">
-      <div className="muted small">Semester {label}</div>
+      <div className="muted small">{labelPrefix} {label}</div>
       {payload.map((entry) => (
         <div className="tt-row" key={String(entry.dataKey)}>
           <span className="tt-key" style={{ background: entry.color }} aria-hidden="true" />
@@ -204,7 +206,7 @@ export function TuitionSweepChart({ rows }: { rows: UniversitySweepResponse["row
                 <CartesianGrid stroke={tokens.grid} strokeDasharray="3 3" />
                 <XAxis dataKey="tuition" stroke={tokens.axis} tick={{ fill: tokens["text-secondary"], fontSize: 12 }} />
                 <YAxis stroke={tokens.axis} domain={["auto", "auto"]} tick={{ fill: tokens["text-secondary"], fontSize: 12 }} />
-                <Tooltip content={<TrajectoryTooltip />} />
+                <Tooltip content={<TrajectoryTooltip labelPrefix="Tuition" />} />
                 <Line
                   type="monotone"
                   dataKey="retentionPct"

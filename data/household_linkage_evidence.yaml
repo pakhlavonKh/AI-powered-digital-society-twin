@@ -1,6 +1,5 @@
 # Declarations bound to local normalized files; not independent source authentication.
-# Paths resolve only against an explicit caller-supplied source root. Phase 6A found
-# matching files in C:/Users/Lenovo/Desktop/Digital-Society-Twin-Population.
+# Paths resolve only against an explicit caller-supplied source root.
 schema_version: household-linkage-evidence-1
 registry_version: ankara-linkage-readiness-1
 geography: '06'

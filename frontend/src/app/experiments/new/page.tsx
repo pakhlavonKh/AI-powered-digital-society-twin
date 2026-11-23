@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { describeDetails, toApiError } from "@/lib/api/client";
 import { PopulationGate, useCapabilities } from "@/components/national/common";
 import { Notice } from "@/components/Notices";
 import { PageHeader } from "@/components/PageHeader";
@@ -40,6 +41,12 @@ const STRATA_OPTIONS = [
   "labour_status",
   "urbanicity",
 ];
+
+function formatApiError(err: unknown): string {
+  const apiErr = toApiError(err);
+  const details = describeDetails(apiErr.details);
+  return `Error [${apiErr.code}]: ${apiErr.message}${details ? ` (${details})` : ""}`;
+}
 
 function defaultLiveModel(caps?: Capabilities): string {
   const keys = caps?.provider_key_present ?? {};
@@ -91,11 +98,19 @@ function Builder({ populationId }: { populationId: string }) {
   const [busy, setBusy] = useState<boolean>(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [engineTouched, setEngineTouched] = useState<boolean>(false);
+  const [callCapEdited, setCallCapEdited] = useState<boolean>(false);
   const [explicitCohort, setExplicitCohort] = useState<boolean>(Boolean(urlCohort));
   const [d, setD] = useState<ExperimentDefinition>(() => blank(urlCohort));
   const [reviewed, setReviewed] = useState<{ experimentId: string; plan: Plan } | null>(null);
   const [confirmed, setConfirmed] = useState<boolean>(false);
   const [running, setRunning] = useState<boolean>(false);
+  const numericParamNames = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    for (const p of d.scenario.parameters) {
+      if (typeof p.value === "number") numericParamNames.current.add(p.name);
+    }
+  }, [d.scenario.parameters]);
 
   const valid = cohorts.data?.items.filter((c) => c.status === "valid" && c.population_id === populationId) ?? [];
   const activeScenario =
@@ -159,10 +174,20 @@ function Builder({ populationId }: { populationId: string }) {
       return true;
     };
 
-    const current = valid.find((c) => c.cohort_id === d.cohort.cohort_id);
+    let pool = valid;
+    if (pool.length === 0) {
+      try {
+        const fresh = await v2<{ items: Cohort[] }>("/cohorts");
+        pool = fresh.items.filter((c) => c.status === "valid" && c.population_id === populationId);
+      } catch {
+        // Ignore transient refetch failure and fall through to cohort creation
+      }
+    }
+
+    const current = pool.find((c) => c.cohort_id === d.cohort.cohort_id);
     if (current && matches(current)) return current.cohort_id;
 
-    const existing = valid.find(matches);
+    const existing = pool.find(matches);
     if (existing) return existing.cohort_id;
 
     const provLabel = provinceName || (wantProvs ? wantProvs.join(", ") : "National");
@@ -181,10 +206,10 @@ function Builder({ populationId }: { populationId: string }) {
           filters,
         },
       });
-      await cohorts.reload();
+      cohorts.reload();
       return createdCohort.cohort_id;
     } catch {
-      if (valid[0]) return valid[0].cohort_id;
+      if (pool[0]) return pool[0].cohort_id;
       const fallback = await v2<Cohort>("/cohorts", {
         method: "POST",
         body: {
@@ -193,7 +218,7 @@ function Builder({ populationId }: { populationId: string }) {
           filters: { age_min: 18 },
         },
       });
-      await cohorts.reload();
+      cohorts.reload();
       return fallback.cohort_id;
     }
   };
@@ -226,7 +251,7 @@ function Builder({ populationId }: { populationId: string }) {
       });
       router.push(withPop(`/results/${out.run.run_id}`, pop));
     } catch (err: unknown) {
-      setFeedback(`Error: ${err instanceof Error ? err.message : String(err)}`);
+      setFeedback(formatApiError(err));
       setRunning(false);
     }
   };
@@ -242,7 +267,7 @@ function Builder({ populationId }: { populationId: string }) {
         method: "POST",
         body: { prompt: raw, save: true },
       });
-      await scenarios.reload();
+      scenarios.reload();
       setSelectedScenarioId(res.scenario_id);
       setSelectedQuestionId("");
 
@@ -275,7 +300,9 @@ function Builder({ populationId }: { populationId: string }) {
         execution: {
           ...d.execution,
           repetitions: reps,
-          max_calls: Math.max(d.execution.max_calls, sampleSize * reps * d.execution.max_attempts),
+          max_calls: callCapEdited
+            ? d.execution.max_calls
+            : Math.max(d.execution.max_calls, sampleSize * reps * d.execution.max_attempts),
         },
         model: resolveModelConfig(d.model),
         environment: {
@@ -289,7 +316,7 @@ function Builder({ populationId }: { populationId: string }) {
       setD(fullDef);
       await buildPlanForDefinition(fullDef);
     } catch (err: unknown) {
-      setFeedback(`Error: ${err instanceof Error ? err.message : String(err)}`);
+      setFeedback(formatApiError(err));
     } finally {
       setBusy(false);
     }
@@ -329,7 +356,9 @@ function Builder({ populationId }: { populationId: string }) {
         execution: {
           ...cur.execution,
           repetitions: reps,
-          max_calls: Math.max(cur.execution.max_calls, sampleSize * reps * cur.execution.max_attempts),
+          max_calls: callCapEdited
+            ? cur.execution.max_calls
+            : Math.max(cur.execution.max_calls, sampleSize * reps * cur.execution.max_attempts),
         },
         model: resolveModelConfig(cur.model),
         persona: cur.persona ?? { visible_fields: null },
@@ -354,7 +383,7 @@ function Builder({ populationId }: { populationId: string }) {
         method: "POST",
         body: { prompt: raw, save: true },
       });
-      await scenarios.reload();
+      scenarios.reload();
       setSelectedScenarioId(res.scenario_id);
       setSelectedQuestionId("");
       await loadPolicyScenario(res.scenario_id, undefined, false);
@@ -363,7 +392,7 @@ function Builder({ populationId }: { populationId: string }) {
         `Compiled "${res.name}" (${res.location.province_name}). Review or edit parameters, question, and controls below, then click Save & review plan.`,
       );
     } catch (err: unknown) {
-      setFeedback(`Error: ${err instanceof Error ? err.message : String(err)}`);
+      setFeedback(formatApiError(err));
     } finally {
       setBusy(false);
     }
@@ -377,7 +406,7 @@ function Builder({ populationId }: { populationId: string }) {
       await loadPolicyScenario(activeScenario.scenario_id, selectedQuestionId || undefined);
       setFeedback(`Loaded template "${activeScenario.name}".`);
     } catch (err: unknown) {
-      setFeedback(`Error: ${err instanceof Error ? err.message : String(err)}`);
+      setFeedback(formatApiError(err));
     } finally {
       setBusy(false);
     }
@@ -418,14 +447,14 @@ function Builder({ populationId }: { populationId: string }) {
         execution: {
           ...d.execution,
           repetitions: reps,
-          max_calls: Math.max(d.execution.max_calls, sampleSize * reps * d.execution.max_attempts),
+          max_calls: d.execution.max_calls,
         },
         model: resolveModelConfig(d.model),
       };
       setD(fullDef);
       await buildPlanForDefinition(fullDef);
     } catch (err: unknown) {
-      setFeedback(`Error: ${err instanceof Error ? err.message : String(err)}`);
+      setFeedback(formatApiError(err));
     } finally {
       setBusy(false);
     }
@@ -491,6 +520,7 @@ function Builder({ populationId }: { populationId: string }) {
           <div
             style={{
               display: "flex",
+              flexWrap: "wrap",
               gap: 8,
               alignItems: "stretch",
               background: "var(--surface-1)",
@@ -505,7 +535,8 @@ function Builder({ populationId }: { populationId: string }) {
               aria-label="Policy simulation prompt"
               rows={2}
               style={{
-                flex: 1,
+                flex: "1 1 220px",
+                minWidth: 0,
                 padding: "8px 12px",
                 fontSize: "0.95rem",
                 lineHeight: 1.4,
@@ -814,12 +845,21 @@ function Builder({ populationId }: { populationId: string }) {
               <select
                 id="scenario-select"
                 className="small"
+                disabled={busy || running}
                 value={activeScenario?.scenario_id ?? selectedScenarioId}
                 onChange={async (e) => {
                   const newId = e.target.value;
                   setSelectedScenarioId(newId);
                   setSelectedQuestionId("");
-                  await loadPolicyScenario(newId, undefined, true);
+                  setBusy(true);
+                  setFeedback(null);
+                  try {
+                    await loadPolicyScenario(newId, undefined, true);
+                  } catch (err: unknown) {
+                    setFeedback(formatApiError(err));
+                  } finally {
+                    setBusy(false);
+                  }
                 }}
               >
                 {scenarios.data?.items.map((s) => (
@@ -906,8 +946,10 @@ function Builder({ populationId }: { populationId: string }) {
                       value={String(p.value)}
                       onChange={(e) => {
                         const raw = e.target.value;
+                        const wasNumeric = numericParamNames.current.has(p.name) || typeof p.value === "number";
+                        if (wasNumeric) numericParamNames.current.add(p.name);
                         const num = Number(raw);
-                        const nextVal = raw !== "" && !Number.isNaN(num) && typeof p.value === "number" ? num : raw;
+                        const nextVal = wasNumeric && raw.trim() !== "" && Number.isFinite(num) ? num : raw;
                         patch("scenario", {
                           parameters: d.scenario.parameters.map((item, j) =>
                             j === idx ? { ...item, value: nextVal } : item,
@@ -1120,7 +1162,10 @@ function Builder({ populationId }: { populationId: string }) {
                     min={1}
                     max={5000}
                     value={d.execution.max_calls}
-                    onChange={(e) => patch("execution", { max_calls: Math.max(1, Number(e.target.value) || 1) })}
+                    onChange={(e) => {
+                      setCallCapEdited(true);
+                      patch("execution", { max_calls: Math.max(1, Number(e.target.value) || 1) });
+                    }}
                   />
                 </div>
                 <div className="field">

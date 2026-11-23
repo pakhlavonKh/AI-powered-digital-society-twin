@@ -3,7 +3,7 @@
 - **Author:** Koray (Data & Validation Engine)
 - **To:** UI & API Owner / Frontend Team
 - **Date:** 2026-10-30
-- **Scope:** Consumption of Combined Quality Reports (K7) in SocietyTwin Web UI & API (`/populations/{id}/validation`, `/builds/{id}/validation`)
+- **Scope:** Consumption of Combined Quality Reports (K7) in SocietyTwin Web UI & API (`/api/v2/populations/{id}/validation`, `/api/v1/builds/{id}/validation`)
 - **Core Principle:** Backward compatibility with zero required UI redesign.
 
 ---
@@ -29,7 +29,7 @@ The table below describes how existing API endpoints can serve the new validatio
 |---|---|---|---|
 | `/api/v2/populations/{population_id}/validation` | `GET` | `ValidationReport` (`v2` + `dependency_validation`) | **Implemented**: returns 81-province `national/validation.py` report plus live K4 `validate_dependencies()` joint checks. |
 | `/api/v2/data-sources` | `GET` | `DataSources` (`+ optional_modules`) | **Implemented**: includes K1–K7 reference bundle availability and optional module flags (`households`, `enrichment`, `marital_strategy`). |
-| `/v1/builds/{build_id}/validation` | `GET` | `ValidationReport` (`v1`) | Serves historical Ankara v1 builds unchanged. |
+| `/api/v1/builds/{build_id}/validation` | `GET` | `ValidationReport` (`v1`) | Serves historical Ankara v1 builds unchanged. |
 | `/populations/{population_id}/quality-report{,.md}` | `GET` | `CombinedQualityReport` | **Proposed** offline helper (`combined_report.to_ui_dict()` / `.to_markdown()`); not mounted as separate HTTP routes. |
 
 ---

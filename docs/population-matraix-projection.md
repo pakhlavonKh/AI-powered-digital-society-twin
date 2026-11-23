@@ -164,10 +164,7 @@ about httpx remains; no dependency change was made. Local-only verification also
 passed 28 tests with the actual-upstream test explicitly skipped. Final tracked
 diff and new-file whitespace checks passed.
 
-The repository's `pytest.ini` takes precedence over its richer pyproject pytest
-configuration, including the `matraix` marker. Commands explicitly use
-`-c pyproject.toml` to enable the intended strict marker configuration without
-editing unrelated configuration. The isolated relocation test explicitly sets
+*(Note: the earlier `pytest.ini` has been removed in favor of `pyproject.toml`, which configures `--strict-markers` and `matraix` by default.)* Commands in that verification used `-c pyproject.toml` before unification; the isolated relocation test explicitly sets
 UTF-8 for Windows pipes. It copies the package into a temporary site-packages
 layout with no repository data/catalog and proves projection works there without
 importing MatrAIx. An actual wheel build/install was not performed. Production

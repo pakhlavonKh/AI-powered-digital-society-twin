@@ -119,6 +119,7 @@ def test_provisioning_shell_script_verifies_sha256_and_fails_loudly_on_mismatch(
     assert "SHA-256 mismatch" in combined_out
 
 
+@pytest.mark.tuik_package
 def test_reference_package_17_vs_14_table_accounting(tmp_path: Path):
     """Verify the exact 17 registered datasets = 14 standard tables + 3 optional local raw tables."""
     reg = load_evidence_registry()

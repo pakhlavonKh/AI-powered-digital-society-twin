@@ -475,7 +475,7 @@ def get_ankara_transit_fare_bundle() -> BenchmarkBundle:
                 publisher_agency="SocietyTwin Scenario Module (Pakhlavon / Koray)",
                 publication_year=2024,
                 citation="SocietyTwin Project, experiments/policy_scenarios/scenarios/transport_fare_001.yaml.",
-                url="file:///c:/Users/Korai/Desktop/engineering%20design/main/experiments/policy_scenarios/scenarios/transport_fare_001.yaml",
+                url="scenarios://transport_fare_001",
                 geography="06",
                 geography_name="Ankara",
                 sample_size=1000,

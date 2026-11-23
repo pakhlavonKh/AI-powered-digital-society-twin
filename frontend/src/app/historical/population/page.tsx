@@ -20,6 +20,7 @@ import { withBuild } from "@/lib/urls";
 
 const PAGE_SIZES = [25, 50, 100];
 type SortField = "person_id" | "age_group" | "gender" | "marital_status";
+const SORT_FIELDS = new Set<SortField>(["person_id", "age_group", "gender", "marital_status"]);
 
 function categoriesOf(summary: Schemas["Summary"] | undefined) {
   const of = (field: string) => summary?.distributions.find((d) => d.field === field)?.categories.map((c) => c.value) ?? [];
@@ -32,10 +33,12 @@ export default function PopulationPage() {
   const pathname = usePathname();
   const { build, missingBuildId, error: buildError, reload: reloadBuilds } = useBuild();
   const filters = filtersFromParams(params);
-  const sort = (params.get("sort") as SortField) || "person_id";
+  const rawSort = params.get("sort");
+  const sort: SortField = rawSort && SORT_FIELDS.has(rawSort as SortField) ? (rawSort as SortField) : "person_id";
   const direction = params.get("dir") === "desc" ? "desc" : "asc";
   const size = PAGE_SIZES.includes(Number(params.get("size"))) ? Number(params.get("size")) : 50;
-  const page = Math.max(0, Number(params.get("page") ?? 0) || 0);
+  const rawPage = params.get("page") ?? "0";
+  const page = /^\d+$/.test(rawPage.trim()) ? Number(rawPage.trim()) : 0;
   const translations = params.get("tr") === "1";
   const buildId = build?.availability.status === "available" ? build.build_id : null;
   const query = filtersToQuery(filters);

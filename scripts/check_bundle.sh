@@ -3,7 +3,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/../frontend"
 [ -d .next/static ] || { echo "Run a production build first (npx next build)"; exit 1; }
-patterns='SOCIETYTWIN_API_ORIGIN|SOCIETYTWIN_STATE_DIR|SOCIETYTWIN_RUNTIME_PYTHON|MATRAIX_ROOT|_API_KEY|sk-[A-Za-z0-9]{16,}|AIza[0-9A-Za-z_-]{30,}|127\.0\.0\.1:87[0-9]{2}|/Users/|/home/'
+patterns='SOCIETYTWIN_API_ORIGIN|SOCIETYTWIN_STATE_DIR|SOCIETYTWIN_RUNTIME_PYTHON|MATRAIX_ROOT|_API_KEY|sk-[A-Za-z0-9]{16,}|AIza[0-9A-Za-z_-]{30,}|127\.0\.0\.1:(8000|87[0-9]{2})|/Users/|/home/|[A-Za-z]:\\\\Users\\\\'
 if grep -rEl "$patterns" .next/static; then
   echo "FAIL: server configuration or key-shaped strings found in the client bundle"
   exit 1

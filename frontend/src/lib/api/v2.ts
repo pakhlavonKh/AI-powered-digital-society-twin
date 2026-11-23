@@ -32,7 +32,17 @@ export async function v2<T>(path: string, opts: { query?: Query; body?: unknown;
     throw toApiError(err);
   }
   const text = await response.text();
-  const data = text ? JSON.parse(text) : undefined;
+  let data: unknown;
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      if (!response.ok) {
+        throw new ApiError(response.status, `http_${response.status}`, text.slice(0, 200) || `Request failed (${response.status})`);
+      }
+      throw new ApiError(response.status, "invalid_json", "The server returned a non-JSON response.");
+    }
+  }
   if (!response.ok) {
     const env = (data ?? {}) as { error?: { code?: string; message?: string; details?: unknown; request_id?: string } };
     throw new ApiError(response.status, env.error?.code ?? `http_${response.status}`, env.error?.message ?? `Request failed (${response.status})`,

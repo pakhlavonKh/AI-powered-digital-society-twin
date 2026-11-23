@@ -10,6 +10,7 @@ requires-python = ">=3.12,<3.13"
 # Lower bounds only; the tested environment is pinned in requirements-api.lock.
 dependencies = [
   "fastapi>=0.135",
+  "starlette>=0.40",
   "uvicorn>=0.37",
   "pydantic>=2.12",
   "PyYAML>=6.0",

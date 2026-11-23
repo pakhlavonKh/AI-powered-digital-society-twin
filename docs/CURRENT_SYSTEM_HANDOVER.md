@@ -243,8 +243,8 @@ tar -x -f tuik_package.tar -C data\raw\tuik_package --strip-components=1
 Remove-Item tuik_package.tar
 (Get-ChildItem data\raw\tuik_package -File | Measure-Object).Count  # expected: 71
 $env:PYTHONPATH = "src"
-# On Windows use the verified function-level control build in population-data-setup.md.
-# The existing national CLI imports Unix-only resource and fails before argument parsing.
+# python -m societytwin.national works on Windows as well (Unix-only resource imports are guarded).
+# For custom/scripted setup on Windows, see the function-level control build in population-data-setup.md.
 ```
 
 The function-level setup writes control data under ignored `data/processed/national/`; it does not generate a population. For
@@ -342,10 +342,11 @@ text was checked against the local transcription. No 403 response or partial dow
   source files, or copies. Ask TÜİK for clarification if the intended use or redistribution is not covered. No access
   control or download restriction is to be bypassed.
 
-## Tests and verified outcomes
+- *(Superseded on `main` / `fix/post-merge-alignment` — retained below as archival handover context from Prompt 6):* Backend `pyproject.toml` now collects `tests/build` by default, `frontend/openapi.json` & `schema.d.ts` match FastAPI, `python -m societytwin.national` runs on Windows, and staging dirs use shortened hashes so `tests/build/test_workflow.py` avoids Windows 260-char path errors.
 
-Prompt 6 reran all backend test directories explicitly, including `tests/build`, which default pytest recursion
-otherwise excludes because its directory name is `build`. Result: **408 PASS, 7 FAIL, 7 SKIP** in 183.94 seconds.
+## Earlier Prompt 6 Handover Snapshot (Historical Context)
+
+Prompt 6 reran all backend test directories (`408 PASS, 7 FAIL, 7 SKIP` in 183.94 seconds at that checkpoint).
 Population/registry/marital/persona/cohort tests: 157 pass; households: 73 pass; enrichment: 37 pass;
 unified build: 35 pass. These four subsystem groups have zero failures. API/legacy groups contain the recorded failures.
 

@@ -25,8 +25,8 @@ export function filtersFromParams(params: URLSearchParams): Filters {
   }
   const min = params.get("age_min");
   const max = params.get("age_max");
-  if (min !== null && min !== "") out.age_min = Number(min);
-  if (max !== null && max !== "") out.age_max = Number(max);
+  if (min !== null && /^-?\d+$/.test(min.trim())) out.age_min = Number(min.trim());
+  if (max !== null && /^-?\d+$/.test(max.trim())) out.age_max = Number(max.trim());
   if (params.get("adult") === "1") out.adult_only = true;
   return out;
 }

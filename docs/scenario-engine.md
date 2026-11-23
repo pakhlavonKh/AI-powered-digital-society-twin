@@ -65,7 +65,7 @@ flowchart TD
 
 ## 3. Core Modules (`src/scenarios/`)
 
-The Scenario Engine core is implemented in [`src/scenarios/`](file:///d:/Uni/EngDesign/AI-powered-digital-society-twin/src/scenarios):
+The Scenario Engine core is implemented in [`src/scenarios/`](../src/scenarios):
 
 ### 3.1 `schema.py` — Strict Data Modeling
 Defines validated Pydantic models for policy configurations:

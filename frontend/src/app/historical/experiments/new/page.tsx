@@ -203,7 +203,7 @@ function DraftForm() {
           </div>
         ) : null}
       </section>      <section className="card stack" aria-labelledby="s3">
-        <h2 id="s3">3. Execution settings</h2>
+        <h2 id="s3">2. Execution settings</h2>
         <fieldset>
           <legend>Mode</legend>
           <div className="stack">
@@ -240,7 +240,7 @@ function DraftForm() {
           </div>
         </div>
       </section>      <section className="card stack" aria-labelledby="s4">
-        <h2 id="s4">4. Save draft</h2>
+        <h2 id="s4">3. Save draft</h2>
         <div className="field">
           <label htmlFor="name">Draft name</label>
           <input id="name" type="text" maxLength={120} value={form.name} onChange={(e) => set("name", e.target.value)} placeholder="Untitled draft" />
@@ -278,7 +278,7 @@ function DraftView({ draftId }: { draftId: string }) {
     if (!active) return;
     const timer = setInterval(() => detail.reload(), 2000);
     return () => clearInterval(timer);
-  }, [active, detail]);
+  }, [active, detail.reload]);
 
   async function run(label: string, fn: () => Promise<unknown>) {
     setBusy(label);

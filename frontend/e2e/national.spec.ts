@@ -168,3 +168,26 @@ test("validation and data sources report fit, coverage and missingness without s
   await page.goto("/settings");
   await expect(page.getByRole("heading", { name: "Constraint rules" })).toBeVisible();
 });
+
+test("prompt compilation runs free-text experiments and /university handles scenario links end-to-end", async ({ page }) => {
+  await page.goto("/experiments/new");
+  await page.getByLabel("Policy simulation prompt").fill("In your own words explain how residents in Ankara react to bus fares");
+  await page.getByRole("button", { name: "Compile & review plan" }).click();
+  await expect(page.getByRole("heading", { name: "Reviewed execution plan" })).toBeVisible();
+  const run = page.getByRole("button", { name: "Run experiment" });
+  await page.getByRole("checkbox", { name: /I reviewed this plan/ }).check();
+  await run.click();
+  await expect(page).toHaveURL(/\/results\/run_/);
+  await expect(page.getByRole("heading", { name: /Citizen Free-Text Responses/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Subgroup comparison" })).toHaveCount(0);
+
+  await page.goto("/university?scenario=uni_tuition_hike_001");
+  await expect(page.getByText(/Linked scenario:.*Ankara University Tuition/)).toBeVisible();
+  await expect(page.getByRole("tab", { name: /2\. Multi-Semester Policy Dynamics/ })).toHaveAttribute("aria-selected", "true");
+  await page.getByLabel("CRN Replications").fill("4");
+  await page.getByLabel(/Cohort Size \(when not using/).fill("40");
+  await page.getByRole("button", { name: /Run Paired CRN Simulation/ }).click();
+  await expect(page.getByText(/Multi-Semester Policy Impact \(univ_/)).toBeVisible({ timeout: 15000 });
+  await page.getByRole("button", { name: "Clear scenario" }).click();
+  await expect(page.getByText(/Linked scenario:/)).toHaveCount(0);
+});

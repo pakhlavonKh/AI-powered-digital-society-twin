@@ -3,32 +3,41 @@
 from __future__ import annotations
 
 import sqlite3
-from contextlib import closing
+from contextlib import contextmanager
 from pathlib import Path
 
 from societytwin.candidates import generate as generate_candidates
-from societytwin.errors import invalid, not_found, unavailable
+from societytwin.errors import WorkbenchError, invalid, not_found, unavailable
 from societytwin.national.rng import MAX_SEED
-from societytwin.university.db import SCHEMA_VERSION, connect
+from societytwin.university.db import SCHEMA_VERSION
 
 
+@contextmanager
 def _open_existing(db_path: Path):
+    """Open an existing university SQLite registry strictly read-only and map corrupt/partial DBs to 503."""
     if not db_path.is_file():
         raise unavailable(
             "university_registry_unavailable",
             f"University SQLite registry is not present at {db_path}. Import a workbook first.",
         )
-    conn = connect(db_path)
+    try:
+        conn = sqlite3.connect(f"{db_path.resolve().as_uri()}?mode=ro", uri=True)
+        conn.row_factory = sqlite3.Row
+    except sqlite3.DatabaseError as exc:
+        raise unavailable("university_registry_invalid", f"University SQLite database could not be opened: {exc}") from exc
     try:
         has_table = conn.execute(
             "SELECT 1 FROM sqlite_master WHERE type='table' AND name='source_snapshots'"
         ).fetchone()
         if not has_table:
             raise unavailable("university_registry_invalid", "University SQLite database has not been initialized.")
-        return closing(conn)
-    except Exception:
-        conn.close()
+        yield conn
+    except WorkbenchError:
         raise
+    except sqlite3.DatabaseError as exc:
+        raise unavailable("university_registry_invalid", f"University SQLite database schema/read error: {exc}") from exc
+    finally:
+        conn.close()
 
 
 def _snapshot_rows(conn: sqlite3.Connection) -> list[dict]:

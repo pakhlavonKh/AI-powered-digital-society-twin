@@ -221,8 +221,8 @@ def build(config):
         if manifest['identity'] != prepared['identity']:raise BuildError('unified build identity collision')
         return target
     output.mkdir(parents=True,exist_ok=True)
-    with TemporaryDirectory(prefix='.s-',dir=output) as temporary:
-        stage = Path(temporary)/prepared['build_id']
+    with TemporaryDirectory(prefix=".s-", dir=output) as temporary:
+        stage = Path(temporary) / prepared["build_id"]
         stage.mkdir()
         _execute(stage,config,prepared)
         inspect_build(stage)

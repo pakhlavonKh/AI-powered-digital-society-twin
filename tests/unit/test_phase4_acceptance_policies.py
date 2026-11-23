@@ -136,3 +136,24 @@ def test_mandatory_check_failure_can_never_be_restricted(combined_report_1000):
     decision = evaluate_acceptance_policy("policy_a_demographic_survey", report_dict)
     assert decision.acceptance_decision == "rejected"
     assert decision.acceptance_decision != "restricted"
+
+
+def test_policy_c_and_not_evaluable_ui_dict_contracts():
+    from societytwin.validation.policies import _normalize_status
+
+    assert _normalize_status({"status": "not_evaluable", "passed": True}) == "not_evaluable"
+    persona_envelope = {
+        "persona_id": "p-1",
+        "synthetic_id": "RES_001",
+        "province_code": "06",
+        "model_visible": {
+            "age": 35,
+            "sex": "female",
+            "marital_status": "married",
+            "education_level": "bachelors",
+            "labour_status": "employed",
+        },
+        "attributes": [],
+    }
+    decision = evaluate_policy_c_matraix_persona_projection(persona_envelope)
+    assert decision.acceptance_decision == "accepted"

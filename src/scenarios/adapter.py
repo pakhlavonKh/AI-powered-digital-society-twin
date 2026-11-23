@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 from pathlib import Path
 from typing import Any
 
@@ -234,11 +235,23 @@ def scenario_to_experiment_definition(
     if p.subsidized_exemptions_note:
         params.append({"name": "concessions", "label": "Concessions and exemptions", "value": p.subsidized_exemptions_note})
 
-    # Build task options
-    options = [{"id": opt.id, "label": opt.label} for opt in target_q.options]
+    # Build task options constrained to ExperimentDefinition TaskSpec limits
+    options: list[dict[str, str]] = []
+    seen_opt_ids: set[str] = set()
+    max_base_opts = 11 if (target_q.type == "single_choice" and target_q.allow_other) else 12
+    for idx, opt in enumerate(target_q.options[:max_base_opts], start=1):
+        norm_id = re.sub(r"[^a-z0-9_]", "_", opt.id.lower()).strip("_")
+        if not norm_id or not norm_id[0].isalpha():
+            norm_id = f"opt_{norm_id}" if norm_id else f"opt_{idx}"
+        norm_id = norm_id[:49]
+        if norm_id in seen_opt_ids:
+            suffix = f"_{idx}"
+            norm_id = f"{norm_id[: 49 - len(suffix)]}{suffix}"
+        seen_opt_ids.add(norm_id)
+        options.append({"id": norm_id, "label": opt.label[:300]})
     allow_other_text = False
     if target_q.type == "single_choice" and target_q.allow_other:
-        if not any(opt["id"] == "other" for opt in options):
+        if "other" not in seen_opt_ids:
             options.append({"id": "other", "label": "Other"})
         allow_other_text = True
 
@@ -248,12 +261,15 @@ def scenario_to_experiment_definition(
         if name not in _ENFORCED_FILTERS and value not in (None, [], ())
     )
 
+    title_suffix = " (Hypothetical)" if scenario.metadata.hypothetical else ""
+    exp_title = f"{scenario.name[: 160 - len(title_suffix)]}{title_suffix}"
+
     # Return structure matching societytwin.national.experiments.ExperimentDefinition
     return {
-        "title": f"{scenario.name} (Hypothetical)" if scenario.metadata.hypothetical else scenario.name,
+        "title": exp_title,
         "scenario": {
-            "title": scenario.name,
-            "description": shown.description,
+            "title": scenario.name[:160],
+            "description": shown.description[:4000],
             "parameters": params,
             "hypothetical": scenario.metadata.hypothetical,
             "source_note": scenario.metadata.source_note,
