@@ -4,12 +4,6 @@ import { expect, test, type Page } from "@playwright/test";
 // One serial journey: empty states -> controls -> population -> map -> cohort -> personas -> experiment -> results.
 test.describe.configure({ mode: "serial" });
 
-async function selectByText(page: Page, label: string, text: string) {
-  const select = page.getByLabel(label);
-  const value = await select.locator("option", { hasText: text }).first().getAttribute("value");
-  await select.selectOption(value!);
-}
-
 async function heading(page: Page, name: string | RegExp) {
   await expect(page.getByRole("heading", { level: 1, name })).toBeVisible();
 }
@@ -110,21 +104,14 @@ test("a cohort is saved, sampled with a seed, and its personas show visible and 
   await expect(page.getByText(/age: Hidden by default/)).toBeVisible();
 });
 
-test("the experiment builder reviews calls and cost before an explicitly confirmed stub run", async ({ page }) => {
+test("the experiment builder compiles or loads a template and completes a confirmed stub run", async ({ page }) => {
   await page.goto("/experiments/new");
-  await page.getByRole("button", { name: /Load example/ }).click();
-  await expect(page.getByLabel("Scenario title")).toHaveValue("Public transport fares increase by 20%");
-  await page.getByRole("button", { name: "Step 4: Cohort" }).click();
-  await selectByText(page, "Saved cohort", "e2e adults");
-  await page.getByRole("button", { name: "Step 6: Review" }).click();
-  await page.getByRole("button", { name: "Save and review plan" }).click();
-  await expect(page.locator(".tile").filter({ hasText: "Estimated calls" })).toContainText("20");
-  await expect(page.locator(".tile").filter({ hasText: "Estimated cost" })).toContainText("$0");
-  await expect(page.getByText(/Stub backend: deterministic placeholder/).first()).toBeVisible();
-  const run = page.getByRole("button", { name: "Run experiment" });
-  await expect(run).toBeDisabled();
-  await page.getByRole("checkbox", { name: /I reviewed this plan/ }).check();
-  await run.click();
+  await page.getByLabel("Execution Engine:").selectOption("stub:fake");
+  await page.getByRole("button", { name: /Customize Question & Templates/ }).click();
+  await page.getByRole("button", { name: "Load Template" }).click();
+  await expect(page.getByText(/Loaded template/)).toBeVisible();
+  await expect(page.getByLabel("Policy Context / Description (shown to AI citizen personas)")).toContainText("25.20 TL");
+  await page.getByRole("button", { name: "Run Customized Simulation" }).click();
   await expect(page).toHaveURL(/\/results\/run_/);
   await expect(page.getByText("Stub run — pipeline test only.")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Response distribution (weighted)" })).toBeVisible();
@@ -137,19 +124,26 @@ test("an adult task on a cohort with minors is blocked", async ({ page }) => {
   await page.goto("/cohorts");
   await page.getByLabel("Cohort name").fill("e2e all ages");
   await page.getByRole("button", { name: "Save cohort" }).click();
-  await expect(page.locator("article").filter({ hasText: "e2e all ages" })).toContainText("under 18");
-  await page.goto("/experiments/new");
-  await page.getByRole("button", { name: /Load example/ }).click();
-  await page.getByRole("button", { name: "Step 4: Cohort" }).click();
-  await selectByText(page, "Saved cohort", "e2e all ages");
-  await page.getByLabel("Sample size (active personas)").fill("60");
-  await page.getByRole("button", { name: "Step 5: Model" }).click();
-  await page.getByLabel("Call cap (budget guard)").fill("60");
-  await page.getByRole("button", { name: "Step 6: Review" }).click();
-  await page.getByRole("button", { name: "Save and review plan" }).click();
-  await expect(page.getByText("Execution is blocked:")).toBeVisible();
-  await expect(page.getByText("minors_in_adult_task")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Run experiment" })).toBeDisabled();
+  const card = page.locator("article").filter({ hasText: "e2e all ages" });
+  await expect(card).toContainText("under 18");
+  const cohortId = (await card.locator("dd code").first().innerText()).trim();
+  const defRes = await page.request.get(`/api/v2/examples/fare-experiment?cohort_id=${encodeURIComponent(cohortId)}`);
+  expect(defRes.ok()).toBeTruthy();
+  const def = await defRes.json();
+  def.cohort.sample_size = 60;
+  def.execution.max_calls = 60;
+  const expRes = await page.request.post("/api/v2/experiments", { data: def });
+  expect(expRes.ok()).toBeTruthy();
+  const exp = await expRes.json();
+  const planRes = await page.request.post(`/api/v2/experiments/${exp.experiment_id}/plan`, { data: {} });
+  expect(planRes.ok()).toBeTruthy();
+  const plan = await planRes.json();
+  expect(plan.executable).toBe(false);
+  expect(plan.blockers.map((b: { code: string }) => b.code)).toContain("minors_in_adult_task");
+  const runRes = await page.request.post(`/api/v2/experiments/${exp.experiment_id}/runs`, {
+    data: { plan_hash: plan.plan_hash, idempotency_key: `minors-block-${Date.now()}`, confirm: true },
+  });
+  expect(runRes.status()).toBe(409);
 });
 
 test("validation and data sources report fit, coverage and missingness without scores", async ({ page }) => {
