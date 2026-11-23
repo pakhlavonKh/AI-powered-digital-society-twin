@@ -6,9 +6,9 @@
  * `src/societytwin/candidates/__init__.py` (`candidate-development-v1`). `null` always means unknown or missing;
  * an observed zero stays `0`.
  *
- * Simulation types (scenario, run, assignment) are a PROVISIONAL frontend contract: no placement engine or API exists
- * yet. They are documented in docs/university-simulation-ui.md as a proposal for the placement owner to accept or
- * replace.
+ * Simulation types (scenario, run, assignment) describe the browser-fixture explorer contract for `/university/*`.
+ * Counterfactual placement and multi-semester APIs live under `/api/v2/placement/*` and `/api/v2/university/*`,
+ * and read-only SQLite workbook endpoints live under `/api/v2/university-registry/*`.
  */
 
 /** Where a record came from. `fixture` data is synthetic and was never imported from a source workbook. */

@@ -102,6 +102,38 @@ function Validation({ populationId }: { populationId: string }) {
         <div className="table-wrap"><table><caption>Every rule runs on every record</caption><thead><tr><th>Rule</th><th>Description</th><th className="num">Checked</th><th className="num">Violations</th></tr></thead>
           <tbody>{r.constraints.map((c) => <tr key={c.rule_id}><th><code>{c.rule_id}</code></th><td className="small">{c.description}</td><td className="num">{fmtInt(c.checked)}</td>
             <td className="num">{c.violations ? <Badge tone="crit">{fmtInt(c.violations)}</Badge> : "0"}</td></tr>)}</tbody></table></div></section>
+      {r.dependency_validation ? (
+        <section className="card stack" aria-labelledby="dep-h">
+          <div className="card-head" style={{ marginBottom: 0 }}>
+            <h2 id="dep-h">Joint dependency &amp; structural checks</h2>
+            <Badge tone={r.dependency_validation.overall_status === "pass" ? "good" : r.dependency_validation.overall_status === "fail" ? "warn" : "neutral"}>
+              {r.dependency_validation.validator_version} · {r.dependency_validation.overall_status}
+            </Badge>
+          </div>
+          <p className="small muted" style={{ margin: 0 }}>{r.dependency_validation.summary_reason}</p>
+          <div className="table-wrap">
+            <table>
+              <caption>Joint checks evaluate age × marital priors (national proxy) and structural gates without inventing unobserved empirical tables.</caption>
+              <thead><tr><th>Check</th><th>Scope</th><th>Status</th><th className="num">Evaluated</th><th className="num">TVD (records)</th><th>Findings</th></tr></thead>
+              <tbody>
+                {[...r.dependency_validation.supported_joint_checks, ...r.dependency_validation.unverified_relationships].map((chk) => (
+                  <tr key={chk.check_id}>
+                    <th><code>{chk.check_id}</code><div className="small muted">{chk.name}</div></th>
+                    <td className="small">{chk.scope_label}</td>
+                    <td><Badge tone={chk.status === "pass" ? "good" : chk.status === "fail" ? "warn" : "neutral"}>{chk.status}</Badge></td>
+                    <td className="num">{fmtInt(chk.evaluated_records)}</td>
+                    <td className="num">{chk.overall_tvd_records != null ? chk.overall_tvd_records.toFixed(4) : "–"}</td>
+                    <td className="small">{chk.reason}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {r.dependency_validation.documented_discrepancies.length ? (
+            <p className="small muted" style={{ margin: 0 }}>Documented source discrepancies: {r.dependency_validation.documented_discrepancies.join(", ")}</p>
+          ) : null}
+        </section>
+      ) : null}
       <section className="card" aria-labelledby="tol-h"><h2 id="tol-h">Configured tolerances and methodology</h2>
         <dl className="kv">{Object.entries(r.tolerances).map(([k, v]) => <div key={k} style={{ display: "contents" }}><dt><code>{k}</code> = {String(v)}</dt><dd className="small">{r.tolerance_justification[k]}</dd></div>)}</dl>
         <p className="small muted">Not validated here: {r.not_validated.join(" ")}</p>

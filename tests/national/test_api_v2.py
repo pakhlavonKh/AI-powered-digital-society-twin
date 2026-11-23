@@ -39,11 +39,29 @@ def test_generation_summary_filters_and_province_coverage(national_client, popul
     assert c.get(f"/api/v2/populations/{population_id}/records", params={"limit": 500}).status_code == 422
     v = c.get(f"/api/v2/populations/{population_id}/validation", params={"province_code": "06"}).json()
     assert [p["province_code"] for p in v["provinces"]] == ["06"] and v["constraint_violations"] == 0
+    dep = v["dependency_validation"]
+    assert dep["validator_version"] and dep["overall_status"] in ("pass", "fail", "not_evaluable")
+    check_ids = {chk["check_id"] for chk in dep["supported_joint_checks"] + dep["unverified_relationships"]}
+    assert {"joint_age_marital", "joint_sex_age_marital", "joint_household_size_type", "joint_age_education", "joint_age_employment"} <= check_ids
+    ds = c.get("/api/v2/data-sources").json()
+    assert "optional_modules" in ds and set(ds["optional_modules"]) >= {"marital_strategy", "resident_enrichment", "households", "k1_k7_validation"}
     env = c.get("/api/v2/environments/06").json()
     assert "mobility" in env["domains"] and env["structurally_unavailable_datasets"] == []
     env34 = c.get("/api/v2/environments/34").json()
     assert any(d["source_id"] == "tuik_pkg:air_traffic" for d in env34["structurally_unavailable_datasets"])
     assert c.get("/api/v2/environments/99").status_code == 404
+
+
+def test_optional_modules_status_reads_repo_registries(make_settings, tmp_path):
+    from tests.conftest import REPO, make_client
+
+    manifest = tmp_path / "manifest.yaml"
+    manifest.write_text("datasets: []\n", encoding="utf-8")
+    with make_client(make_settings(repo_root=REPO, data_manifest=manifest, state_dir=tmp_path / "state")) as c:
+        opt = c.get("/api/v2/data-sources").json()["optional_modules"]
+        assert opt["marital_strategy"]["configured"] is True and opt["marital_strategy"]["enabled"] is False
+        assert opt["resident_enrichment"]["configured"] is True and "degurba_class" in opt["resident_enrichment"]["attributes"]
+        assert opt["households"]["configured"] is True and opt["households"]["linkage_supported"] is False
 
 
 def test_record_detail_shows_visible_and_hidden_attributes(national_client, population_id):

@@ -135,7 +135,8 @@ def build_router() -> APIRouter:
                 "package": {"directory": "data/raw/tuik_package", "present": s.settings.tuik_package_dir.is_dir(),
                             "files": sum(1 for p in s.settings.tuik_package_dir.iterdir() if p.is_file() and not p.name.startswith("."))
                             if s.settings.tuik_package_dir.is_dir() else 0,
-                            "mapping_file": "data/tuik_package_mapping.yaml", "mapping_present": s.settings.tuik_mapping_path.is_file()}}
+                            "mapping_file": "data/tuik_package_mapping.yaml", "mapping_present": s.settings.tuik_mapping_path.is_file()},
+                "optional_modules": s.optional_modules_status()}
 
     @r.get("/populations", tags=["population"])
     def populations(s: S):
@@ -378,5 +379,57 @@ def build_router() -> APIRouter:
             description="Sweep tuition percentage sensitivity curves with paired CRN replications.")
     def university_sweep_run(body: UniversitySweepRequest, s: S):
         return s.run_university_sweep(body)
+
+    # ------------------------------------------------------------------ read-only university SQLite registry & candidates
+    @r.get("/university-registry/status", tags=["university-registry"],
+           description="Availability and snapshot metadata for the local university SQLite registry.")
+    def university_registry_status(s: S):
+        return s.university_registry_status()
+
+    @r.get("/university-registry/snapshots", tags=["university-registry"],
+           description="List imported university workbook snapshots from SQLite.")
+    def university_registry_snapshots(s: S):
+        return s.list_university_registry_snapshots()
+
+    @r.get("/university-registry/snapshots/{snapshot_id}/programs", tags=["university-registry"],
+           description="Query programs, universities, and latest admissions/tuition for an imported SQLite snapshot.")
+    def university_registry_programs(
+        snapshot_id: str,
+        s: S,
+        university_key: str | None = None,
+        score_type: str | None = None,
+        degree_level: str | None = None,
+        q: str | None = None,
+        offset: Annotated[int, Query(ge=0)] = 0,
+        limit: Annotated[int, Query(ge=1, le=MAX_PAGE)] = 50,
+    ):
+        return s.query_university_registry_programs(snapshot_id, university_key, score_type, degree_level, q, offset, limit)
+
+    @r.get("/university-registry/snapshots/{snapshot_id}/programs/{program_code}", tags=["university-registry"],
+           description="Retrieve full multi-year admissions, tuition, and quality issues for one registry program.")
+    def university_registry_program_detail(snapshot_id: str, program_code: str, s: S):
+        return s.get_university_registry_program(snapshot_id, program_code)
+
+    @r.get("/university-registry/snapshots/{snapshot_id}/issues", tags=["university-registry"],
+           description="List importer data quality issues recorded for a university registry snapshot.")
+    def university_registry_issues(
+        snapshot_id: str,
+        s: S,
+        severity: str | None = None,
+        review_status: str | None = None,
+        offset: Annotated[int, Query(ge=0)] = 0,
+        limit: Annotated[int, Query(ge=1, le=200)] = 100,
+    ):
+        return s.list_university_registry_issues(snapshot_id, severity, review_status, offset, limit)
+
+    @r.get("/university-registry/candidates/preview", tags=["university-registry"],
+           description="Generate a deterministic synthetic applicant cohort preview (candidate-development-v1).")
+    def university_registry_candidates_preview(
+        s: S,
+        seed: Annotated[int, Query(ge=0, le=MAX_SEED)] = 42,
+        size: Annotated[int, Query(ge=1, le=500)] = 50,
+        snapshot_id: str | None = None,
+    ):
+        return s.preview_university_candidates(seed=seed, size=size, snapshot_id=snapshot_id)
 
     return r

@@ -1,9 +1,9 @@
 # University Simulation UI & Results Explorer
 
-> **Status:** working frontend on **fixture data**. No university registry, candidate or placement API exists yet
-> (`frontend/openapi.json` has no such paths), so every page runs against a deterministic synthetic fixture behind a
-> data-source adapter. The API adapter is a placeholder that reports *pending backend integration*; it never guesses an
-> endpoint. Fixture results come from an **illustrative fixture allocation**, not from a placement engine.
+> **Status:** split between two tracks being unified:
+> - `/university` (**University Sim**) runs live counterfactual placement (`/api/v2/placement/*`) and multi-semester policy simulation (`/api/v2/university/*`) backed by `src/scenarios/{placement,university}/` and SQLite run persistence (`NationalRegistry`).
+> - `/api/v2/university-registry/*` exposes read-only endpoints over the imported workbook SQLite registry (`src/societytwin/university/db.py`) and `candidate-development-v1` preview (`src/societytwin/candidates/`).
+> - `/university/{programs,candidates,scenarios,results,compare}` currently run against the deterministic browser fixture adapter (`fixture:university-ui-v1` + `fixtures/allocator.ts`) until their frontend types and API adapter (`apiSource.ts`) are wired to the live SQLite & placement endpoints.
 
 Owner: Sam (frontend). Registry schema and candidate handoff: Bejan (`feature/university-sqlite`). Placement engine,
 eligibility and allocation rules: Pakhlavon (per `docs/candidate-population.md` on that branch).
@@ -19,9 +19,10 @@ eligibility and allocation rules: Pakhlavon (per `docs/candidate-population.md` 
 | `/university/results` | Placement Results | Summary metrics, six charts, unplaced candidates, run provenance and result validation. |
 | `/university/compare` | Scenario Comparison | Compatibility gate, B − A differences, comparison charts, program and candidate-level changes. |
 
-The sidebar group **University Simulation** links all five pages. On `/university/*` the top bar shows the registry
-snapshot, the data origin (fixture/API) and the execution mode. Provenance, missing-data and validation panels appear
-on every page that shows data.
+The sidebar links `/university` under **Experiments** (`University Sim`) and the five explorer views under
+**University Simulation**, with cross-links in `UniversityBar`, on `/university`, and on the Dashboard. On
+`/university/*` the top bar shows the registry snapshot, the data origin (fixture/API) and the execution mode. Provenance,
+missing-data and validation panels appear on every page that shows data.
 
 URL state: `snapshot` (registry snapshot; absent = newest), and per page —
 programs: `year` (absent = latest, `all`), `score`, `scholarship`, `university`, `type`, `lang` (repeatable), `q`,
@@ -188,13 +189,12 @@ affect the university pages.
 - Program search, filtering and paging run in the browser over the whole catalogue (fine for ~1,300 programs).
 - Score-type folding (SÖZ/SOZ, DİL/DIL) is a UI assumption.
 
-## 9. Backend dependencies still open
+## 9. Backend integration status
 
-| Dependency | Needed for | Owner (per team docs) |
+| Dependency | Status | Notes |
 |---|---|---|
-| Read-only registry API (snapshots, catalogue or paged programs, program detail, quality issues) | Program Explorer on real data | Pakhlavon (API) with Bejan (registry) |
-| Candidate cohort API or file handoff, including **ranked preferences** | Candidate Explorer on real data | Bejan / open decision |
-| Placement engine and scenario execution API (submit, status, assignment-level results, reasons) | Scenario execution, Results, Comparison | Pakhlavon |
-| Agreed score-type vocabulary between registry and candidates | Matching and eligibility | Bejan / Pakhlavon |
-| Acceptance or replacement of the provisional scenario and result contracts above | Removing the provisional labels | Pakhlavon, reviewed by Sam |
-| Scholarship-availability and preference-change mechanisms | Presets D and E | Not assigned |
+| Read-only registry API (`snapshots`, paged `programs`, program detail, `issues`) | **Implemented** (`/api/v2/university-registry/*`) | `apiSource.ts` adapter mapping into `lib/university/types.ts` still pending |
+| Candidate cohort preview API (`candidate-development-v1`) | **Implemented** (`/api/v2/university-registry/candidates/preview`) | Ranked preferences generation remains open |
+| Placement engine and multi-semester scenario execution API | **Implemented** (`/api/v2/placement/*`, `/api/v2/university/*`) | Serves `/university` Studio; mapping `apiSource.ts` / explorer schemas remains open |
+| Agreed score-type vocabulary (`SÖZ`/`SOZ`, `DİL`/`DIL`, `TYT`) | Open decision | `lib/university/util.ts` folds accents cleanly in UI |
+| Scholarship-availability and preference-change presets in explorer | Implemented on `/university` (`aid_budget_change_pct`); fixture presets D/E remain disabled | Awaits explorer API cutover |

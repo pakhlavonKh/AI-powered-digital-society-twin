@@ -1,6 +1,6 @@
-# Architecture Reference (v2, PROPOSED)
+# Architecture Reference (v2)
 
-> **Status: PROPOSED**, awaiting instructor and team approval. Nothing is implemented yet.
+> **Status:** Initial v2 architecture blueprint; core national pipeline (`src/societytwin/national/`), API (`/api/v1`, `/api/v2`), frontend workbench (`frontend/`), Scenario Engine (`src/scenarios/`), university SQLite/placement (`src/societytwin/university/`, `candidates/`), build/enrichment/households (`build/`, `enrichment/`, `households/`), and validation (`evidence/`, `validation/`) modules are implemented. See [docs/national-pipeline.md](national-pipeline.md), [docs/research-workbench.md](research-workbench.md), and [docs/scenario-engine.md](scenario-engine.md) for current implemented details.
 >
 > This is the **module and interface reference**. The reasoning behind each decision, the diagrams (system context, data flow, population generation, persona-to-agent activation, experiment lifecycle, deployment), and the MVP and roadmap are in the **[SocietyTwin v2 Architecture Report](societytwin-v2-architecture.md)**.
 >

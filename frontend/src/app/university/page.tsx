@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Notice } from "@/components/Notices";
 import { PageHeader } from "@/components/PageHeader";
@@ -14,6 +15,7 @@ import {
   v2,
   type PlacementProgramsCatalog,
   type PlacementRunResponse,
+  type UniversityRegistryStatus,
   type UniversityRunResponse,
   type UniversitySweepResponse,
 } from "@/lib/api/v2";
@@ -62,6 +64,7 @@ function UniversitySimulatorWorkspace() {
   const [runningUniversity, setRunningUniversity] = useState(false);
   const [sweepData, setSweepData] = useState<UniversitySweepResponse | null>(null);
   const [runningSweep, setRunningSweep] = useState(false);
+  const [regStatus, setRegStatus] = useState<UniversityRegistryStatus | null>(null);
 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -69,15 +72,17 @@ function UniversitySimulatorWorkspace() {
     let cancelled = false;
     async function loadInitial() {
       try {
-        const [cat, pList, uList] = await Promise.all([
+        const [cat, pList, uList, reg] = await Promise.all([
           v2<PlacementProgramsCatalog>("/placement/programs"),
           v2<{ items: PlacementRunResponse[] }>("/placement/runs"),
           v2<{ items: UniversityRunResponse[] }>("/university/runs"),
+          v2<UniversityRegistryStatus>("/university-registry/status").catch(() => null),
         ]);
         if (cancelled) return;
         setCatalog(cat);
         setPlacementRuns(pList.items);
         setUniversityRuns(uList.items);
+        if (reg && typeof reg.available === "boolean") setRegStatus(reg);
         if (pList.items.length > 0) {
           const detail = await v2<PlacementRunResponse>(`/placement/runs/${pList.items[0].run_id}`);
           if (!cancelled) setActivePlacement(detail);
@@ -639,6 +644,30 @@ function UniversitySimulatorWorkspace() {
           </div>
         </section>
       ) : null}
+
+      <section className="card stack" aria-labelledby="uni-explorer-links">
+        <div className="card-head" style={{ marginBottom: 0 }}>
+          <h3 id="uni-explorer-links" style={{ margin: 0 }}>University Simulation Explorer &amp; SQLite Registry</h3>
+          <Badge tone={regStatus?.available ? "good" : "neutral"}>
+            {regStatus?.available
+              ? `SQLite registry: ${regStatus.snapshots.length} snapshot(s)`
+              : "SQLite registry: optional / not imported"}
+          </Badge>
+        </div>
+        <p className="small muted" style={{ margin: 0 }}>
+          This studio executes live counterfactual placement and multi-semester simulations via{" "}
+          <code>/api/v2/placement/*</code> and <code>/api/v2/university/*</code>. Browse institutional metadata, synthetic
+          candidates, and fixture comparisons in the sibling explorer views (read-only workbook SQLite APIs are at{" "}
+          <code>/api/v2/university-registry/*</code>):
+        </p>
+        <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
+          <Link className="button small" href="/university/programs">Programs</Link>
+          <Link className="button small" href="/university/candidates">Candidates</Link>
+          <Link className="button small" href="/university/scenarios">Scenario Setup</Link>
+          <Link className="button small" href="/university/results">Placement Results</Link>
+          <Link className="button small" href="/university/compare">Compare Scenarios</Link>
+        </div>
+      </section>
     </div>
   );
 }

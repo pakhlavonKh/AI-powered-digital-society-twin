@@ -251,6 +251,35 @@ export type TableFit = {
 };
 export type ProvinceCalibration = { province_code: string; calibrated: boolean; margins: string[]; weight_ratio_bounds?: [number, number];
   margins_not_calibrated?: { margin: string; records: number; converged?: boolean; reason: string }[] };
+export type DependencyJointCheck = {
+  check_id: string;
+  name: string;
+  dimensions: string[];
+  category: string;
+  status: string;
+  scope: string;
+  scope_label: string;
+  reason: string;
+  reference_dataset_id?: string | null;
+  reference_title?: string | null;
+  evaluated_records: number;
+  overall_tvd_records?: number | null;
+  overall_tvd_weighted?: number | null;
+  max_abs_z?: number | null;
+  structural_zero_violations?: string[];
+  notes?: string[];
+};
+export type DependencyValidation = {
+  report_schema_version: string;
+  validator_version: string;
+  geography_code: string;
+  overall_status: string;
+  status_counts: Record<string, number>;
+  summary_reason: string;
+  supported_joint_checks: DependencyJointCheck[];
+  unverified_relationships: DependencyJointCheck[];
+  documented_discrepancies: string[];
+};
 export type ValidationReport = {
   method_version: string; population_id: string; statement: string; tolerances: Record<string, number>; tolerance_justification: Record<string, string>;
   national: { scope: string; province_count: number; province_reference_count: number; tables: TableFit[]; note?: string | null };
@@ -259,6 +288,7 @@ export type ValidationReport = {
     cross_source_checks: { name: string; year: number; root_table: number; context: number; difference: number; passed: boolean; detail: string }[] }[];
   constraints: { rule_id: string; kind: string; description: string; checked: number; violations: number; examples: { synthetic_id: string; detail: string }[] }[];
   constraint_violations: number; weights: Weights; not_validated: string[];
+  dependency_validation?: DependencyValidation;
 };
 
 export type Discrepancy = { dataset: string | null; field: string; claimed: unknown; actual: unknown; note: string };
@@ -297,8 +327,15 @@ export type ControlsStatus = { status: "built" | "not_built" | "invalid"; detail
   tables?: ControlTable[]; sources?: Source[]; inputs?: { path: string; role: string; sha256: string; bytes: number }[]; warnings?: string[];
   context_indicators?: number; context_observations?: number; context_domains?: Record<string, number>; multi_year_observations?: number;
   projection_observations?: number; audits?: (PackageAudit | CrossSourceAudit)[]; package_dir_present: boolean; builder_version: string };
+export type OptionalModules = {
+  marital_strategy: { configured: boolean; registry_version?: string; enabled: boolean; strategy?: string | null; seed_present: boolean };
+  resident_enrichment: { configured: boolean; registry_version?: string; enabled: boolean; attributes: string[]; sources_present: Record<string, boolean> };
+  households: { configured: boolean; size_enabled: boolean; type_size_enabled: boolean; linkage_supported: boolean; linkage_evidence_present: boolean; sources_present: Record<string, boolean> };
+  k1_k7_validation: { district_csv_present: boolean; built_reference_package_present: boolean; joint_dependency_checks_active: boolean; note: string };
+};
 export type DataSources = { controls: ControlsStatus; root_manifest: { path: string; status: string; datasets: unknown[]; note: string; error: string | null };
-  package: { directory: string; present: boolean; files?: number; mapping_file: string; mapping_present: boolean } };
+  package: { directory: string; present: boolean; files?: number; mapping_file: string; mapping_present: boolean };
+  optional_modules?: OptionalModules };
 
 export type Overview = {
   controls: { status: string; built_at: string | null; tables: string[] }; populations: PopulationListItem[]; default_population_id: string | null;
@@ -604,5 +641,20 @@ export type UniversitySweepResponse = {
     mean_net_tuition_revenue: number;
     mean_aid_disbursed: number;
   }[];
+};
+
+export type UniversityRegistryStatus = {
+  available: boolean;
+  db_path: string;
+  schema_version: number | null;
+  snapshots: {
+    snapshot_id: string;
+    source_filename: string;
+    imported_at: string;
+    verification_status: string;
+    counts: { universities: number; programs: number; open_quality_issues: number };
+    admission_years: number[];
+  }[];
+  note: string;
 };
 

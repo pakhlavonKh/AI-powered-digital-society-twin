@@ -43,7 +43,7 @@ function SampleForm({ cohort, onDone }: { cohort: Cohort; onDone: () => void }) 
           </select></div>
         {method === "stratified" ? <div className="field"><label htmlFor={`st-${cohort.cohort_id}`}>Strata</label>
           <select id={`st-${cohort.cohort_id}`} value={strata} onChange={(e) => setStrata(e.target.value)}>
-            {["province_code", "sex", "age_group", "marital_status", "education_level"].map((f) => <option key={f} value={f}>{f}</option>)}</select></div> : null}
+            {["province_code", "sex", "age_group", "marital_status", "education_level", "labour_status", "urbanicity"].map((f) => <option key={f} value={f}>{f}</option>)}</select></div> : null}
         <div className="field"><label htmlFor={`sd-${cohort.cohort_id}`}>Seed</label>
           <input id={`sd-${cohort.cohort_id}`} type="number" min={0} value={seed} onChange={(e) => setSeed(Number(e.target.value))} /></div>
       </div>

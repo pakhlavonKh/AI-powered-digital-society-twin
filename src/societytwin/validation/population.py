@@ -1453,7 +1453,8 @@ def validate_population(
                 "(flag D2_ANKARA_EDUCATION_15PLUS_VS_ADNKS_15PLUS_2025); within-sex shares are compared "
                 f"with per-sex universe scaling (male={edu_scale_by_sex[('male',)]:.6f}, female={edu_scale_by_sex[('female',)]:.6f}).",
                 "Published 'unknown' category (17,626 in Ankara 2025: 7,474 male, 10,152 female) is preserved and validated.",
-                "Minimum-completion-age structural zeros (e.g. higher_education >= 20, masters >= 22, doctorate >= 25) are enforced.",
+                "Minimum-completion-age structural zeros (primary >= 9, basic_8yr >= 13, lower_secondary >= 13, "
+                "upper_secondary >= 16, higher_education >= 18, masters >= 21, doctorate >= 24) are enforced.",
             ),
         )
     )
@@ -1786,8 +1787,8 @@ def validate_population(
                 status="not_evaluable",
                 reason=(
                     "Not evaluable on resident-only population: (1) ankara_household_types_2025 reports 1,987,216 private "
-                    "households (unit='household': one_person=407,306, nuclear_family=1,312,420, extended_family=193,972, "
-                    "non_family_multi_person=73,518; average_household_size=2.863618 -> 5,690,627 private-household residents), "
+                    "households (unit='household': one_person=400,484, nuclear_family=1,312,420, extended_family=205,415, "
+                    "non_family_multi_person=68,897; average_household_size=2.863618 -> 5,690,627 private-household residents), "
                     "leaving an unreconciled 219,693-person gap vs Ankara's 5,910,320 ADNKS resident population "
                     "(flag D1_ANKARA_HH_VS_RESIDENT_POP_2025); and (2) resident records keep household_type=None (UNAVAILABLE) "
                     "because person-level household-type membership is not observed in provincial ADNKS tables."

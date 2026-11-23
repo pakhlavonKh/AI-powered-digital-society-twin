@@ -90,7 +90,7 @@ an experiment runs only the personas of a bounded, seeded cohort sample after an
 | Runner: stub backend; MatrAIx PersonaJsonSurvey with arbitrary personas (fake transport verified); replay cache | **Implemented** |
 | MatrAIx live provider transport | **Partially implemented**: gated, never run against a provider |
 | Weighted aggregation with Kish effective n, intervals, small-group suppression | **Implemented** |
-| UI: Dashboard, Population, Cohorts, Personas, New Experiment, Experiments, Results, Validation, Data Sources, Settings | **Implemented** |
+| UI: Dashboard, Population, Cohorts, Personas, New Experiment, University Sim (`/university` + `/university/*` explorer), Experiments, Results, Validation, Data Sources, Settings | **Implemented** |
 | Real data for all 81 provinces: age group × sex (root), marital status, education and settlement type, 2016–2025 | **Implemented** from the TÜİK province package (2025 for every province at the default reference year) |
 | Province context: 472–497 package indicators per province in 13 domains, with published periods and projections kept apart | **Implemented** |
 | Labour status, household size and household type on real data | **Not available**: the package publishes labour-force *rates* and household *counts*, not persons by status or household (§3.4) |
@@ -480,11 +480,15 @@ content and file checksums). Same seed, controls and size reproduce the same pop
 
 ## 13. API (`/api/v2`)
 
-`GET overview`, `capabilities`, `geography/provinces`, `environments/{code}`, `controls`, `data-sources`;
+`GET overview`, `capabilities`, `geography/provinces`, `environments/{code}`, `controls`, `data-sources` (includes `optional_modules` sidecar/K1–K7 status);
 `POST controls/build`; `GET|POST populations`; `GET populations/{id}`, `/summary`, `/records`, `/records/{sid}`,
-`/validation`; `POST cohorts/preview`; `GET|POST cohorts`; `GET cohorts/{id}`; `POST cohorts/{id}/samples`;
-`GET samples/{id}`, `/personas`; `GET examples/fare-experiment`; `GET|POST experiments`; `GET experiments/{id}`;
-`POST experiments/{id}/plan`, `/runs`; `GET runs`, `runs/{id}`, `/responses`, `/aggregate`; `POST runs/{id}/replay`.
+`/validation` (includes K4 `dependency_validation` checks); `POST cohorts/preview`; `GET|POST cohorts`; `GET cohorts/{id}`; `POST cohorts/{id}/samples`;
+`GET samples/{id}`, `/personas`; `GET|POST scenarios`, `POST scenarios/from-prompt`, `GET scenarios/{id}`, `/experiment-definition`;
+`GET examples/fare-experiment`; `GET|POST experiments`; `GET experiments/{id}`; `POST experiments/{id}/plan`, `/runs`;
+`GET runs`, `runs/{id}`, `/responses`, `/text-summary`, `/aggregate`; `POST runs/{id}/replay`;
+`GET placement/programs`, `GET|POST placement/runs`, `GET placement/runs/{id}`, `POST placement/compare`;
+`GET|POST university/runs`, `GET university/runs/{id}`, `POST university/sweep`;
+`GET university-registry/status`, `/snapshots`, `/snapshots/{id}/programs`, `/snapshots/{id}/programs/{code}`, `/snapshots/{id}/issues`, `/candidates/preview`.
 Filters are query parameters (`province_codes`, `age_min`, `age_max`, `sexes`, `marital_statuses`, `adult_only`, …);
 records are paged server-side (≤ 200). Mutations are accepted from loopback clients only. `/api/v1` is unchanged and
 serves the historical Ankara workbench under `/historical` in the UI.

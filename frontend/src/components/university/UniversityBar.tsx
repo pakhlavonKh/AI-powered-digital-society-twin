@@ -1,11 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useSelectedSnapshot, useUniversityCapabilities } from "@/lib/university/context";
 import { Badge } from "../StatusBadge";
 import { SourceBadge } from "./common";
 
-/** Top bar for /university: which registry snapshot is in use, and whether data and execution are real or fixtures. */
+/** Top bar for /university/* explorer pages: shows active snapshot, fixture vs API provenance, and link to /university studio. */
 export function UniversityBar() {
   const { snapshot, snapshots, missingId, loading, error } = useSelectedSnapshot();
   const caps = useUniversityCapabilities();
@@ -37,7 +38,16 @@ export function UniversityBar() {
             : exec.mode === "api" ? <Badge tone="good" glyph="✓" title={exec.detail}>Execution: placement API</Badge>
               : <Badge tone="warn" glyph="!" title={exec.detail}>Execution unavailable</Badge>
         ) : null}
-        {caps.data && caps.data.origin === "fixture" ? <Badge tone="warn" glyph="·" title="No registry or placement endpoint exists in the SocietyTwin API yet.">Registry API: pending backend</Badge> : null}
+        {caps.data && caps.data.origin === "fixture" ? (
+          <Badge
+            tone="info"
+            glyph="·"
+            title="This sub-explorer uses fixture:university-ui-v1; live SQLite registry queries (/api/v2/university-registry/*) and placement simulation (/university) are available."
+          >
+            Explorer mode: UI fixtures
+          </Badge>
+        ) : null}
+        <Link className="button small" href="/university">Placement Studio →</Link>
       </div>
       {missingId ? <Badge tone="crit" glyph="!">Snapshot {missingId} does not exist; nothing else was selected</Badge> : null}
       {error ? <Badge tone="crit" glyph="!">Snapshots unavailable: {error.message}</Badge> : null}

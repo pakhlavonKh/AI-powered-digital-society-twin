@@ -15,9 +15,9 @@ The SocietyTwin Validation Layer (Phases 3 through 7) produces comprehensive, mu
 2. **Multidimensional Dependency Validation (K4):** Evaluates joint distributions (`age × marital_status`, `sex × age × marital_status`, `household_size × household_type`, `age × education`) against national empirical proxies or structural zeros.
 3. **Simulation Results Evaluation (K6):** Evaluates persona responses to policy interventions (such as the Ankara 20% fare increase), reporting weighted distributions, subgroup breakdowns, failure audits, and behavioral benchmark comparisons.
 
-To ensure seamless integration with the existing UI and FastAPI routes (`src/societytwin/api/app.py` and `src/societytwin/api/v2.py`), the validation layer provides:
-- The full rich Pydantic model: [`CombinedQualityReport`](file:///c:/Users/Korai/Desktop/engineering%20design/main/src/societytwin/validation/reports.py#L398)
-- A drop-in UI dictionary serializer: [`CombinedQualityReport.to_ui_dict()`](file:///c:/Users/Korai/Desktop/engineering%20design/main/src/societytwin/validation/reports.py#L436) that matches the existing [`ValidationReport`](file:///c:/Users/Korai/Desktop/engineering%20design/main/src/societytwin/api/schemas.py#L317) Pydantic schema in `src/societytwin/api/schemas.py`.
+To connect validation reporting with the web UI and FastAPI routes (`src/societytwin/api/app.py` and `src/societytwin/api/v2.py`):
+- **Integrated into `/api/v2/populations/{population_id}/validation`:** `NationalService._dependency_validation()` runs `validate_dependencies(..., include_marginal_report=False)` from [`validation/dependencies.py`](../src/societytwin/validation/dependencies.py) and returns `dependency_validation` alongside the 81-province source-fit report rendered on `/validation`. Optional module and K1–K7 reference readiness is also surfaced on `/api/v2/data-sources` (`optional_modules`).
+- **Standalone full K7 helper:** [`CombinedQualityReport`](../src/societytwin/validation/reports.py) and [`CombinedQualityReport.to_ui_dict()`](../src/societytwin/validation/reports.py) produce offline multi-phase quality bundles and `/api/v1`-shaped payloads for research scripts (proposed `/populations/{id}/quality-report` and `/quality-report.md` routes are not exposed as standalone API paths).
 
 ---
 
@@ -25,12 +25,12 @@ To ensure seamless integration with the existing UI and FastAPI routes (`src/soc
 
 The table below describes how existing API endpoints can serve the new validation artifacts:
 
-| Endpoint | Method | Existing Response Model | Integration Behavior |
+| Endpoint | Method | Response | Integration Status |
 |---|---|---|---|
-| `/populations/{population_id}/validation` | `GET` | `dict` (unconstrained) | Returns `generate_combined_quality_report(population).to_ui_dict()` directly, or the full `model_dump()`. |
-| `/v1/builds/{build_id}/validation` | `GET` | `ValidationReport` | Fully satisfied by `combined_report.to_ui_dict()`. Populates `metrics`, `checks`, `unavailable_evidence`, `reference_tables`, and `acceptance_note`. |
-| `/populations/{population_id}/quality-report` *(Proposed)* | `GET` | `CombinedQualityReport` | Returns the complete multidimensional JSON report with explicit failure reasons, validation gaps, and simulation benchmarks. |
-| `/populations/{population_id}/quality-report.md` *(Proposed)* | `GET` | `text/markdown` | Returns `combined_report.to_markdown()` for direct rendering in UI documentation panels or modal popups. |
+| `/api/v2/populations/{population_id}/validation` | `GET` | `ValidationReport` (`v2` + `dependency_validation`) | **Implemented**: returns 81-province `national/validation.py` report plus live K4 `validate_dependencies()` joint checks. |
+| `/api/v2/data-sources` | `GET` | `DataSources` (`+ optional_modules`) | **Implemented**: includes K1–K7 reference bundle availability and optional module flags (`households`, `enrichment`, `marital_strategy`). |
+| `/v1/builds/{build_id}/validation` | `GET` | `ValidationReport` (`v1`) | Serves historical Ankara v1 builds unchanged. |
+| `/populations/{population_id}/quality-report{,.md}` | `GET` | `CombinedQualityReport` | **Proposed** offline helper (`combined_report.to_ui_dict()` / `.to_markdown()`); not mounted as separate HTTP routes. |
 
 ---
 

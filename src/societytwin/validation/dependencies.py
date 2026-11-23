@@ -1100,7 +1100,7 @@ def evaluate_age_education(
             structural_zero_violations=tuple(structural_violations[:20]),
             notes=(
                 "Empirical joint distribution unobserved in TÜİK published tables; benchmark not invented.",
-                "Evaluated deterministic minimum completion ages: primary>=11, lower_sec>=14, high_school>=17, higher_ed>=20, masters>=22, doctorate>=25.",
+                "Evaluated deterministic minimum completion ages: primary>=9, basic_8yr>=13, lower_sec>=13, upper_sec>=16, higher_ed>=18, masters>=21, doctorate>=24.",
             ),
         )
 

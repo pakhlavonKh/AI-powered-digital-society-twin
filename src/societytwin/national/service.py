@@ -239,10 +239,114 @@ class NationalService:
         report = loaded.validation
         if report is None:
             report = validate(loaded.columns(), loaded.manifest, self.store())
+        report = dict(report)
         if province_code:
             code = geo.normalize_code(province_code)
-            report = dict(report, provinces=[p for p in report["provinces"] if p["province_code"] == code])
+            report["provinces"] = [p for p in report["provinces"] if p["province_code"] == code]
+        if "dependency_validation" not in report and loaded.table.num_rows > 0:
+            report["dependency_validation"] = self._dependency_validation(loaded)
         return json.loads(dumps(report))
+
+    def _dependency_validation(self, loaded) -> dict:
+        from societytwin.validation.dependencies import validate_dependencies
+
+        dep = validate_dependencies(
+            {"columns": loaded.columns(), "manifest": loaded.manifest},
+            include_marginal_report=False,
+            repo_root=self.settings.repo_root,
+            tuik_package_dir=self.settings.tuik_package_dir,
+        )
+        raw = dep.model_dump(mode="json")
+        return {
+            "report_schema_version": raw["report_schema_version"],
+            "validator_version": raw["validator_version"],
+            "geography_code": raw["geography_code"],
+            "overall_status": raw["overall_status"],
+            "status_counts": raw["status_counts"],
+            "summary_reason": raw["summary_reason"],
+            "supported_joint_checks": raw["supported_joint_checks"],
+            "unverified_relationships": raw["unverified_relationships"],
+            "documented_discrepancies": raw["documented_discrepancies"],
+        }
+
+    def optional_modules_status(self) -> dict:
+        data_dir = self.settings.repo_root / "data"
+        dep_path = self.settings.dependency_registry_path or DEFAULT_REGISTRY_PATH
+        marital_info: dict = {"configured": False, "enabled": False, "strategy": None, "seed_present": False}
+        if dep_path.is_file():
+            dep = load_registry(dep_path)
+            ms = dep.marital_strategy
+            marital_info = {
+                "configured": True,
+                "registry_version": dep.registry_version,
+                "enabled": bool(ms and ms.enabled),
+                "strategy": ms.model_version if ms else None,
+                "seed_present": bool(ms and (self.settings.repo_root / ms.source_file).is_file()),
+            }
+
+        ext_path = data_dir / "resident_extension_registry.yaml"
+        enrichment_info: dict = {"configured": False, "enabled": False, "attributes": [], "sources_present": {}}
+        if ext_path.is_file():
+            from societytwin.enrichment.registry import load_registry as load_ext
+
+            ext = load_ext(ext_path)
+            enrichment_info = {
+                "configured": True,
+                "registry_version": ext.registry_version,
+                "enabled": any(m.enabled for m in ext.modules.values()),
+                "attributes": sorted(ext.attributes),
+                "sources_present": {
+                    k: (self.settings.repo_root / a.source.path).is_file()
+                    for k, a in ext.attributes.items()
+                },
+            }
+
+        hh_path = data_dir / "household_registry.yaml"
+        hht_path = data_dir / "household_type_size_registry.yaml"
+        hh_link_path = data_dir / "household_linkage_evidence.yaml"
+        households_info: dict = {
+            "configured": hh_path.is_file() or hht_path.is_file(),
+            "size_enabled": False,
+            "type_size_enabled": False,
+            "linkage_supported": False,
+            "linkage_evidence_present": hh_link_path.is_file(),
+            "sources_present": {},
+        }
+        if hh_path.is_file():
+            from societytwin.households.registry import load_registry as load_hh
+
+            hh = load_hh(hh_path)
+            households_info["size_enabled"] = bool(hh.module.enabled)
+            households_info["sources_present"]["household_size"] = (self.settings.repo_root / hh.source.source_file).is_file()
+        if hht_path.is_file():
+            from societytwin.households.type_size_registry import load_type_size_registry
+
+            hht = load_type_size_registry(hht_path)
+            households_info["type_size_enabled"] = bool(hht.enabled)
+            households_info["sources_present"]["household_type_size_national"] = (
+                self.settings.repo_root / hht.national.path
+            ).is_file()
+            households_info["sources_present"]["household_type_ankara"] = (
+                self.settings.repo_root / hht.ankara_types.path
+            ).is_file()
+
+        district_csv = self.settings.tuik_package_dir / "ankara_district_population_and_growth.csv"
+        k2_manifest = data_dir / "reference_package_k2_v1" / "manifest.json"
+        k1_k7_info = {
+            "district_csv_present": district_csv.is_file(),
+            "built_reference_package_present": k2_manifest.is_file(),
+            "joint_dependency_checks_active": True,
+            "note": (
+                "K4 joint dependency checks run live in /api/v2/populations/{id}/validation; "
+                "K3 full 14-table reference bundle requires ankara_district_population_and_growth.csv."
+            ),
+        }
+        return {
+            "marital_strategy": marital_info,
+            "resident_enrichment": enrichment_info,
+            "households": households_info,
+            "k1_k7_validation": k1_k7_info,
+        }
 
     # ================================================================ cohorts
     def preview_cohort(self, population_id: str, spec: PopulationFilter) -> dict:
@@ -899,6 +1003,52 @@ class NationalService:
         from societytwin.national.university_service import run_university_sweep_workbench
 
         return run_university_sweep_workbench(self, req)
+
+    # ================================================================ read-only university SQLite registry & candidates
+    def university_registry_status(self) -> dict:
+        from societytwin.university.service import university_registry_status
+
+        return university_registry_status(self.settings.university_db_path)
+
+    def list_university_registry_snapshots(self) -> dict:
+        from societytwin.university.service import list_university_snapshots
+
+        return list_university_snapshots(self.settings.university_db_path)
+
+    def query_university_registry_programs(
+        self,
+        snapshot_id: str,
+        university_key: str | None = None,
+        score_type: str | None = None,
+        degree_level: str | None = None,
+        q: str | None = None,
+        offset: int = 0,
+        limit: int = 50,
+    ) -> dict:
+        from societytwin.university.service import query_university_programs
+
+        return query_university_programs(
+            self.settings.university_db_path, snapshot_id, university_key, score_type, degree_level, q, offset, limit
+        )
+
+    def get_university_registry_program(self, snapshot_id: str, program_code: str) -> dict:
+        from societytwin.university.service import get_university_program
+
+        return get_university_program(self.settings.university_db_path, snapshot_id, program_code)
+
+    def list_university_registry_issues(
+        self, snapshot_id: str, severity: str | None = None, review_status: str | None = None, offset: int = 0, limit: int = 100
+    ) -> dict:
+        from societytwin.university.service import list_university_issues
+
+        return list_university_issues(
+            self.settings.university_db_path, snapshot_id, severity, review_status, offset, limit
+        )
+
+    def preview_university_candidates(self, seed: int = 42, size: int = 50, snapshot_id: str | None = None) -> dict:
+        from societytwin.university.service import preview_candidates
+
+        return preview_candidates(self.settings.university_db_path, seed=seed, size=size, snapshot_id=snapshot_id)
 
 
 def _sum(values) -> float | None:

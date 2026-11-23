@@ -89,13 +89,17 @@ and the provider's terms before enabling it; it has not been run against a provi
 
 | Variable | Default | Purpose |
 |---|---|---|
+| `SOCIETYTWIN_REPO_ROOT` | checkout root | Repository root override for settings, data, and `.env` discovery |
 | `SOCIETYTWIN_EXPERIMENT_ROOT` | `experiments/matraix_simulation` | Fixture folder (a `layout.json` there may rename files; used by the test fixture) |
 | `SOCIETYTWIN_IMPORT_RUNS_DIR` | `<experiment root>/runs` | Read-only historical run folders |
-| `SOCIETYTWIN_STATE_DIR` | `data/results/societytwin_local` | SQLite registry, managed outputs, materialized personas and logs (git-ignored) |
+| `SOCIETYTWIN_STATE_DIR` | `data/results/societytwin_local` | SQLite registry, managed outputs, materialized personas, saved prompt scenarios, and logs (git-ignored) |
 | `SOCIETYTWIN_DATA_MANIFEST` | `data/manifest.yaml` | Root dataset manifest |
 | `MATRAIX_ROOT` | sibling `../MatrAIx-Persona-8B` | External MatrAIx checkout |
 | `SOCIETYTWIN_RUNTIME_PYTHON` | unset | Interpreter with MatrAIx installed |
-| `SOCIETYTWIN_ENABLE_LIVE_EXECUTION` | off | Allows the live A/B mode |
+| `SOCIETYTWIN_ENABLE_LIVE_EXECUTION` | auto (`on` if key present outside pytest, else `off`) | Allows live execution; set `0` to force offline-only |
+| `SOCIETYTWIN_START_WORKER` | on | Runs background local worker inside API process |
+| `SOCIETYTWIN_SUBPROCESS_TIMEOUT` | `600` | External MatrAIx subprocess timeout in seconds |
+| `SOCIETYTWIN_DISABLE_DOTENV` | off | Skips loading `.env` files when `1` (used in isolated E2E runs) |
 | `SOCIETYTWIN_LOCAL_MUTATIONS` | on | POST endpoints, accepted from loopback clients only |
 | `SOCIETYTWIN_FRONTEND_ORIGINS` | `http://127.0.0.1:3000,http://localhost:3000` | CORS allowlist |
 | `SOCIETYTWIN_API_ORIGIN` (frontend) | `http://127.0.0.1:8000` | Where Next forwards `/api/v1` and `/api/v2`; server-side only, set at build time for `next build` |
@@ -103,6 +107,11 @@ and the provider's terms before enabling it; it has not been run against a provi
 | `SOCIETYTWIN_TUIK_MAPPING` | `data/tuik_package_mapping.yaml` | Rules mapping package indicators to control tables |
 | `SOCIETYTWIN_CONTROLS_DIR` | `data/processed/national` | Built control store |
 | `SOCIETYTWIN_POPULATIONS_DIR` | `data/populations` | Generated populations |
+| `SOCIETYTWIN_UNIVERSITY_DB` | `data/processed/university/university.sqlite3` | Read-only SQLite university registry database |
+| `SOCIETYTWIN_DEPENDENCY_REGISTRY` | `data/dependency_registry.yaml` | Optional dependency registry override |
+| `SOCIETYTWIN_ENABLE_LIVE_SCENARIO_LLM` | off | Allows OpenAI compilation inside `/api/v2/scenarios/from-prompt` |
+| `SOCIETYTWIN_ALLOW_LLM_SUMMARY` | off | Enables OpenAI synthesis in `/api/v2/runs/{id}/text-summary` for live runs |
+| `SOCIETYTWIN_SUMMARY_MODEL` | `gpt-4o-mini` | Optional model override for LLM executive result summary |
 | `SOCIETYTWIN_MAX_AGENTS` | `200` | Maximum active personas per national run |
 | `SOCIETYTWIN_MODEL_PRICES` | unset | Optional YAML price table (`models: {provider/model: {input_per_mtok, output_per_mtok, source, as_of}}`); without it cost is unknown |
 
@@ -111,12 +120,13 @@ This is a local development service. It has no authentication and must not be ex
 ## Architecture
 
 ```text
-frontend/ (Next.js, TypeScript, Recharts)  ── /api/v1 rewrite ──►  src/societytwin/api (FastAPI)
-                                                                        │
-            ┌──────────────┬──────────────┬─────────────┬───────────────┼──────────────┬───────────────┐
-       population/     sampling/      evaluation/     persona/     experiments/     registry/       agents/
-   readers, builds   filters, SRS    source fit,    source cards,  imported runs,  SQLite, jobs,  subprocess adapter
-                                     integrity      YAML views     drafts, plans   migrations     to MatrAIx runners
+frontend/ (Next.js, TypeScript, Recharts)  ── /api/v1, /api/v2 rewrite ──►  src/societytwin/api (FastAPI)
+                                                                                  │
+  ┌───────────┬────────────┬──────────────┬───────────┬─────────────┬────────────┴──────────┬──────────────┐
+national/   scenarios/   university/   households/  enrichment/  validation/evidence/    build/     v1 legacy modules
+(81 provs,  (NLP/YAML     (SQLite +     (optional    (sidecar     (K1–K7 offline checks   (unified    (population, sampling,
+cohorts,    compiler +     candidates    households)  attributes)  + K4 live in /v2)      pipeline)    evaluation, persona,
+runner)     placement)     registry)                                                                   experiments, agents)
 ```
 
 - Population, sampling and evaluation import neither web frameworks nor model SDKs. Only `agents` starts the

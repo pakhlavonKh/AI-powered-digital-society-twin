@@ -5,9 +5,9 @@ import type { RegistrySnapshot } from "@/lib/university/types";
 import { ErrorState, Loading, UnavailableState } from "../States";
 
 const TEXT = {
-  registry: "Synthetic institutions, programs, quotas, ranks and fees generated for UI development, shaped like the university SQLite registry. Not imported from the source workbook; no registry API exists yet.",
+  registry: "Synthetic institutions, programs, quotas, ranks and fees generated for UI exploration (fixture:university-ui-v1). Live workbook queries are exposed separately at /api/v2/university-registry/*.",
   candidates: "Fictional synthetic applicants and artificial preference lists. Not real students, not YKS scores or ranks, and not a behavioural model.",
-  simulation: "Results come from an illustrative fixture allocation computed in your browser. No placement engine or API has run. Not a forecast or an official outcome.",
+  simulation: "This explorer uses an illustrative browser-side fixture allocation. Live counterfactual placement and multi-semester simulations are available in the University Placement Studio (/university).",
 };
 
 /** Always shown while fixture data is in use, so fixture output is never mistaken for real data. */
