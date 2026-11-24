@@ -1238,6 +1238,14 @@ def summarize_university_query(
         f"Simplified/hypothetical placement rules (osym_verified=false): Cohort size={cohort_meta['sample_size']}, seed={cohort_meta['seed']}, reporting_basis={cohort_meta['reporting_basis']} (scale_factor={cohort_meta['cohort_scale_factor']}).",
         "Application definitions are reported separately ('listed anywhere', 'top-k', '1st choice', 'placed') and never conflated.",
     ]
+    if cohort_meta.get("quota_scale_factor", 1.0) < 1.0:
+        caveats.append(
+            f"Sample-congested quotas (quota_scale_factor={cohort_meta['quota_scale_factor']}): program seat capacities are proportionally scaled to cohort size (floor 1 seat/open program) so competitive quotas bind."
+        )
+    if cohort_meta.get("empirical_priors_active"):
+        caveats.append(
+            "Scores and provincial origins are drawn from aggregate ÖSYM cumulative score distributions (2026) and YÖK Ankara mobility flows; household budgets remain synthetic assumptions."
+        )
 
     sections = _build_query_sections(
         query_spec,

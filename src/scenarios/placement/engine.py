@@ -599,6 +599,7 @@ def run_placement(
     seed: int | None = None,
     min_group: int = 1,
     preference_config: PreferenceModelConfig | None = None,
+    preference_cache: dict[str, Any] | None = None,
 ) -> PlacementResult:
     """Execute deterministic Candidate-Proposing Deferred Acceptance over general quotas."""
     base_ruleset = ruleset or PlacementRuleset()
@@ -651,6 +652,7 @@ def run_placement(
             seed=eff_ruleset.tie_break_policy.tie_seed,
             cost_unit=baseline_cost_unit,
             baseline_ranks=baseline_ranks,
+            preference_cache=preference_cache,
         )
         intervention_meta = {
             **intervention_meta,

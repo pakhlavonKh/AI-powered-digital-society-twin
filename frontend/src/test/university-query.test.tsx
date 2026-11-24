@@ -488,4 +488,54 @@ describe("UniversityPage Prompt-Driven Query Studio", () => {
     expect(screen.getByLabelText(/Admission year/i)).toBeInTheDocument();
     expect(screen.getByRole("option", { name: "2025" })).toBeInTheDocument();
   });
+
+  it("auto-defaults cohort size to 2500 on large SQLite snapshots and restores 200 for Demo", async () => {
+    v2Mock.mockImplementation(async (path: string) => {
+      if (path === "/placement/programs") return BASE_CATALOG;
+      if (path === "/university-registry/status") {
+        return {
+          available: true,
+          db_path: "university.sqlite3",
+          schema_version: 1,
+          snapshots: [
+            {
+              snapshot_id: "snap_ankara_2026",
+              source_filename: "ankara_validated_2026_osym.csv",
+              imported_at: "2026-11-24T18:00:00Z",
+              verification_status: "verified",
+              counts: { universities: 22, programs: 1814, open_quality_issues: 0 },
+              admission_years: [2026],
+            },
+          ],
+          note: "ok",
+        };
+      }
+      if (path === "/university-registry/snapshots/snap_ankara_2026/universities") {
+        return {
+          snapshot_id: "snap_ankara_2026",
+          items: [
+            {
+              university_id: "UNI_BASKENT",
+              university_key: "baskent",
+              university_name: "Başkent Üniversitesi",
+              university_type: "Vakıf",
+              program_count: 90,
+            },
+          ],
+        };
+      }
+      return { items: [], total: 0 };
+    });
+
+    render(<UniversityPage />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("option", { name: /Başkent Üniversitesi/i })).toBeInTheDocument();
+    });
+    await userEvent.click(screen.getByText(/Advanced query options/i));
+    expect(screen.getByLabelText(/Query cohort size/i)).toHaveValue(2500);
+
+    await userEvent.selectOptions(screen.getByLabelText(/Catalog source/i), "");
+    expect(screen.getByLabelText(/Query cohort size/i)).toHaveValue(200);
+  });
 });

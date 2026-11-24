@@ -19,7 +19,7 @@ from scenarios.placement.cohort_synth import (
 )
 from scenarios.placement.comparison import ComparisonMismatchError, compare_placement_scenarios
 from scenarios.placement.engine import run_placement
-from scenarios.placement.models import PlacementResult, PlacementRuleset, ProgramOffering
+from scenarios.placement.models import PlacementResult, PlacementRuleset, ProgramOffering, catalog_fee_scale
 from scenarios.placement.preference_model import compute_elasticity_sensitivity_range
 from scenarios.schema import ScenarioConfig, UniversityPolicyIntervention
 from scenarios.summary import (
@@ -31,6 +31,7 @@ from scenarios.summary import (
 )
 from scenarios.university.cohort import (
     build_synthetic_university_cohort,
+    build_target_university_m2_cohort,
     student_cohort_from_placement_handoff,
 )
 from scenarios.university.experiments import (
@@ -113,7 +114,7 @@ class UniversityQueryPlanRequest(BaseModel):
     snapshot_id: str | None = Field(default=None, max_length=128)
     admission_year: int | None = Field(default=None, ge=1990, le=2100)
     population_id: str | None = Field(default=None, max_length=160)
-    cohort_size: int = Field(default=200, ge=20, le=2000)
+    cohort_size: int = Field(default=200, ge=20, le=5000)
     seed: int = Field(default=42, ge=0, le=MAX_SEED)
     elasticity_preset: ElasticityPreset = "medium"
     model: str | None = Field(default=None, max_length=128)
@@ -128,7 +129,7 @@ class UniversityQueryRunRequest(BaseModel):
     snapshot_id: str | None = Field(default=None, max_length=128)
     admission_year: int | None = Field(default=None, ge=1990, le=2100)
     population_id: str | None = Field(default=None, max_length=160)
-    cohort_size: int = Field(default=200, ge=20, le=2000)
+    cohort_size: int = Field(default=200, ge=20, le=5000)
     seed: int = Field(default=42, ge=0, le=MAX_SEED)
     elasticity_preset: ElasticityPreset = "medium"
     preference_config: PreferenceModelConfig | None = None
@@ -311,22 +312,59 @@ def _sync_edited_query_spec(
     )
 
 
+def _scale_quotas_to_cohort(
+    programs: list[ProgramOffering],
+    cohort_size: int,
+    overrides: dict[str, int] | None = None,
+) -> tuple[list[ProgramOffering], float]:
+    """Scale oversized real program seat totals proportionally to the sample cohort while keeping >=1 seat/open program."""
+    open_progs = [p for p in programs if p.status == "open" and p.capacity > 0]
+    total_open = sum(p.capacity for p in open_progs)
+    if len(open_progs) < 20 or total_open <= max(int(round(cohort_size * 1.1)), len(open_progs)):
+        return programs, 1.0
+
+    target_total = max(len(open_progs), int(round(cohort_size * 0.86)))
+    lo, hi = 0.0, float(target_total) / float(max(1, total_open))
+    for _ in range(28):
+        mid = 0.5 * (lo + hi)
+        s = sum(max(1, int(round(p.capacity * mid))) for p in open_progs)
+        if s > target_total:
+            hi = mid
+        else:
+            lo = mid
+    factor = 0.5 * (lo + hi)
+    ov = overrides or {}
+    scaled: list[ProgramOffering] = []
+    new_total = 0
+    for p in programs:
+        if p.status == "open" and p.capacity > 0 and p.program_id not in ov:
+            new_cap = max(1, int(round(p.capacity * factor)))
+            new_total += new_cap
+            scaled.append(p.model_copy(update={"capacity": new_cap}))
+        else:
+            if p.status == "open" and p.capacity > 0:
+                new_total += p.capacity
+            scaled.append(p)
+    eff_factor = round(new_total / total_open, 4) if total_open > 0 else 1.0
+    return scaled, eff_factor
+
+
 def execute_university_query_workbench(service: NationalService, req: UniversityQueryRunRequest) -> dict[str, Any]:
     """Execute a compiled/edited university query plan, compute question-aware stats & summary, and persist."""
     eff_snapshot = req.snapshot_id or (req.query_spec.snapshot_id if req.query_spec else None)
     eff_year = req.admission_year or (req.query_spec.admission_year if req.query_spec else None)
-    programs, catalog_meta = resolve_university_catalog(
+    raw_programs, catalog_meta = resolve_university_catalog(
         service,
         snapshot_id=eff_snapshot,
         admission_year=eff_year,
     )
 
     if req.query_spec is not None:
-        query_spec = _sync_edited_query_spec(req.query_spec, programs, req)
+        query_spec = _sync_edited_query_spec(req.query_spec, raw_programs, req)
     else:
         query_spec = compile_university_query(
             req.prompt,
-            catalog=programs,
+            catalog=raw_programs,
             context_university_id=req.context_university_id,
             snapshot_id=eff_snapshot,
             admission_year=catalog_meta.get("admission_year"),
@@ -348,10 +386,42 @@ def execute_university_query_workbench(service: NationalService, req: University
             {"out_of_scope_reasons": query_spec.out_of_scope_reasons},
         )
 
+    programs, quota_scale_factor = _scale_quotas_to_cohort(
+        raw_programs,
+        query_spec.cohort_size,
+        overrides=query_spec.levers.program_capacity_overrides,
+    )
+    if quota_scale_factor < 1.0 and query_spec.levers.base_aid_budget is not None:
+        # Keep inferred baseline aid pools proportional when quotas are scaled to the sample cohort
+        has_inferred_aid = any(a.key == "base_aid_budget" and a.source == "inferred" for a in query_spec.assumptions)
+        if has_inferred_aid:
+            scaled_aid = round(max(100_000.0, float(query_spec.levers.base_aid_budget) * quota_scale_factor), 2)
+            query_spec = query_spec.model_copy(
+                update={
+                    "levers": query_spec.levers.model_copy(update={"base_aid_budget": scaled_aid}),
+                    "comparison_variants": [
+                        v.model_copy(
+                            update={"intervention": v.intervention.model_copy(update={"base_aid_budget": scaled_aid})}
+                        )
+                        for v in query_spec.comparison_variants
+                    ],
+                }
+            )
+
+    use_empirical_priors = bool(eff_snapshot or len(programs) > 30)
     pref_cfg = req.preference_config or preset_preference_config(req.elasticity_preset)
     ruleset = PlacementRuleset()
-    cohort = _resolve_candidate_cohort(service, req.population_id, programs, query_spec.cohort_size, query_spec.seed)
+    cohort = _resolve_candidate_cohort(
+        service,
+        req.population_id,
+        programs,
+        query_spec.cohort_size,
+        query_spec.seed,
+        empirical_priors=use_empirical_priors,
+        populate_initial_preferences=False,
+    )
 
+    preference_cache: dict[str, Any] = {}
     base_scope_int = UniversityPolicyIntervention(
         target_university_ids=list(query_spec.levers.target_university_ids),
         target_program_ids=list(query_spec.levers.target_program_ids),
@@ -368,6 +438,7 @@ def execute_university_query_workbench(service: NationalService, req: University
             intervention=intervention,
             seed=query_spec.seed,
             preference_config=cfg,
+            preference_cache=preference_cache,
         )
 
     variant_summaries: list[dict[str, Any]] | None = None
@@ -496,8 +567,16 @@ def execute_university_query_workbench(service: NationalService, req: University
         top_k=pref_cfg.top_k_definition,
     )
 
+    analytics["cohort_metadata"]["quota_scale_factor"] = quota_scale_factor
+    analytics["cohort_metadata"]["empirical_priors_active"] = bool(
+        use_empirical_priors and (cohort.field_provenance.get("scores", {}) or cohort.field_provenance.get("all_attributes", {})).get("source", "").startswith("osym")
+    )
+
     elasticity_range = None
     if not pref_cfg.coefficients_calibrated:
+        preset_cache_map: dict[ElasticityPreset, tuple[PlacementResult, PlacementResult]] | None = None
+        if not query_spec.comparison_variants and not (query_spec.sweep_tuition_pcts or query_spec.intent == "revenue_tradeoff"):
+            preset_cache_map = {pref_cfg.elasticity_preset: (baseline_result, policy_result)}
         elasticity_range = compute_elasticity_sensitivity_range(
             candidates=cohort.candidates,
             programs=programs,
@@ -507,31 +586,47 @@ def execute_university_query_workbench(service: NationalService, req: University
             intervention=active_policy_int,
             seed=query_spec.seed,
             top_k=pref_cfg.top_k_definition,
+            preference_cache=preference_cache,
+            preset_results=preset_cache_map,
         )
 
-    # 4. Optional Milestone 2 retention simulation (scoped to target university!)
+    # 4. Optional Milestone 2 retention simulation (anchored on pre-policy baseline enrollees!)
     university_comparison = None
     if query_spec.simulation_mode in ("retention", "both") or query_spec.intent == "retention_impact":
         target_set = set(analytics["target_program_ids"])
-        handoff = placement_result_to_student_cohort(policy_result, cohort, programs)
-        scoped_students = [s for s in handoff.get("students", []) if s.get("program_id") in target_set]
-        if len(scoped_students) < 5:
-            base_handoff = placement_result_to_student_cohort(baseline_result, cohort, programs)
-            scoped_students = [s for s in base_handoff.get("students", []) if s.get("program_id") in target_set]
-        if len(scoped_students) >= 5:
-            handoff["students"] = scoped_students
-            handoff["student_count"] = len(scoped_students)
-        if handoff.get("students"):
-            students, courses = student_cohort_from_placement_handoff(handoff, seed=query_spec.seed)
+        target_progs = [p for p in programs if p.program_id in target_set]
+        fee_scale = catalog_fee_scale(programs)
+        base_handoff = placement_result_to_student_cohort(baseline_result, cohort, programs)
+        scoped_students = [s for s in base_handoff.get("students", []) if s.get("program_id") in target_set]
+        has_paid_enrollees = any(
+            float((s.get("financials") or {}).get("published_tuition") or 0.0) > 0.0
+            for s in scoped_students
+        )
+        all_free_target = bool(analytics.get("all_target_programs_free", False))
+        if len(scoped_students) >= 5 and (all_free_target or has_paid_enrollees):
+            base_handoff["students"] = scoped_students
+            base_handoff["student_count"] = len(scoped_students)
+            students, courses = student_cohort_from_placement_handoff(base_handoff, seed=query_spec.seed, fee_scale=fee_scale)
+        elif target_progs:
+            students, courses = build_target_university_m2_cohort(
+                target_progs,
+                size=min(max(60, len(scoped_students) or 120), 200),
+                seed=query_spec.seed,
+                fee_scale=fee_scale,
+            )
         else:
             students, courses = build_synthetic_university_cohort(size=min(query_spec.cohort_size, 200), seed=query_spec.seed)
         prog_uni_map = {p.program_id: p.university_id for p in programs}
         eff_terms = max(2, active_policy_int.semester_count)
+        m2_ruleset = UniversityRuleset(default_hold_threshold=round(5_000.0 * fee_scale, 2))
+        m2_weights = UtilityWeights(beta_net_cost=round(-0.32 / max(1.0, fee_scale), 4))
         university_comparison = run_replicated_university_experiment(
             students=students,
             courses=courses,
             policy_intervention=active_policy_int,
             baseline_intervention=base_scope_int.model_copy(update={"semester_count": eff_terms}),
+            ruleset=m2_ruleset,
+            weights=m2_weights,
             semester_count=eff_terms,
             replications=min(8, max(2, active_policy_int.replications)),
             base_seed=query_spec.seed,
@@ -674,6 +769,9 @@ def _resolve_candidate_cohort(
     programs: list[ProgramOffering],
     cohort_size: int,
     seed: int,
+    *,
+    empirical_priors: bool = False,
+    populate_initial_preferences: bool = True,
 ):
     if population_id:
         loaded = service._load(population_id)
@@ -683,10 +781,18 @@ def _resolve_candidate_cohort(
                 programs,
                 sample_size=cohort_size,
                 seed=seed,
+                empirical_priors=empirical_priors,
+                populate_initial_preferences=populate_initial_preferences,
             )
         except ValueError as exc:
             raise invalid("insufficient_cohort", str(exc)) from exc
-    return build_standalone_test_cohort(programs, size=cohort_size, seed=seed)
+    return build_standalone_test_cohort(
+        programs,
+        size=cohort_size,
+        seed=seed,
+        empirical_priors=empirical_priors,
+        populate_initial_preferences=populate_initial_preferences,
+    )
 
 
 def run_placement_workbench(service: NationalService, req: PlacementRunRequest) -> dict[str, Any]:

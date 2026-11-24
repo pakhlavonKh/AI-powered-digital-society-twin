@@ -449,6 +449,7 @@ def load_programs_from_sqlite_snapshot(
         ).fetchall()
 
         adm_map: dict[int, sqlite3.Row] = {}
+        prior_rank_map: dict[int, int] = {}
         if target_year is not None:
             for a in conn.execute(
                 """
@@ -459,6 +460,25 @@ def load_programs_from_sqlite_snapshot(
                 (snapshot_id, target_year),
             ).fetchall():
                 adm_map[a["program_id"]] = a
+            for pr in conn.execute(
+                """
+                SELECT a1.program_id, a1.success_rank
+                FROM annual_admissions a1
+                WHERE a1.snapshot_id = ?
+                  AND a1.admission_year <= ?
+                  AND a1.success_rank IS NOT NULL
+                  AND a1.admission_year = (
+                      SELECT MAX(a2.admission_year)
+                      FROM annual_admissions a2
+                      WHERE a2.snapshot_id = a1.snapshot_id
+                        AND a2.program_id = a1.program_id
+                        AND a2.admission_year <= ?
+                        AND a2.success_rank IS NOT NULL
+                  )
+                """,
+                (snapshot_id, target_year, target_year),
+            ).fetchall():
+                prior_rank_map[pr["program_id"]] = int(pr["success_rank"])
 
         tuit_map: dict[int, sqlite3.Row] = {}
         for t in conn.execute(
@@ -481,6 +501,7 @@ def load_programs_from_sqlite_snapshot(
     missing_quota_count = 0
     missing_tuition_count = 0
     missing_rank_count = 0
+    prior_year_rank_fallback_count = 0
 
     for r in rows:
         score_type = _map_score_type(r["score_type"])
@@ -502,6 +523,11 @@ def load_programs_from_sqlite_snapshot(
             status = "open" if capacity > 0 else "closed"
 
         success_rank = adm["success_rank"] if adm is not None and adm["success_rank"] is not None else None
+        if success_rank is None:
+            fallback_rk = prior_rank_map.get(pid)
+            if fallback_rk is not None:
+                success_rank = fallback_rk
+                prior_year_rank_fallback_count += 1
         if success_rank is None:
             missing_rank_count += 1
             prestige = 0.22
@@ -568,5 +594,6 @@ def load_programs_from_sqlite_snapshot(
         "missing_quota_count": missing_quota_count,
         "missing_tuition_count": missing_tuition_count,
         "missing_rank_count": missing_rank_count,
+        "prior_year_rank_fallback_count": prior_year_rank_fallback_count,
     }
     return offerings, meta

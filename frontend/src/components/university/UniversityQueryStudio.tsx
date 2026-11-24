@@ -63,6 +63,7 @@ export function UniversityQueryStudio({
   const [contextUniversityId, setContextUniversityId] = useState<string>("");
   const [usePopulationCohort, setUsePopulationCohort] = useState<boolean>(false);
   const [cohortSize, setCohortSize] = useState<number>(200);
+  const userEditedCohortSize = useRef(false);
   const [seed, setSeed] = useState<number>(42);
   const [elasticityPreset, setElasticityPreset] = useState<ElasticityPreset>("medium");
 
@@ -87,6 +88,9 @@ export function UniversityQueryStudio({
     if (!autoSelectedSnapshot.current && !snapshotId && snapshots.length > 0) {
       autoSelectedSnapshot.current = true;
       setSnapshotId(snapshots[0].snapshot_id);
+      if (!userEditedCohortSize.current && (snapshots[0].counts?.programs ?? 0) > 100) {
+        setCohortSize(2500);
+      }
     }
   }, [snapshots, snapshotId]);
   const activeSnapshot = useMemo(
@@ -120,7 +124,10 @@ export function UniversityQueryStudio({
   }, [snapshotId, snapshotUniversities, demoUniversities]);
 
   useEffect(() => {
-    if (!contextUniversityId && universityOptions.length > 0) {
+    if (
+      universityOptions.length > 0 &&
+      (!contextUniversityId || !universityOptions.some((u) => u.university_id === contextUniversityId))
+    ) {
       const preferred =
         universityOptions.find((u) => u.university_type === "foundation") ?? universityOptions[0];
       if (preferred) setContextUniversityId(preferred.university_id);
@@ -130,14 +137,6 @@ export function UniversityQueryStudio({
   useEffect(() => {
     if (!snapshotId) {
       setSnapshotUniversities([]);
-      if (
-        demoUniversities.length > 0 &&
-        !demoUniversities.some((u) => u.university_id === contextUniversityId)
-      ) {
-        const preferred =
-          demoUniversities.find((u) => u.university_type === "foundation") ?? demoUniversities[0];
-        if (preferred) setContextUniversityId(preferred.university_id);
-      }
       return;
     }
     let cancelled = false;
@@ -148,11 +147,6 @@ export function UniversityQueryStudio({
         if (cancelled) return;
         const items = Array.isArray(res?.items) ? res.items : [];
         setSnapshotUniversities(items);
-        if (items.length > 0) {
-          const preferred =
-            items.find((u) => u.university_type === "foundation") ?? items[0];
-          setContextUniversityId(preferred.university_id);
-        }
       })
       .catch(() => {
         if (!cancelled) setSnapshotUniversities([]);
@@ -160,7 +154,7 @@ export function UniversityQueryStudio({
     return () => {
       cancelled = true;
     };
-  }, [snapshotId, demoUniversities]);
+  }, [snapshotId]);
 
   const selectedSnapshotYears = useMemo(() => {
     const snap = snapshots.find((s) => s.snapshot_id === snapshotId);
@@ -370,8 +364,13 @@ export function UniversityQueryStudio({
                   id="uq-snapshot"
                   value={snapshotId}
                   onChange={(e) => {
-                    setSnapshotId(e.target.value);
+                    const nextSid = e.target.value;
+                    setSnapshotId(nextSid);
                     setAdmissionYear("");
+                    if (!userEditedCohortSize.current) {
+                      const nextSnap = snapshots.find((s) => s.snapshot_id === nextSid);
+                      setCohortSize(nextSnap && (nextSnap.counts?.programs ?? 0) > 100 ? 2500 : 200);
+                    }
                   }}
                 >
                   <option value="">Built-in Demo Catalog</option>
@@ -432,11 +431,14 @@ export function UniversityQueryStudio({
                     aria-label="Query cohort size"
                     type="number"
                     min={20}
-                    max={2000}
-                    step={20}
+                    max={5000}
+                    step={50}
                     value={cohortSize}
-                    onChange={(e) => setCohortSize(Math.max(20, Math.min(2000, Number(e.target.value) || 200)))}
-                    style={{ width: 78 }}
+                    onChange={(e) => {
+                      userEditedCohortSize.current = true;
+                      setCohortSize(Math.max(20, Math.min(5000, Number(e.target.value) || 200)));
+                    }}
+                    style={{ width: 84 }}
                   />
                 </div>
               </div>

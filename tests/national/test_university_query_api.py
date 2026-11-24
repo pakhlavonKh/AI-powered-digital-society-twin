@@ -211,3 +211,104 @@ def test_query_edge_cases_aid_state_competitor_and_multi_compare(national_client
     assert bd["query_spec"]["simulation_mode"] == "both"
     assert "semesters" in bd["summary"]["direct_answer"].lower()
     assert any(s["id"] == "retention_trajectory" for s in bd["detailed_statistics"])
+
+
+def test_retention_handoff_uses_baseline_enrollees_and_fee_scaling(make_settings, tmp_path):
+    import csv
+    from societytwin.university.osym_importer import import_validated_osym_csvs
+
+    p_csv = tmp_path / "p.csv"
+    a_csv = tmp_path / "a.csv"
+    t_csv = tmp_path / "t.csv"
+    db_path = tmp_path / "university.sqlite3"
+
+    def _dump(path, cols, rows):
+        with path.open("w", encoding="utf-8", newline="") as handle:
+            writer = csv.DictWriter(handle, fieldnames=cols)
+            writer.writeheader()
+            writer.writerows(rows)
+
+    _dump(
+        p_csv,
+        [
+            "program_code", "admission_year", "campus_city", "university_name_official",
+            "university_type", "program_name_official", "faculty_official", "degree_level",
+            "score_type", "program_regime", "scholarship_tier", "teaching_language_explicit",
+            "official_genel_success_rank_from_next_kilavuz",
+        ],
+        [
+            {
+                "program_code": "2001", "admission_year": 2026, "campus_city": "ANKARA",
+                "university_name_official": "ANATOLIA VAKIF ÜNİVERSİTESİ", "university_type": "VAKIF",
+                "program_name_official": "Bilgisayar Mühendisliği", "faculty_official": "Mühendislik",
+                "degree_level": "lisans", "score_type": "SAY", "program_regime": "foundation_partial_or_paid",
+                "scholarship_tier": "Ücretli", "teaching_language_explicit": "Türkçe",
+                "official_genel_success_rank_from_next_kilavuz": "",
+            },
+            {
+                "program_code": "2002", "admission_year": 2026, "campus_city": "ANKARA",
+                "university_name_official": "ANATOLIA VAKIF ÜNİVERSİTESİ", "university_type": "VAKIF",
+                "program_name_official": "Bilgisayar Mühendisliği", "faculty_official": "Mühendislik",
+                "degree_level": "lisans", "score_type": "SAY", "program_regime": "foundation_partial_or_paid",
+                "scholarship_tier": "%50 İndirimli", "teaching_language_explicit": "Türkçe",
+                "official_genel_success_rank_from_next_kilavuz": "",
+            },
+            {
+                "program_code": "2003", "admission_year": 2026, "campus_city": "ANKARA",
+                "university_name_official": "ANKARA DEVLET ÜNİVERSİTESİ", "university_type": "DEVLET",
+                "program_name_official": "Bilgisayar Mühendisliği", "faculty_official": "Mühendislik",
+                "degree_level": "lisans", "score_type": "SAY", "program_regime": "state_standard",
+                "scholarship_tier": "Devlet", "teaching_language_explicit": "Türkçe",
+                "official_genel_success_rank_from_next_kilavuz": "",
+            },
+        ],
+    )
+    _dump(
+        a_csv,
+        ["quota_track", "program_code", "admission_year", "quota", "placed", "official_success_rank"],
+        [
+            {"quota_track": "genel", "program_code": "2001", "admission_year": 2026, "quota": 60, "placed": 60, "official_success_rank": 120000},
+            {"quota_track": "genel", "program_code": "2002", "admission_year": 2026, "quota": 40, "placed": 40, "official_success_rank": 70000},
+            {"quota_track": "genel", "program_code": "2003", "admission_year": 2026, "quota": 80, "placed": 80, "official_success_rank": 40000},
+        ],
+    )
+    _dump(
+        t_csv,
+        [
+            "program_code", "academic_year", "full_annual_tuition_try", "net_annual_tuition_try",
+            "currency", "fee_type", "verification_status", "source_id", "kdv_included", "fee_basis_note",
+        ],
+        [
+            {"program_code": "2001", "academic_year": "2026-2027", "full_annual_tuition_try": "640000", "net_annual_tuition_try": "640000", "currency": "TRY", "fee_type": "foundation", "verification_status": "verified", "source_id": "s1", "kdv_included": "true", "fee_basis_note": ""},
+            {"program_code": "2002", "academic_year": "2026-2027", "full_annual_tuition_try": "640000", "net_annual_tuition_try": "320000", "currency": "TRY", "fee_type": "foundation", "verification_status": "verified", "source_id": "s1", "kdv_included": "true", "fee_basis_note": ""},
+            {"program_code": "2003", "academic_year": "2026-2027", "full_annual_tuition_try": "0", "net_annual_tuition_try": "0", "currency": "TRY", "fee_type": "state", "verification_status": "verified", "source_id": "s1", "kdv_included": "true", "fee_basis_note": ""},
+        ],
+    )
+    report = import_validated_osym_csvs(
+        programs_csv=p_csv,
+        admissions_csv=a_csv,
+        tuition_csv=t_csv,
+        database_path=db_path,
+        target_year=2026,
+    )
+
+    with make_client(make_settings(university_db_path=db_path)) as client:
+        ret_run = client.post(
+            "/api/v2/university/query/runs",
+            json={
+                "prompt": "How does a 25% tuition increase affect 4-semester retention and dropout at Anatolia Vakif Universitesi?",
+                "snapshot_id": report["snapshot_id"],
+                "admission_year": 2026,
+                "cohort_size": 240,
+                "seed": 42,
+            },
+        )
+        assert ret_run.status_code == 201, ret_run.text
+        body = ret_run.json()
+        assert body["intent"] == "retention_impact"
+        ucmp = body["result"]["university_comparison"]
+        assert ucmp["coefficients_calibrated"] is False
+        assert ucmp["osym_verified"] is False
+        ret_effect = ucmp["policy_effects"]["cumulative_retention_rate"]
+        assert ret_effect["mean"] < 0.0
+        assert ret_effect["baseline_mean"] > ret_effect["policy_mean"]

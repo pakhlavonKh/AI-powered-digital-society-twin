@@ -144,7 +144,7 @@ class UniversityQuerySpec(BaseModel):
     metrics_requested: list[str] = Field(default_factory=list)
     subgroup_dimensions_requested: list[str] = Field(default_factory=list)
     simulation_mode: QuerySimulationMode = "placement"
-    cohort_size: int = Field(default=200, ge=20, le=2000)
+    cohort_size: int = Field(default=200, ge=20, le=5000)
     seed: int = Field(default=42, ge=0)
     assumptions: list[QueryAssumption] = Field(default_factory=list)
     disclaimers: list[str] = Field(default_factory=list)

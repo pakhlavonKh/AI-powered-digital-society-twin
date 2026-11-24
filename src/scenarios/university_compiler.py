@@ -144,7 +144,19 @@ def _resolve_entities(
     unresolved: list[UnresolvedEntity] = []
     norm_prompt = _norm(prompt)
 
-    # 1. Explicit university name / ID match
+    # 1. Explicit university name / ID / common Turkish acronym match
+    uni_aliases: dict[str, tuple[str, ...]] = {
+        "ihsan dogramaci bilkent universitesi": ("bilkent",),
+        "orta dogu teknik universitesi": ("odtu", "metu", "middle east technical"),
+        "tobb ekonomi ve teknoloji universitesi": ("tobb etu", "tobb"),
+        "ankara haci bayram veli universitesi": ("ahbvu", "ahbv", "haci bayram veli", "haci bayram"),
+        "ankara yildirim beyazit universitesi": ("aybu", "yildirim beyazit"),
+        "ankara sosyal bilimler universitesi": ("asbu", "sosyal bilimler"),
+        "turk hava kurumu universitesi": ("thku", "thk"),
+        "ted universitesi": ("tedu",),
+        "ostim teknik universitesi": ("ostim",),
+        "saglik bilimleri universitesi": ("sbu",),
+    }
     uni_scores: list[tuple[int, str, str]] = []
     stop = {"university", "universitesi", "hypothetical", "institute", "college", "synthetic"}
     for uid, uname in sorted(unis.items()):
@@ -154,8 +166,14 @@ def _resolve_entities(
         norm_name = _norm(uname)
         core_tokens = [t for t in norm_name.split() if t not in stop and len(t) >= 2]
         full_core = " ".join(core_tokens)
+        aliases = uni_aliases.get(norm_name, ())
+        matched_aliases = [
+            a for a in aliases if re.search(rf"\b{re.escape(a)}\b", norm_prompt)
+        ]
         if full_core and full_core in norm_prompt:
             uni_scores.append((len(full_core) + 20, uid, uname))
+        elif matched_aliases:
+            uni_scores.append((max(len(a) for a in matched_aliases) + 15, uid, uname))
         elif core_tokens:
             hits = sum(1 for t in core_tokens if re.search(rf"\b{re.escape(t)}\b", norm_prompt))
             if hits == len(core_tokens) or (hits >= 2 and hits >= len(core_tokens) - 1):

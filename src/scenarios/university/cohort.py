@@ -63,12 +63,14 @@ def student_cohort_from_placement_handoff(
     *,
     seed: int = 42,
     course_capacity: int | None = None,
+    fee_scale: float = 1.0,
 ) -> tuple[list[StudentAgentRecord], list[CourseOffering]]:
     """Convert Milestone 1's placement_result_to_student_cohort payload into Year-1 StudentAgentRecords."""
     students_raw = handoff.get("students", [])
     stream = Stream("university:handoff_cohort", seed)
     cap = course_capacity if course_capacity is not None else max(20, int(len(students_raw) * 0.95) + 5)
     courses = build_demo_course_catalog(base_capacity=cap)
+    eff_scale = max(1.0, float(fee_scale))
 
     students: list[StudentAgentRecord] = []
     for row in sorted(students_raw, key=lambda r: str(r["student_id"])):
@@ -79,10 +81,12 @@ def student_cohort_from_placement_handoff(
         sem_tuition = round(gross_annual / 2.0, 2)
         sem_grant = round(float(fin.get("need_aid_grant") or 0.0) / 2.0, 2)
         income_band = row.get("income_band") or "middle"
-        liquid_budget = float(row.get("liquid_budget") if row.get("liquid_budget") is not None else 45_000.0)
+        liquid_budget = float(row.get("liquid_budget") if row.get("liquid_budget") is not None else round(45_000.0 * eff_scale, 2))
         score = row.get("admission_score")
         apt_hint = round(min(0.95, max(0.35, (float(score) - 200.0) / 350.0)), 4) if score is not None else None
         beh = _assumed_behavioral_profile(stream, income_band, aptitude_hint=apt_hint)
+        if eff_scale > 1.0:
+            beh["semester_earnings"] = round(float(beh["semester_earnings"]) * eff_scale, 2)
 
         prov_map = {
             "program_id": "milestone1_placement_handoff",
@@ -112,6 +116,80 @@ def student_cohort_from_placement_handoff(
                 liquid_budget=liquid_budget,
                 state="active",
                 field_provenance=prov_map,
+                **beh,
+            )
+        )
+    return students, courses
+
+
+def build_target_university_m2_cohort(
+    target_programs: list[Any],
+    *,
+    size: int = 120,
+    seed: int = 42,
+    fee_scale: float = 1.0,
+) -> tuple[list[StudentAgentRecord], list[CourseOffering]]:
+    """Build an M2 cohort anchored to the target university's actual fee and scholarship program mix."""
+    open_progs = [p for p in target_programs if getattr(p, "status", "open") == "open" and getattr(p, "capacity", 0) > 0]
+    if not open_progs:
+        return build_synthetic_university_cohort(size=size, seed=seed)
+
+    eff_scale = max(1.0, float(fee_scale))
+    stream = Stream("university:target_program_m2", seed)
+    courses = build_demo_course_catalog(base_capacity=max(20, int(round(size * 0.96))))
+    weights = [float(max(1, p.capacity)) for p in open_progs]
+    cum_weights: list[float] = []
+    acc = 0.0
+    for w in weights:
+        acc += w
+        cum_weights.append(acc)
+
+    students: list[StudentAgentRecord] = []
+    for idx in range(1, size + 1):
+        prog = open_progs[stream.weighted_index(cum_weights)]
+        income_roll = stream.random()
+        if income_roll < 0.35:
+            income_band = "low"
+            liquid_budget = round((14_000.0 + stream.random() * 26_000.0) * eff_scale, 2)
+            grant = round((12_000.0 + stream.random() * 10_000.0) * eff_scale, 2)
+        elif income_roll < 0.78:
+            income_band = "middle"
+            liquid_budget = round((42_000.0 + stream.random() * 48_000.0) * eff_scale, 2)
+            grant = round((3_000.0 + stream.random() * 5_000.0) * eff_scale, 2)
+        else:
+            income_band = "high"
+            liquid_budget = round((110_000.0 + stream.random() * 140_000.0) * eff_scale, 2)
+            grant = 0.0
+
+        sem_tuition = round(float(getattr(prog, "tuition_annual", 0.0)) / 2.0, 2)
+        schol_pct = float(getattr(prog, "scholarship_pct", 0.0))
+        beh = _assumed_behavioral_profile(stream, income_band)
+        if eff_scale > 1.0:
+            beh["semester_earnings"] = round(float(beh["semester_earnings"]) * eff_scale, 2)
+        base_gpa = round(min(3.95, max(1.85, 2.0 + beh["academic_aptitude"] * 1.65)), 3)
+
+        students.append(
+            StudentAgentRecord(
+                student_id=f"STU_{idx:05d}",
+                program_id=str(prog.program_id),
+                province_code=getattr(prog, "province_code", None) or "06",
+                year=1,
+                gpa=base_gpa,
+                earned_credits=0,
+                attempted_credits=0,
+                quality_points_total=0.0,
+                completed_courses=[],
+                tuition_per_semester=sem_tuition,
+                scholarship_pct=schol_pct,
+                need_aid_grant=grant,
+                income_band=income_band,
+                liquid_budget=liquid_budget,
+                state="active",
+                field_provenance={
+                    "program_id": "target_university_catalog_mix",
+                    "tuition_per_semester": "target_university_catalog_mix",
+                    "all_synthetic_attributes": Evidence.ASSUMED,
+                },
                 **beh,
             )
         )

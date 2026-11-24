@@ -219,3 +219,126 @@ def test_analytics_summarizer_elasticity_range_and_llm_grounding_guard():
     # Number grounding guard rejects ungrounded/hallucinated figures
     assert _llm_numbers_grounded(["Applicants changed from 120 to 95."], {120.0, 95.0}) is True
     assert _llm_numbers_grounded(["Applicants changed to 99999."], {120.0, 95.0}) is False
+
+
+def test_empirical_priors_quota_scaling_vectorized_crn_and_acronym_resolution():
+    from scenarios.placement.cohort_synth import catalog_fee_scale
+    from scenarios.placement.models import ProgramOffering
+    from societytwin.national.university_service import _scale_quotas_to_cohort
+
+    # 1. Empirical priors draw realistic 2026 scores and YÖK Ankara OD provinces (with Ankara plurality)
+    demo_progs = build_standalone_demo_programs()
+    c1 = build_standalone_test_cohort(
+        demo_progs,
+        size=160,
+        seed=42,
+        empirical_priors=True,
+        populate_initial_preferences=False,
+    )
+    c2 = build_standalone_test_cohort(
+        demo_progs,
+        size=160,
+        seed=42,
+        empirical_priors=True,
+        populate_initial_preferences=False,
+    )
+    assert c1.candidates == c2.candidates
+    assert all(cand.preferences == [] for cand in c1.candidates)
+    ank_share = sum(1 for cand in c1.candidates if cand.province_code == "06") / len(c1.candidates)
+    assert 0.25 <= ank_share <= 0.70
+    for cand in c1.candidates:
+        for st_val in cand.scores.values():
+            assert 100.0 <= st_val <= 575.0
+
+    # 2. Vectorized CRN preference scoring path (n*m > 20_000) preserves shuffled-program determinism & capacity cap
+    many_progs: list[ProgramOffering] = []
+    for i in range(205):
+        is_state = i % 2 == 0
+        many_progs.append(
+            ProgramOffering(
+                program_id=f"PRG_VEC_{i:03d}",
+                university_id=f"UNI_{i % 10:02d}",
+                university_name=f"University {i % 10}",
+                university_type="state" if is_state else "foundation",
+                province_code="06",
+                department_name="Computer Engineering" if i % 3 == 0 else "Economics",
+                degree_level="bachelor",
+                score_type="SAY" if i % 3 == 0 else "EA",
+                baraj_group="engineering" if i % 3 == 0 else None,
+                capacity=120,
+                tuition_annual=0.0 if is_state else 480000.0,
+                scholarship_pct=100.0 if is_state else (50.0 if i % 4 == 1 else 0.0),
+                university_rank=15000 + i * 700,
+                prestige_score=max(0.25, 0.90 - (i % 25) * 0.025),
+                status="open",
+            )
+        )
+    assert catalog_fee_scale(many_progs) > 1.0
+    vec_cohort = build_standalone_test_cohort(many_progs, size=120, seed=7, empirical_priors=False, populate_initial_preferences=False)
+    scaled_progs, scale_factor = _scale_quotas_to_cohort(many_progs, len(vec_cohort.candidates))
+    assert 0.0 < scale_factor < 1.0
+    assert all(p.capacity >= 1 for p in scaled_progs)
+
+    shuffled_progs = list(scaled_progs)
+    random.Random(19).shuffle(shuffled_progs)
+    cfg = preset_preference_config("medium")
+    ruleset = PlacementRuleset(max_preferences=5)
+    pref_cache: dict[str, object] = {}
+
+    res1 = run_placement(
+        vec_cohort.candidates,
+        scaled_progs,
+        ruleset=ruleset,
+        seed=42,
+        intervention=UniversityPolicyIntervention(target_university_ids=["UNI_01"]),
+        preference_config=cfg,
+        preference_cache=pref_cache,
+    )
+    res2 = run_placement(
+        vec_cohort.candidates,
+        shuffled_progs,
+        ruleset=ruleset,
+        seed=42,
+        intervention=UniversityPolicyIntervention(target_university_ids=["UNI_01"]),
+        preference_config=cfg,
+        preference_cache=pref_cache,
+    )
+    assert res1.manifest.result_sha256 == res2.manifest.result_sha256
+
+    # 3. Acronym & distinctive token resolution matches Turkish university names cleanly
+    tr_catalog = [
+        ProgramOffering(
+            program_id="P_ODTU",
+            university_id="UNI_ODTU",
+            university_name="Orta Doğu Teknik Üniversitesi",
+            university_type="state",
+            province_code="06",
+            department_name="Computer Engineering",
+            degree_level="bachelor",
+            score_type="SAY",
+            baraj_group="engineering",
+            capacity=90,
+            tuition_annual=0.0,
+            scholarship_pct=100.0,
+            status="open",
+        ),
+        ProgramOffering(
+            program_id="P_BILKENT",
+            university_id="UNI_BILKENT",
+            university_name="İhsan Doğramacı Bilkent Üniversitesi",
+            university_type="foundation",
+            province_code="06",
+            department_name="Computer Engineering",
+            degree_level="bachelor",
+            score_type="SAY",
+            baraj_group="engineering",
+            capacity=45,
+            tuition_annual=640000.0,
+            scholarship_pct=0.0,
+            status="open",
+        ),
+    ]
+    odtu_spec = compile_university_query("What happens if ODTU expands quota by 10%?", catalog=tr_catalog, force_heuristic=True)
+    bilk_spec = compile_university_query("What happens if Bilkent University raises tuition by 20%?", catalog=tr_catalog, force_heuristic=True)
+    assert odtu_spec.levers.target_university_ids == ["UNI_ODTU"]
+    assert bilk_spec.levers.target_university_ids == ["UNI_BILKENT"]
