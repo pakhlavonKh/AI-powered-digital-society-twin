@@ -280,3 +280,73 @@ class NationalRegistry:
             (run_id,),
         ).fetchone()
         return self._university_row(row, include_payload=True) if row else None
+
+    # university prompt query runs (migration 4) ----------------------------
+    def insert_university_query_run(self, record: dict) -> None:
+        with transaction(self.conn):
+            self.conn.execute(
+                "INSERT INTO university_query_runs "
+                "(run_id, prompt, intent, snapshot_id, focus_university_id, request_hash, result_sha256, "
+                "osym_verified, coefficients_calibrated, query_spec_json, request_json, result_json, "
+                "summary_json, detailed_statistics_json, manifest_json, created_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    record["run_id"],
+                    record["prompt"],
+                    record["intent"],
+                    record.get("snapshot_id"),
+                    record.get("focus_university_id"),
+                    record["request_hash"],
+                    record["result_sha256"],
+                    1 if record.get("osym_verified") else 0,
+                    1 if record.get("coefficients_calibrated") else 0,
+                    json.dumps(record["query_spec"], ensure_ascii=False),
+                    json.dumps(record["request"], ensure_ascii=False),
+                    json.dumps(record["result"], ensure_ascii=False),
+                    json.dumps(record["summary"], ensure_ascii=False),
+                    json.dumps(record["detailed_statistics"], ensure_ascii=False),
+                    json.dumps(record["manifest"], ensure_ascii=False),
+                    record["created_at"],
+                ),
+            )
+
+    def _university_query_row(self, row, *, include_payload: bool) -> dict:
+        qspec = json.loads(row["query_spec_json"])
+        summary = json.loads(row["summary_json"])
+        out: dict = {
+            "run_id": row["run_id"],
+            "prompt": row["prompt"],
+            "intent": row["intent"],
+            "snapshot_id": row["snapshot_id"],
+            "focus_university_id": row["focus_university_id"],
+            "focus_university_name": qspec.get("focus_university_name"),
+            "request_hash": row["request_hash"],
+            "result_sha256": row["result_sha256"],
+            "osym_verified": bool(row["osym_verified"]),
+            "coefficients_calibrated": bool(row["coefficients_calibrated"]),
+            "headline": summary.get("headline"),
+            "direct_answer": summary.get("direct_answer"),
+            "created_at": row["created_at"],
+        }
+        if include_payload:
+            out["query_spec"] = qspec
+            out["request"] = json.loads(row["request_json"])
+            out["result"] = json.loads(row["result_json"])
+            out["summary"] = summary
+            out["detailed_statistics"] = json.loads(row["detailed_statistics_json"])
+            out["manifest"] = json.loads(row["manifest_json"])
+        return out
+
+    def university_query_runs(self, limit: int = 50) -> list[dict]:
+        rows = self.conn.execute(
+            "SELECT * FROM university_query_runs ORDER BY created_at DESC, run_id DESC LIMIT ?",
+            (limit,),
+        )
+        return [self._university_query_row(r, include_payload=False) for r in rows]
+
+    def university_query_run(self, run_id: str) -> dict | None:
+        row = self.conn.execute(
+            "SELECT * FROM university_query_runs WHERE run_id = ?",
+            (run_id,),
+        ).fetchone()
+        return self._university_query_row(row, include_payload=True) if row else None

@@ -20,11 +20,13 @@ from scenarios.placement.cohort_synth import (
 from scenarios.placement.comparison import ComparisonMismatchError, compare_placement_scenarios
 from scenarios.placement.engine import run_placement
 from scenarios.placement.models import PlacementResult, PlacementRuleset, ProgramOffering
+from scenarios.placement.preference_model import compute_elasticity_sensitivity_range
 from scenarios.schema import ScenarioConfig, UniversityPolicyIntervention
 from scenarios.summary import (
     summarize_placement_comparison,
     summarize_placement_result,
     summarize_university_comparison,
+    summarize_university_query,
     summarize_university_result,
 )
 from scenarios.university.cohort import (
@@ -37,9 +39,21 @@ from scenarios.university.experiments import (
 )
 from scenarios.university.models import UniversityRuleset, UtilityWeights
 from scenarios.university.semester_engine import run_university_simulation
+from scenarios.university_analytics import compute_target_university_analytics
+from scenarios.compiler import compile_university_query
+from scenarios.university_query import (
+    ElasticityPreset,
+    PreferenceModelConfig,
+    UniversityQuerySpec,
+    preset_preference_config,
+)
 from societytwin.common import canonical_hash, new_id, utc_now
 from societytwin.errors import conflict, invalid, not_found
 from societytwin.national.rng import MAX_SEED
+from societytwin.university.service import (
+    list_snapshot_universities,
+    load_programs_from_sqlite_snapshot,
+)
 
 if TYPE_CHECKING:
     from societytwin.national.service import NationalService
@@ -89,6 +103,536 @@ class UniversitySweepRequest(BaseModel):
     seed: int = Field(default=42, ge=0, le=MAX_SEED)
     tuition_pcts: list[float] = Field(default_factory=lambda: [0.0, 5.0, 10.0, 15.0, 20.0, 25.0, 30.0], min_length=2, max_length=15)
     aid_budget_pct: float | None = Field(default=None, ge=-100.0, le=500.0)
+
+
+class UniversityQueryPlanRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    prompt: str = Field(min_length=3, max_length=4000)
+    context_university_id: str | None = Field(default=None, max_length=128)
+    snapshot_id: str | None = Field(default=None, max_length=128)
+    admission_year: int | None = Field(default=None, ge=1990, le=2100)
+    population_id: str | None = Field(default=None, max_length=160)
+    cohort_size: int = Field(default=200, ge=20, le=2000)
+    seed: int = Field(default=42, ge=0, le=MAX_SEED)
+    elasticity_preset: ElasticityPreset = "medium"
+    model: str | None = Field(default=None, max_length=128)
+
+
+class UniversityQueryRunRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    prompt: str = Field(min_length=3, max_length=4000)
+    query_spec: UniversityQuerySpec | None = None
+    context_university_id: str | None = Field(default=None, max_length=128)
+    snapshot_id: str | None = Field(default=None, max_length=128)
+    admission_year: int | None = Field(default=None, ge=1990, le=2100)
+    population_id: str | None = Field(default=None, max_length=160)
+    cohort_size: int = Field(default=200, ge=20, le=2000)
+    seed: int = Field(default=42, ge=0, le=MAX_SEED)
+    elasticity_preset: ElasticityPreset = "medium"
+    preference_config: PreferenceModelConfig | None = None
+    model: str | None = Field(default=None, max_length=128)
+
+
+def resolve_university_catalog(
+    service: NationalService,
+    snapshot_id: str | None = None,
+    admission_year: int | None = None,
+) -> tuple[list[ProgramOffering], dict[str, Any]]:
+    """Load ProgramOffering catalog from a SQLite snapshot if given, else the built-in demo catalog."""
+    if snapshot_id:
+        return load_programs_from_sqlite_snapshot(
+            service.settings.university_db_path,
+            snapshot_id,
+            admission_year=admission_year,
+        )
+    programs = build_standalone_demo_programs()
+    return programs, {
+        "catalog_source": "standalone_demo_catalog",
+        "snapshot_id": None,
+        "admission_year": admission_year or 2025,
+        "programs_loaded": len(programs),
+    }
+
+
+def plan_university_query_workbench(service: NationalService, req: UniversityQueryPlanRequest) -> dict[str, Any]:
+    """Compile a natural-language university query and return a zero-cost reviewable plan."""
+    programs, catalog_meta = resolve_university_catalog(
+        service,
+        snapshot_id=req.snapshot_id,
+        admission_year=req.admission_year,
+    )
+    query_spec = compile_university_query(
+        req.prompt,
+        catalog=programs,
+        context_university_id=req.context_university_id,
+        snapshot_id=req.snapshot_id,
+        admission_year=catalog_meta.get("admission_year"),
+        cohort_size=req.cohort_size,
+        seed=req.seed,
+        model=req.model,
+    )
+    pref_cfg = preset_preference_config(req.elasticity_preset)
+    ruleset = PlacementRuleset()
+
+    targeted = [
+        p
+        for p in programs
+        if (
+            not query_spec.levers.target_university_ids
+            and not query_spec.levers.target_program_ids
+            and not query_spec.levers.target_department_names
+        )
+        or (
+            (not query_spec.levers.target_university_ids or p.university_id in query_spec.levers.target_university_ids)
+            and (not query_spec.levers.target_program_ids or p.program_id in query_spec.levers.target_program_ids)
+            and (
+                not query_spec.levers.target_department_names
+                or any(d.lower() in p.department_name.lower() for d in query_spec.levers.target_department_names)
+            )
+        )
+    ]
+
+    blockers: list[dict[str, str]] = []
+    warnings: list[str] = []
+    if query_spec.unresolved_entities:
+        for ue in query_spec.unresolved_entities:
+            blockers.append({"code": f"unresolved_{ue.entity_type}", "message": ue.reason})
+    if query_spec.out_of_scope_reasons:
+        for reason in query_spec.out_of_scope_reasons:
+            blockers.append({"code": "out_of_scope_query", "message": reason})
+    if not targeted:
+        blockers.append({"code": "no_matching_programs", "message": "No catalog programs match the target university/department filter."})
+    if req.population_id:
+        try:
+            service._load(req.population_id)
+        except Exception as exc:  # noqa: BLE001
+            blockers.append({"code": "invalid_population", "message": str(exc)})
+    if not pref_cfg.coefficients_calibrated:
+        warnings.append(
+            "Demand elasticities are uncalibrated synthetic assumptions (coefficients_calibrated=false); "
+            "execution runs Low / Medium / High elasticity presets and reports a range."
+        )
+    if targeted and all(p.published_net_tuition_before_aid() <= 0.0 for p in targeted) and (
+        query_spec.levers.tuition_change_pct or query_spec.levers.aid_budget_change_pct
+    ):
+        warnings.append(
+            "All targeted programs currently have 0 TL annual tuition (state or 100% scholarship); "
+            "percentage tuition scaling leaves net tuition at 0 TL."
+        )
+    if not ruleset.osym_verified:
+        warnings.append(ruleset.disclosure_banner())
+
+    universities = sorted(
+        {
+            (p.university_id, p.university_name, p.university_type)
+            for p in programs
+        }
+    )
+    plan_payload = {
+        "query_spec": query_spec.model_dump(mode="json"),
+        "preference_config": pref_cfg.model_dump(mode="json"),
+        "population_id": req.population_id,
+        "catalog_meta": catalog_meta,
+    }
+    return {
+        "plan_hash": canonical_hash(plan_payload),
+        "query_spec": query_spec.model_dump(mode="json"),
+        "preference_config": pref_cfg.model_dump(mode="json"),
+        "elasticity_presets": ["low", "medium", "high"],
+        "catalog": {
+            **catalog_meta,
+            "total_programs": len(programs),
+            "targeted_programs": len(targeted),
+            "rivals_fixed": bool(
+                query_spec.levers.target_university_ids
+                or query_spec.levers.target_program_ids
+                or query_spec.levers.target_department_names
+            ),
+            "universities": [
+                {"university_id": uid, "university_name": uname, "university_type": utype}
+                for uid, uname, utype in universities
+            ],
+        },
+        "population_id": req.population_id,
+        "osym_verified": ruleset.osym_verified,
+        "coefficients_calibrated": pref_cfg.coefficients_calibrated,
+        "blockers": blockers,
+        "warnings": warnings,
+        "executable": len(blockers) == 0,
+        "disclaimers": query_spec.disclaimers,
+    }
+
+
+def _sync_edited_query_spec(
+    spec: UniversityQuerySpec,
+    programs: list[ProgramOffering],
+    req: UniversityQueryRunRequest,
+) -> UniversityQuerySpec:
+    """Keep target university scoping and cohort parameters consistent if user edited the plan."""
+    levers = spec.levers
+    focus_uid = req.context_university_id or spec.focus_university_id
+    focus_uname = spec.focus_university_name
+    if focus_uid:
+        uni_names = {p.university_id: p.university_name for p in programs}
+        if focus_uid in uni_names:
+            focus_uname = uni_names[focus_uid]
+        if not levers.target_university_ids or (req.context_university_id and levers.target_university_ids != [focus_uid]):
+            levers = levers.model_copy(update={"target_university_ids": [focus_uid]})
+
+    synced_variants = []
+    for v in spec.comparison_variants:
+        v_int = v.intervention
+        if focus_uid and v_int.target_university_ids != [focus_uid]:
+            v_int = v_int.model_copy(update={"target_university_ids": [focus_uid]})
+        if not v.is_baseline:
+            if v.variant_id == "ranking_higher" and levers.ranking_change_pct is not None:
+                mag = abs(float(levers.ranking_change_pct))
+                v_int = v_int.model_copy(update={"ranking_change_pct": mag})
+                v = v.model_copy(update={"label": f"Higher Ranking (+{mag:g}%)"})
+            elif v.variant_id == "ranking_lower" and levers.ranking_change_pct is not None:
+                mag = abs(float(levers.ranking_change_pct))
+                v_int = v_int.model_copy(update={"ranking_change_pct": -mag})
+                v = v.model_copy(update={"label": f"Lower Ranking (-{mag:g}%)"})
+        synced_variants.append(v.model_copy(update={"intervention": v_int}))
+
+    return spec.model_copy(
+        update={
+            "focus_university_id": focus_uid,
+            "focus_university_name": focus_uname,
+            "levers": levers,
+            "comparison_variants": synced_variants,
+            "cohort_size": req.cohort_size,
+            "seed": req.seed,
+            "snapshot_id": req.snapshot_id if req.snapshot_id is not None else spec.snapshot_id,
+            "admission_year": req.admission_year if req.admission_year is not None else spec.admission_year,
+        }
+    )
+
+
+def execute_university_query_workbench(service: NationalService, req: UniversityQueryRunRequest) -> dict[str, Any]:
+    """Execute a compiled/edited university query plan, compute question-aware stats & summary, and persist."""
+    eff_snapshot = req.snapshot_id or (req.query_spec.snapshot_id if req.query_spec else None)
+    eff_year = req.admission_year or (req.query_spec.admission_year if req.query_spec else None)
+    programs, catalog_meta = resolve_university_catalog(
+        service,
+        snapshot_id=eff_snapshot,
+        admission_year=eff_year,
+    )
+
+    if req.query_spec is not None:
+        query_spec = _sync_edited_query_spec(req.query_spec, programs, req)
+    else:
+        query_spec = compile_university_query(
+            req.prompt,
+            catalog=programs,
+            context_university_id=req.context_university_id,
+            snapshot_id=eff_snapshot,
+            admission_year=catalog_meta.get("admission_year"),
+            cohort_size=req.cohort_size,
+            seed=req.seed,
+            model=req.model,
+        )
+
+    if query_spec.unresolved_entities:
+        raise invalid(
+            "unresolved_university_entity",
+            query_spec.unresolved_entities[0].reason,
+            {"unresolved_entities": [u.model_dump(mode="json") for u in query_spec.unresolved_entities]},
+        )
+    if query_spec.out_of_scope_reasons:
+        raise invalid(
+            "out_of_scope_university_query",
+            query_spec.out_of_scope_reasons[0],
+            {"out_of_scope_reasons": query_spec.out_of_scope_reasons},
+        )
+
+    pref_cfg = req.preference_config or preset_preference_config(req.elasticity_preset)
+    ruleset = PlacementRuleset()
+    cohort = _resolve_candidate_cohort(service, req.population_id, programs, query_spec.cohort_size, query_spec.seed)
+
+    base_scope_int = UniversityPolicyIntervention(
+        target_university_ids=list(query_spec.levers.target_university_ids),
+        target_program_ids=list(query_spec.levers.target_program_ids),
+        target_department_names=list(query_spec.levers.target_department_names),
+        base_aid_budget=query_spec.levers.base_aid_budget,
+        max_grant_per_student=query_spec.levers.max_grant_per_student,
+    )
+
+    def _run_one(intervention: UniversityPolicyIntervention, cfg: PreferenceModelConfig = pref_cfg) -> PlacementResult:
+        return run_placement(
+            candidates=cohort.candidates,
+            programs=programs,
+            ruleset=ruleset,
+            intervention=intervention,
+            seed=query_spec.seed,
+            preference_config=cfg,
+        )
+
+    variant_summaries: list[dict[str, Any]] | None = None
+    sweep_rows: list[dict[str, Any]] | None = None
+    baseline_result: PlacementResult | None = None
+    policy_result: PlacementResult | None = None
+    active_policy_int = query_spec.levers
+
+    # 1. Multi-variant path (e.g. "ranking got higher or lower" or "compare +10/+20/+30%")
+    if query_spec.comparison_variants:
+        variant_runs: list[tuple[Any, PlacementResult]] = []
+        for var in query_spec.comparison_variants:
+            res = _run_one(var.intervention)
+            variant_runs.append((var, res))
+            if var.is_baseline:
+                baseline_result = res
+
+        if baseline_result is None:
+            baseline_result = _run_one(base_scope_int)
+
+        non_base = [(v, r) for v, r in variant_runs if not v.is_baseline]
+        if non_base:
+            # Prefer positive/higher variant as primary comparison pair for detailed breakdown
+            chosen_var, policy_result = non_base[-1]
+            active_policy_int = chosen_var.intervention
+        else:
+            policy_result = baseline_result
+
+        variant_summaries = []
+        for var, res in variant_runs:
+            cmp_v = compare_placement_scenarios(baseline_result, res)
+            an_v = compute_target_university_analytics(
+                query_spec=query_spec,
+                candidates=cohort.candidates,
+                programs=programs,
+                baseline_result=baseline_result,
+                policy_result=res,
+                comparison=cmp_v,
+                cohort_source=cohort.demographic_source,
+                seed=query_spec.seed,
+                top_k=pref_cfg.top_k_definition,
+            )
+            defs_v = an_v["application_definitions"]
+            cut_scores = [p["policy_cutoff_score"] for p in an_v["programs"] if p["policy_cutoff_score"] is not None]
+            variant_summaries.append({
+                "variant_id": var.variant_id,
+                "label": var.label,
+                "is_baseline": var.is_baseline,
+                "listed_anywhere": defs_v["listed_anywhere"]["policy"],
+                "listed_anywhere_delta": defs_v["listed_anywhere"]["delta"],
+                "fee_paying_listed": defs_v["fee_paying_listed"]["policy"],
+                "listed_top_k": defs_v["listed_top_k"]["policy"],
+                "first_choice": defs_v["first_choice"]["policy"],
+                "placed": defs_v["placed"]["policy"],
+                "filled": an_v["target_capacity"]["policy_filled"],
+                "capacity": an_v["target_capacity"]["policy"],
+                "mean_cutoff_score": round(sum(cut_scores) / len(cut_scores), 2) if cut_scores else None,
+                "target_net_revenue": an_v["target_revenue"]["policy"],
+            })
+
+    # 2. Revenue / Tuition sweep path
+    elif query_spec.sweep_tuition_pcts or query_spec.intent == "revenue_tradeoff":
+        grid = query_spec.sweep_tuition_pcts or [-20.0, 0.0, 10.0, 20.0, 30.0, 40.0, 50.0, 75.0, 100.0]
+        if 0.0 not in grid:
+            grid = sorted(set([0.0, *grid]))
+        baseline_result = _run_one(base_scope_int)
+        sweep_rows = []
+        best_res: PlacementResult | None = None
+        best_rev = -1.0
+        best_int = active_policy_int
+        for pct in grid:
+            step_int = query_spec.levers.model_copy(
+                update={
+                    "tuition_change_pct": float(pct),
+                }
+            )
+            res = baseline_result if pct == 0.0 else _run_one(step_int)
+            cmp_s = compare_placement_scenarios(baseline_result, res)
+            an_s = compute_target_university_analytics(
+                query_spec=query_spec,
+                candidates=cohort.candidates,
+                programs=programs,
+                baseline_result=baseline_result,
+                policy_result=res,
+                comparison=cmp_s,
+                cohort_source=cohort.demographic_source,
+                seed=query_spec.seed,
+                top_k=pref_cfg.top_k_definition,
+            )
+            defs_s = an_s["application_definitions"]
+            rev_s = an_s["target_revenue"]["policy"]
+            sweep_rows.append({
+                "tuition_change_pct": float(pct),
+                "listed_anywhere": defs_s["listed_anywhere"]["policy"],
+                "listed_top_k": defs_s["listed_top_k"]["policy"],
+                "first_choice": defs_s["first_choice"]["policy"],
+                "placed": defs_s["placed"]["policy"],
+                "target_net_revenue": rev_s,
+            })
+            if rev_s > best_rev:
+                best_rev = rev_s
+                best_res = res
+                best_int = step_int
+        if query_spec.levers.tuition_change_pct is not None:
+            policy_result = _run_one(query_spec.levers)
+        else:
+            policy_result = best_res or baseline_result
+            active_policy_int = best_int
+
+    # 3. Single baseline vs policy path
+    else:
+        baseline_result = _run_one(base_scope_int)
+        policy_result = _run_one(query_spec.levers)
+
+    assert baseline_result is not None and policy_result is not None
+    comparison = compare_placement_scenarios(baseline_result, policy_result)
+    analytics = compute_target_university_analytics(
+        query_spec=query_spec,
+        candidates=cohort.candidates,
+        programs=programs,
+        baseline_result=baseline_result,
+        policy_result=policy_result,
+        comparison=comparison,
+        cohort_source=cohort.demographic_source,
+        seed=query_spec.seed,
+        top_k=pref_cfg.top_k_definition,
+    )
+
+    elasticity_range = None
+    if not pref_cfg.coefficients_calibrated:
+        elasticity_range = compute_elasticity_sensitivity_range(
+            candidates=cohort.candidates,
+            programs=programs,
+            target_program_ids=set(analytics["target_program_ids"]),
+            fee_target_program_ids=set(analytics.get("fee_target_program_ids", [])),
+            ruleset=ruleset,
+            intervention=active_policy_int,
+            seed=query_spec.seed,
+            top_k=pref_cfg.top_k_definition,
+        )
+
+    # 4. Optional Milestone 2 retention simulation (scoped to target university!)
+    university_comparison = None
+    if query_spec.simulation_mode in ("retention", "both") or query_spec.intent == "retention_impact":
+        target_set = set(analytics["target_program_ids"])
+        handoff = placement_result_to_student_cohort(policy_result, cohort, programs)
+        scoped_students = [s for s in handoff.get("students", []) if s.get("program_id") in target_set]
+        if len(scoped_students) < 5:
+            base_handoff = placement_result_to_student_cohort(baseline_result, cohort, programs)
+            scoped_students = [s for s in base_handoff.get("students", []) if s.get("program_id") in target_set]
+        if len(scoped_students) >= 5:
+            handoff["students"] = scoped_students
+            handoff["student_count"] = len(scoped_students)
+        if handoff.get("students"):
+            students, courses = student_cohort_from_placement_handoff(handoff, seed=query_spec.seed)
+        else:
+            students, courses = build_synthetic_university_cohort(size=min(query_spec.cohort_size, 200), seed=query_spec.seed)
+        prog_uni_map = {p.program_id: p.university_id for p in programs}
+        eff_terms = max(2, active_policy_int.semester_count)
+        university_comparison = run_replicated_university_experiment(
+            students=students,
+            courses=courses,
+            policy_intervention=active_policy_int,
+            baseline_intervention=base_scope_int.model_copy(update={"semester_count": eff_terms}),
+            semester_count=eff_terms,
+            replications=min(8, max(2, active_policy_int.replications)),
+            base_seed=query_spec.seed,
+            baseline_scenario_id="query_retention_baseline",
+            policy_scenario_id="query_retention_policy",
+            program_university_map=prog_uni_map,
+        )
+
+    summary = summarize_university_query(
+        query_spec,
+        analytics,
+        elasticity_range=elasticity_range,
+        variant_summaries=variant_summaries,
+        sweep_rows=sweep_rows,
+        university_comparison=university_comparison,
+        allow_llm=bool(service.settings.live_execution_enabled),
+    )
+
+    req_payload = req.model_dump(mode="json")
+    result_payload = {
+        "analytics": analytics,
+        "elasticity_range": elasticity_range,
+        "variants": variant_summaries,
+        "sweep_rows": sweep_rows,
+        "comparison": comparison.model_dump(mode="json"),
+        "university_comparison": university_comparison.model_dump(mode="json") if university_comparison is not None else None,
+        "catalog_meta": catalog_meta,
+    }
+    result_sha256 = canonical_hash({
+        "query_spec": query_spec.model_dump(mode="json"),
+        "policy_result_sha256": policy_result.manifest.result_sha256,
+        "baseline_result_sha256": baseline_result.manifest.result_sha256,
+        "analytics": analytics,
+    })
+    manifest = {
+        "engine_version": policy_result.manifest.engine_version,
+        "catalog_source": catalog_meta["catalog_source"],
+        "snapshot_id": catalog_meta.get("snapshot_id"),
+        "admission_year": catalog_meta.get("admission_year"),
+        "cohort_source": cohort.demographic_source,
+        "cohort_size": len(cohort.candidates),
+        "seed": query_spec.seed,
+        "elasticity_preset": pref_cfg.elasticity_preset,
+        "preference_model": pref_cfg.model_dump(mode="json"),
+        "rivals_fixed": True,
+        "osym_verified": ruleset.osym_verified,
+        "coefficients_calibrated": pref_cfg.coefficients_calibrated,
+        "disclaimer": ruleset.disclosure_banner(),
+        "result_sha256": result_sha256,
+    }
+
+    run_id = new_id("uquery")
+    created_at = utc_now()
+    record = {
+        "run_id": run_id,
+        "prompt": query_spec.original_prompt,
+        "intent": query_spec.intent,
+        "snapshot_id": eff_snapshot,
+        "focus_university_id": query_spec.focus_university_id,
+        "request_hash": canonical_hash(req_payload),
+        "result_sha256": result_sha256,
+        "osym_verified": ruleset.osym_verified,
+        "coefficients_calibrated": pref_cfg.coefficients_calibrated,
+        "query_spec": query_spec.model_dump(mode="json"),
+        "request": req_payload,
+        "result": result_payload,
+        "summary": summary,
+        "detailed_statistics": summary["detailed_statistics"],
+        "manifest": manifest,
+        "created_at": created_at,
+    }
+    service.db.insert_university_query_run(record)
+    return {
+        "run_id": run_id,
+        "prompt": query_spec.original_prompt,
+        "intent": query_spec.intent,
+        "snapshot_id": eff_snapshot,
+        "focus_university_id": query_spec.focus_university_id,
+        "focus_university_name": query_spec.focus_university_name,
+        "osym_verified": ruleset.osym_verified,
+        "coefficients_calibrated": pref_cfg.coefficients_calibrated,
+        "result_sha256": result_sha256,
+        "created_at": created_at,
+        "query_spec": record["query_spec"],
+        "summary": summary,
+        "detailed_statistics": record["detailed_statistics"],
+        "result": result_payload,
+        "manifest": manifest,
+    }
+
+
+def list_university_query_runs_workbench(service: NationalService) -> dict[str, Any]:
+    rows = service.db.university_query_runs()
+    return {"items": rows, "total": len(rows)}
+
+
+def get_university_query_run_workbench(service: NationalService, run_id: str) -> dict[str, Any]:
+    row = service.db.university_query_run(run_id)
+    if row is None:
+        raise not_found("unknown_university_query_run", f"No university query run '{run_id}'.")
+    return row
 
 
 def _resolve_scenario_and_intervention(

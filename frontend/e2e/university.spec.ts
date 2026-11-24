@@ -122,3 +122,19 @@ test("comparison shows pp and relative changes for compatible runs and blocks in
   await expect(page.getByText("These runs cannot be compared.")).toBeVisible();
   await expect(page.getByText(/different candidate cohorts/).first()).toBeVisible();
 });
+
+test("live /university prompt studio compiles, runs counterfactuals, and displays answer + stats", async ({ page }) => {
+  await page.goto("/university");
+  await heading(page, "University Decision & Placement Simulator");
+  await expect(page.getByRole("heading", { name: "Ask a University Policy Question" })).toBeVisible();
+  await expect(page.getByText(/Connected to SQLite snapshot:|no SQLite DB found at/i)).toBeVisible();
+  await page.locator("summary", { hasText: /Advanced query options/ }).click();
+  await page.getByLabel(/Catalog source/i).selectOption("");
+  await page.getByLabel(/Target university/i).selectOption("UNI_ANK_FOUND");
+  await page.getByRole("button", { name: "Compile Query Plan" }).click();
+  await expect(page.getByText(/Compiled Plan: application_demand/i)).toBeVisible();
+  await page.getByRole("button", { name: "Run Counterfactual Simulation" }).click();
+  await expect(page.getByText(/Question-Specific Executive Summary/i)).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText(/Applicants by Household Income Band/i)).toBeVisible();
+  await expect(page.getByText(/Applicant Migration & Competitor Flow/i)).toBeVisible();
+});

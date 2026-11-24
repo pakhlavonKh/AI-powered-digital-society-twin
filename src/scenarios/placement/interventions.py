@@ -19,37 +19,110 @@ except ImportError:
 from societytwin.national.fitting import largest_remainder
 
 
+def _program_matches_targets(
+    program: ProgramOffering,
+    intervention: UniversityPolicyIntervention,
+) -> bool:
+    """Return True when program is within target scope (empty scope targets all programs)."""
+    if (
+        not intervention.target_university_ids
+        and not intervention.target_program_ids
+        and not intervention.target_department_names
+    ):
+        return True
+    if intervention.target_university_ids and program.university_id not in intervention.target_university_ids:
+        return False
+    if intervention.target_program_ids and program.program_id not in intervention.target_program_ids:
+        return False
+    if intervention.target_department_names:
+        dept_l = program.department_name.lower()
+        if not any(d.lower() in dept_l for d in intervention.target_department_names):
+            return False
+    return True
+
+
+def _scholarship_tier_key(program: ProgramOffering) -> str:
+    if program.tuition_annual <= 0.0:
+        return "state_free"
+    if program.scholarship_pct >= 99.9:
+        return "burslu"
+    if program.scholarship_pct >= 49.9:
+        return "pct50"
+    if program.scholarship_pct >= 24.9:
+        return "pct25"
+    return "ucretli"
+
+
+def _apply_exogenous_ranking_shift(
+    program: ProgramOffering,
+    intervention: UniversityPolicyIntervention,
+) -> dict[str, Any]:
+    """Apply exogenous prestige/rank_score shift without modifying max_rank_override (ÖSYM baraj)."""
+    pct = intervention.ranking_change_pct
+    spot_delta = intervention.ranking_rank_delta
+    if pct is None and spot_delta is None:
+        return {}
+
+    base_prestige = program.effective_prestige_score()
+    delta = 0.0
+    if pct is not None:
+        # Positive pct improves ranking/prestige; negative pct lowers it.
+        delta += 0.50 * (float(pct) / 100.0)
+    if spot_delta is not None:
+        # Positive spot_delta improves by N spots; negative drops by N spots.
+        delta += max(-0.45, min(0.45, float(spot_delta) / 150.0))
+
+    new_prestige = round(max(0.02, min(0.99, base_prestige + delta)), 6)
+    updates: dict[str, Any] = {"prestige_score": new_prestige}
+    if program.university_rank is not None:
+        rank_val = program.university_rank
+        if pct is not None:
+            rank_val = max(1, int(round(rank_val * max(0.1, 1.0 - float(pct) / 100.0))))
+        if spot_delta is not None:
+            rank_val = max(1, rank_val - int(spot_delta))
+        updates["university_rank"] = rank_val
+    return updates
+
+
 def _scale_program_capacities(
     programs: list[ProgramOffering],
     intervention: UniversityPolicyIntervention,
 ) -> dict[str, int]:
-    """Compute new general quota capacities deterministically."""
-    open_indices = [i for i, p in enumerate(programs) if p.status == "open" and p.capacity > 0]
-    if intervention.capacity_change_pct is None or not open_indices:
-        return {p.program_id: p.capacity for p in programs}
-
-    factor = max(0.0, 1.0 + intervention.capacity_change_pct / 100.0)
+    """Compute new general quota capacities deterministically (scoped to target programs)."""
+    targeted_open = [
+        i
+        for i, p in enumerate(programs)
+        if p.status == "open" and p.capacity > 0 and _program_matches_targets(p, intervention)
+    ]
     out = {p.program_id: p.capacity for p in programs}
-
-    if intervention.capacity_rounding == "largest_remainder":
-        shares = {programs[i].program_id: float(programs[i].capacity) for i in open_indices}
-        total_before = sum(programs[i].capacity for i in open_indices)
-        target_total = max(0, int(round(total_before * factor)))
-        if target_total == 0:
-            for i in open_indices:
-                out[programs[i].program_id] = 0
+    if intervention.capacity_change_pct is not None and targeted_open:
+        factor = max(0.0, 1.0 + intervention.capacity_change_pct / 100.0)
+        if intervention.capacity_rounding == "largest_remainder":
+            shares = {programs[i].program_id: float(programs[i].capacity) for i in targeted_open}
+            total_before = sum(programs[i].capacity for i in targeted_open)
+            target_total = max(0, int(round(total_before * factor)))
+            if target_total == 0:
+                for i in targeted_open:
+                    out[programs[i].program_id] = 0
+            else:
+                out.update(largest_remainder(shares, target_total))
         else:
-            allocated = largest_remainder(shares, target_total)
-            out.update(allocated)
-        return out
+            for i in targeted_open:
+                p = programs[i]
+                raw = p.capacity * factor
+                if intervention.capacity_rounding == "nearest":
+                    out[p.program_id] = max(0, int(round(raw)))
+                else:
+                    out[p.program_id] = max(0, int(math.floor(raw + 1e-9)))
 
-    for i in open_indices:
-        p = programs[i]
-        raw = p.capacity * factor
-        if intervention.capacity_rounding == "nearest":
-            out[p.program_id] = max(0, int(round(raw)))
-        else:
-            out[p.program_id] = max(0, int(math.floor(raw + 1e-9)))
+    if intervention.scholarship_tier_mix:
+        tier_map = {k.strip().lower(): float(v) for k, v in intervention.scholarship_tier_mix.items()}
+        for i in targeted_open:
+            p = programs[i]
+            tier = _scholarship_tier_key(p)
+            mult = tier_map.get(p.program_id.lower()) or tier_map.get(tier)
+            if mult is not None:
+                out[p.program_id] = max(0, int(round(out[p.program_id] * mult)))
     return out
 
 
@@ -149,6 +222,7 @@ def apply_intervention(
         )
 
     closed_set = set(intervention.closed_programs)
+    opened_set = set(intervention.opened_programs)
     scaled_caps = _scale_program_capacities(programs, intervention)
     tuition_factor = (
         max(0.0, 1.0 + intervention.tuition_change_pct / 100.0)
@@ -157,20 +231,31 @@ def apply_intervention(
     )
 
     new_programs: list[ProgramOffering] = []
+    targeted_ids: list[str] = []
     for p in programs:
+        is_target = _program_matches_targets(p, intervention)
+        if is_target:
+            targeted_ids.append(p.program_id)
+
         updates: dict[str, Any] = {}
         if p.program_id in closed_set:
             updates["status"] = "closed"
+        elif p.program_id in opened_set:
+            updates["status"] = "open"
+
         new_cap = intervention.program_capacity_overrides.get(p.program_id, scaled_caps[p.program_id])
         updates["capacity"] = max(0, int(new_cap))
 
         if p.program_id in intervention.tuition_overrides:
             updates["tuition_annual"] = round(float(intervention.tuition_overrides[p.program_id]), 2)
-        elif intervention.tuition_change_pct is not None and p.tuition_annual > 0.0:
+        elif is_target and intervention.tuition_change_pct is not None and p.tuition_annual > 0.0:
             updates["tuition_annual"] = round(p.tuition_annual * tuition_factor, 2)
 
         if p.program_id in intervention.min_score_overrides:
             updates["min_score"] = float(intervention.min_score_overrides[p.program_id])
+
+        if is_target:
+            updates.update(_apply_exogenous_ranking_shift(p, intervention))
 
         new_programs.append(p.model_copy(update=updates, deep=True))
 
@@ -202,6 +287,17 @@ def apply_intervention(
         "affordability_filter_mode": intervention.affordability_filter_mode,
         "installment_count": intervention.installment_count,
         "rank_threshold_overrides": dict(intervention.rank_threshold_overrides),
+        "ranking_change_pct": intervention.ranking_change_pct,
+        "ranking_rank_delta": intervention.ranking_rank_delta,
+        "target_university_ids": list(intervention.target_university_ids),
+        "target_program_ids": list(intervention.target_program_ids),
+        "target_department_names": list(intervention.target_department_names),
+        "targeted_program_count": len(targeted_ids),
+        "rivals_fixed": bool(
+            intervention.target_university_ids
+            or intervention.target_program_ids
+            or intervention.target_department_names
+        ),
         "apply_prior_placement_obp_penalty": intervention.apply_prior_placement_obp_penalty,
         **aid_summary,
     }

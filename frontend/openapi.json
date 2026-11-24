@@ -5012,6 +5012,145 @@
         }
       }
     },
+    "/api/v2/university/query/plan": {
+      "post": {
+        "tags": [
+          "university-simulation"
+        ],
+        "summary": "University Query Plan",
+        "description": "Compile a natural-language university question into a zero-cost reviewable query plan.",
+        "operationId": "university_query_plan_api_v2_university_query_plan_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UniversityQueryPlanRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/university/query/runs": {
+      "get": {
+        "tags": [
+          "university-simulation"
+        ],
+        "summary": "University Query Runs List",
+        "description": "List persisted prompt-driven university simulation runs.",
+        "operationId": "university_query_runs_list_api_v2_university_query_runs_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "university-simulation"
+        ],
+        "summary": "University Query Run Create",
+        "description": "Execute a compiled/edited university prompt simulation and persist answer + statistics.",
+        "operationId": "university_query_run_create_api_v2_university_query_runs_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UniversityQueryRunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/university/query/runs/{run_id}": {
+      "get": {
+        "tags": [
+          "university-simulation"
+        ],
+        "summary": "University Query Run Get",
+        "description": "Retrieve a persisted prompt-driven university simulation run.",
+        "operationId": "university_query_run_get_api_v2_university_query_runs__run_id__get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v2/university-registry/status": {
       "get": {
         "tags": [
@@ -5046,6 +5185,47 @@
             "content": {
               "application/json": {
                 "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/university-registry/snapshots/{snapshot_id}/universities": {
+      "get": {
+        "tags": [
+          "university-registry"
+        ],
+        "summary": "University Registry Universities",
+        "description": "List universities and program counts for an imported SQLite snapshot.",
+        "operationId": "university_registry_universities_api_v2_university_registry_snapshots__snapshot_id__universities_get",
+        "parameters": [
+          {
+            "name": "snapshot_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Snapshot Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
               }
             }
           }
@@ -10032,6 +10212,81 @@
         "title": "PopulationFilterConfig",
         "description": "Criteria defining which synthetic residents are eligible to participate in the scenario."
       },
+      "PreferenceModelConfig": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled",
+            "default": true
+          },
+          "elasticity_preset": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "title": "Elasticity Preset",
+            "default": "medium"
+          },
+          "beta_rank": {
+            "type": "number",
+            "maximum": 20.0,
+            "minimum": 0.0,
+            "title": "Beta Rank",
+            "default": 2.2
+          },
+          "beta_cost_by_income": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Beta Cost By Income"
+          },
+          "beta_home": {
+            "type": "number",
+            "maximum": 10.0,
+            "minimum": 0.0,
+            "title": "Beta Home",
+            "default": 0.65
+          },
+          "beta_fit": {
+            "type": "number",
+            "maximum": 10.0,
+            "minimum": 0.0,
+            "title": "Beta Fit",
+            "default": 0.85
+          },
+          "outside_option_threshold": {
+            "type": "number",
+            "maximum": 10.0,
+            "minimum": -10.0,
+            "title": "Outside Option Threshold",
+            "default": 0.72
+          },
+          "top_k_definition": {
+            "type": "integer",
+            "maximum": 24.0,
+            "minimum": 1.0,
+            "title": "Top K Definition",
+            "default": 3
+          },
+          "coefficients_calibrated": {
+            "type": "boolean",
+            "title": "Coefficients Calibrated",
+            "default": false
+          },
+          "calibration_note": {
+            "type": "string",
+            "title": "Calibration Note",
+            "default": "Synthetic uncalibrated behavioral elasticities; low/medium/high sensitivity range reported."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "PreferenceModelConfig",
+        "description": "Uncalibrated synthetic random-utility parameters for policy-responsive applications."
+      },
       "Preflight": {
         "properties": {
           "preflight_hash": {
@@ -10562,6 +10817,106 @@
           "source"
         ],
         "title": "Prompts"
+      },
+      "QueryAssumption": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Key"
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Label"
+          },
+          "value": {
+            "title": "Value"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "user",
+              "default",
+              "inferred"
+            ],
+            "title": "Source",
+            "default": "default"
+          },
+          "editable": {
+            "type": "boolean",
+            "title": "Editable",
+            "default": true
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 32
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "key",
+          "label",
+          "value"
+        ],
+        "title": "QueryAssumption",
+        "description": "Explicit assumption parsed or defaulted from an NLP university query."
+      },
+      "QueryVariantSpec": {
+        "properties": {
+          "variant_id": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Variant Id"
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Label"
+          },
+          "intervention": {
+            "$ref": "#/components/schemas/UniversityPolicyIntervention"
+          },
+          "is_baseline": {
+            "type": "boolean",
+            "title": "Is Baseline",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "variant_id",
+          "label",
+          "intervention"
+        ],
+        "title": "QueryVariantSpec",
+        "description": "Named counterfactual policy variant for directional or multi-scenario comparisons."
       },
       "Question": {
         "properties": {
@@ -12687,7 +13042,7 @@
               {
                 "type": "number",
                 "maximum": 1000.0,
-                "exclusiveMinimum": -100.0
+                "minimum": -100.0
               },
               {
                 "type": "null"
@@ -12787,6 +13142,55 @@
             "title": "Affordability Filter Mode",
             "default": "none"
           },
+          "target_university_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Target University Ids"
+          },
+          "target_program_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Target Program Ids"
+          },
+          "target_department_names": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Target Department Names"
+          },
+          "ranking_change_pct": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 500.0,
+                "exclusiveMinimum": -100.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ranking Change Pct",
+            "description": "Exogenous percentage shift in targeted prestige/ranking (>0 improves, <0 worsens)."
+          },
+          "ranking_rank_delta": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 100000.0,
+                "minimum": -100000.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ranking Rank Delta",
+            "description": "Exogenous rank-spot shift for targeted programs (>0 improves by N spots, <0 drops N spots)."
+          },
           "capacity_change_pct": {
             "anyOf": [
               {
@@ -12817,12 +13221,26 @@
             "type": "object",
             "title": "Program Capacity Overrides"
           },
+          "scholarship_tier_mix": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Scholarship Tier Mix"
+          },
           "closed_programs": {
             "items": {
               "type": "string"
             },
             "type": "array",
             "title": "Closed Programs"
+          },
+          "opened_programs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Opened Programs"
           },
           "rank_threshold_overrides": {
             "additionalProperties": {
@@ -12915,6 +13333,426 @@
         "type": "object",
         "title": "UniversityPolicyIntervention",
         "description": "Economic, capacity, and academic parameters for university placement and policy scenarios."
+      },
+      "UniversityQueryPlanRequest": {
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "maxLength": 4000,
+            "minLength": 3,
+            "title": "Prompt"
+          },
+          "context_university_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Context University Id"
+          },
+          "snapshot_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot Id"
+          },
+          "admission_year": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 2100.0,
+                "minimum": 1990.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Admission Year"
+          },
+          "population_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 160
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Population Id"
+          },
+          "cohort_size": {
+            "type": "integer",
+            "maximum": 2000.0,
+            "minimum": 20.0,
+            "title": "Cohort Size",
+            "default": 200
+          },
+          "seed": {
+            "type": "integer",
+            "maximum": 9.223372036854776e+18,
+            "minimum": 0.0,
+            "title": "Seed",
+            "default": 42
+          },
+          "elasticity_preset": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "title": "Elasticity Preset",
+            "default": "medium"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "prompt"
+        ],
+        "title": "UniversityQueryPlanRequest"
+      },
+      "UniversityQueryRunRequest": {
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "maxLength": 4000,
+            "minLength": 3,
+            "title": "Prompt"
+          },
+          "query_spec": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UniversityQuerySpec"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "context_university_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Context University Id"
+          },
+          "snapshot_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot Id"
+          },
+          "admission_year": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 2100.0,
+                "minimum": 1990.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Admission Year"
+          },
+          "population_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 160
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Population Id"
+          },
+          "cohort_size": {
+            "type": "integer",
+            "maximum": 2000.0,
+            "minimum": 20.0,
+            "title": "Cohort Size",
+            "default": 200
+          },
+          "seed": {
+            "type": "integer",
+            "maximum": 9.223372036854776e+18,
+            "minimum": 0.0,
+            "title": "Seed",
+            "default": 42
+          },
+          "elasticity_preset": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "title": "Elasticity Preset",
+            "default": "medium"
+          },
+          "preference_config": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PreferenceModelConfig"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "prompt"
+        ],
+        "title": "UniversityQueryRunRequest"
+      },
+      "UniversityQuerySpec": {
+        "properties": {
+          "original_prompt": {
+            "type": "string",
+            "maxLength": 4000,
+            "minLength": 3,
+            "title": "Original Prompt"
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "en",
+              "tr",
+              "mixed"
+            ],
+            "title": "Language",
+            "default": "en"
+          },
+          "intent": {
+            "type": "string",
+            "enum": [
+              "application_demand",
+              "ranking_sensitivity",
+              "cutoff_impact",
+              "placement_fill",
+              "affordability_equity",
+              "scholarship_aid",
+              "quota_capacity",
+              "revenue_tradeoff",
+              "retention_impact",
+              "competitor_flow",
+              "multi_scenario_compare",
+              "composite"
+            ],
+            "title": "Intent",
+            "default": "application_demand"
+          },
+          "focus_university_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Focus University Id"
+          },
+          "focus_university_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Focus University Name"
+          },
+          "focus_program_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Focus Program Ids"
+          },
+          "focus_department_names": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Focus Department Names"
+          },
+          "snapshot_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot Id"
+          },
+          "admission_year": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 2100.0,
+                "minimum": 1990.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Admission Year"
+          },
+          "levers": {
+            "$ref": "#/components/schemas/UniversityPolicyIntervention"
+          },
+          "comparison_variants": {
+            "items": {
+              "$ref": "#/components/schemas/QueryVariantSpec"
+            },
+            "type": "array",
+            "title": "Comparison Variants"
+          },
+          "sweep_tuition_pcts": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Sweep Tuition Pcts"
+          },
+          "metrics_requested": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Metrics Requested"
+          },
+          "subgroup_dimensions_requested": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Subgroup Dimensions Requested"
+          },
+          "simulation_mode": {
+            "type": "string",
+            "enum": [
+              "placement",
+              "retention",
+              "both"
+            ],
+            "title": "Simulation Mode",
+            "default": "placement"
+          },
+          "cohort_size": {
+            "type": "integer",
+            "maximum": 2000.0,
+            "minimum": 20.0,
+            "title": "Cohort Size",
+            "default": 200
+          },
+          "seed": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Seed",
+            "default": 42
+          },
+          "assumptions": {
+            "items": {
+              "$ref": "#/components/schemas/QueryAssumption"
+            },
+            "type": "array",
+            "title": "Assumptions"
+          },
+          "disclaimers": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Disclaimers"
+          },
+          "confidence": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "default": 0.8
+          },
+          "unresolved_entities": {
+            "items": {
+              "$ref": "#/components/schemas/UnresolvedEntity"
+            },
+            "type": "array",
+            "title": "Unresolved Entities"
+          },
+          "out_of_scope_reasons": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Out Of Scope Reasons"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "original_prompt"
+        ],
+        "title": "UniversityQuerySpec",
+        "description": "Structured representation of a natural-language university simulation query."
       },
       "UniversityRuleset": {
         "properties": {
@@ -13204,6 +14042,51 @@
         "additionalProperties": false,
         "type": "object",
         "title": "UniversitySweepRequest"
+      },
+      "UnresolvedEntity": {
+        "properties": {
+          "mention": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Mention"
+          },
+          "entity_type": {
+            "type": "string",
+            "enum": [
+              "university",
+              "department",
+              "program",
+              "lever"
+            ],
+            "title": "Entity Type"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason"
+          },
+          "candidates": {
+            "items": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Candidates"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "mention",
+          "entity_type",
+          "reason"
+        ],
+        "title": "UnresolvedEntity",
+        "description": "Ambiguous or unmatched university/department/lever mention requiring user confirmation."
       },
       "Usage": {
         "properties": {

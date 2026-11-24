@@ -163,6 +163,27 @@ MIGRATIONS: list[tuple[int, str, str]] = [
         );
         CREATE INDEX university_policy_runs_created ON university_policy_runs(created_at DESC);
     """),
+    (4, "university query runs", """
+        CREATE TABLE university_query_runs (
+            run_id TEXT PRIMARY KEY,
+            prompt TEXT NOT NULL,
+            intent TEXT NOT NULL,
+            snapshot_id TEXT,
+            focus_university_id TEXT,
+            request_hash TEXT NOT NULL,
+            result_sha256 TEXT NOT NULL,
+            osym_verified INTEGER NOT NULL,
+            coefficients_calibrated INTEGER NOT NULL,
+            query_spec_json TEXT NOT NULL,
+            request_json TEXT NOT NULL,
+            result_json TEXT NOT NULL,
+            summary_json TEXT NOT NULL,
+            detailed_statistics_json TEXT NOT NULL,
+            manifest_json TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        );
+        CREATE INDEX university_query_runs_created ON university_query_runs(created_at DESC);
+    """),
 ]
 
 

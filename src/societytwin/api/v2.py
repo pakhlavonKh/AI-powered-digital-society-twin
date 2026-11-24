@@ -22,6 +22,8 @@ from societytwin.national.store import MAX_PAGE, SORTABLE, PopulationFilter
 from societytwin.national.university_service import (
     PlacementCompareRequest,
     PlacementRunRequest,
+    UniversityQueryPlanRequest,
+    UniversityQueryRunRequest,
     UniversityRunRequest,
     UniversitySweepRequest,
 )
@@ -385,6 +387,26 @@ def build_router() -> APIRouter:
     def university_sweep_run(body: UniversitySweepRequest, s: S):
         return s.run_university_sweep(body)
 
+    @r.post("/university/query/plan", tags=["university-simulation"],
+            description="Compile a natural-language university question into a zero-cost reviewable query plan.")
+    def university_query_plan(body: UniversityQueryPlanRequest, s: S):
+        return s.plan_university_query(body)
+
+    @r.post("/university/query/runs", status_code=201, tags=["university-simulation"],
+            description="Execute a compiled/edited university prompt simulation and persist answer + statistics.")
+    def university_query_run_create(body: UniversityQueryRunRequest, s: S):
+        return s.run_university_query(body)
+
+    @r.get("/university/query/runs", tags=["university-simulation"],
+           description="List persisted prompt-driven university simulation runs.")
+    def university_query_runs_list(s: S):
+        return s.list_university_query_runs()
+
+    @r.get("/university/query/runs/{run_id}", tags=["university-simulation"],
+           description="Retrieve a persisted prompt-driven university simulation run.")
+    def university_query_run_get(run_id: str, s: S):
+        return s.get_university_query_run(run_id)
+
     # ------------------------------------------------------------------ read-only university SQLite registry & candidates
     @r.get("/university-registry/status", tags=["university-registry"],
            description="Availability and snapshot metadata for the local university SQLite registry.")
@@ -395,6 +417,11 @@ def build_router() -> APIRouter:
            description="List imported university workbook snapshots from SQLite.")
     def university_registry_snapshots(s: S):
         return s.list_university_registry_snapshots()
+
+    @r.get("/university-registry/snapshots/{snapshot_id}/universities", tags=["university-registry"],
+           description="List universities and program counts for an imported SQLite snapshot.")
+    def university_registry_universities(snapshot_id: str, s: S):
+        return s.list_university_registry_universities(snapshot_id)
 
     @r.get("/university-registry/snapshots/{snapshot_id}/programs", tags=["university-registry"],
            description="Query programs, universities, and latest admissions/tuition for an imported SQLite snapshot.")

@@ -466,8 +466,8 @@ export type PlacementProgram = {
   program_id: string;
   university_id: string;
   university_name: string;
-  university_type: "state" | "foundation";
-  province_code: string;
+  university_type: "state" | "foundation" | "kktc" | "other";
+  province_code: string | null;
   department_name: string;
   degree_level: "associate" | "bachelor";
   score_type: "TYT" | "SAY" | "EA" | "SÖZ" | "DİL";
@@ -475,6 +475,8 @@ export type PlacementProgram = {
   capacity: number;
   tuition_annual: number;
   scholarship_pct: number;
+  university_rank?: number | null;
+  prestige_score?: number | null;
   status: string;
 };
 
@@ -666,5 +668,193 @@ export type UniversityRegistryStatus = {
     admission_years: number[];
   }[];
   note: string;
+};
+
+export type UniversityIntent =
+  | "application_demand"
+  | "ranking_sensitivity"
+  | "cutoff_impact"
+  | "placement_fill"
+  | "affordability_equity"
+  | "scholarship_aid"
+  | "quota_capacity"
+  | "revenue_tradeoff"
+  | "retention_impact"
+  | "competitor_flow"
+  | "multi_scenario_compare"
+  | "composite";
+
+export type ElasticityPreset = "low" | "medium" | "high";
+export type QuerySimulationMode = "placement" | "retention" | "both";
+
+export type UniversityPolicyLevers = {
+  target_university_ids?: string[];
+  target_program_ids?: string[];
+  target_department_names?: string[];
+  capacity_change_pct?: number;
+  tuition_change_pct?: number;
+  aid_budget_change_pct?: number;
+  ranking_change_pct?: number | null;
+  ranking_rank_delta?: number | null;
+  scholarship_tier_mix?: Record<string, number> | null;
+  installment_count?: number;
+  attendance_min_pct?: number;
+  grading_difficulty_shift?: number;
+  semester_count?: number;
+  replications?: number;
+  closed_programs?: string[];
+  opened_programs?: Record<string, unknown>[];
+  rank_threshold_overrides?: Record<string, number>;
+  max_rank_override?: number | null;
+  apply_prior_placement_obp_penalty?: boolean | null;
+};
+
+export type UniversityQueryAssumption = {
+  key: string;
+  label: string;
+  value: unknown;
+  source: "user" | "default" | "inferred";
+  editable: boolean;
+  unit?: string | null;
+  description?: string | null;
+};
+
+export type UniversityQueryVariantSpec = {
+  variant_id: string;
+  label: string;
+  intervention: UniversityPolicyLevers;
+  is_baseline: boolean;
+};
+
+export type UniversityUnresolvedEntity = {
+  mention: string;
+  entity_type: "university" | "department" | "program" | "lever";
+  reason: string;
+  candidates: { university_id?: string; university_name?: string; university_type?: string }[];
+};
+
+export type UniversityQuerySpec = {
+  original_prompt: string;
+  language: "en" | "tr" | "mixed";
+  intent: UniversityIntent;
+  focus_university_id: string | null;
+  focus_university_name: string | null;
+  focus_program_ids: string[];
+  focus_department_names: string[];
+  snapshot_id: string | null;
+  admission_year: number | null;
+  levers: UniversityPolicyLevers;
+  comparison_variants: UniversityQueryVariantSpec[];
+  sweep_tuition_pcts: number[];
+  metrics_requested: string[];
+  subgroup_dimensions_requested: string[];
+  simulation_mode: QuerySimulationMode;
+  cohort_size: number;
+  seed: number;
+  assumptions: UniversityQueryAssumption[];
+  disclaimers: string[];
+  confidence: number;
+  unresolved_entities: UniversityUnresolvedEntity[];
+  out_of_scope_reasons: string[];
+};
+
+export type PreferenceModelConfig = {
+  enabled: boolean;
+  elasticity_preset: ElasticityPreset;
+  beta_rank: number;
+  beta_cost_by_income: Record<string, number>;
+  beta_home: number;
+  beta_fit: number;
+  outside_option_threshold: number;
+  top_k_definition: number;
+  coefficients_calibrated: boolean;
+  calibration_note: string;
+};
+
+export type SnapshotUniversityItem = {
+  university_id: string;
+  university_key: string;
+  university_name: string;
+  university_type: string;
+  university_type_raw?: string | null;
+  city?: string | null;
+  province_code?: string | null;
+  program_count: number;
+};
+
+export type UniversityQueryPlanResponse = {
+  plan_hash: string;
+  query_spec: UniversityQuerySpec;
+  preference_config: PreferenceModelConfig;
+  elasticity_presets: Record<ElasticityPreset, PreferenceModelConfig>;
+  catalog: {
+    catalog_source: string;
+    snapshot_id: string | null;
+    admission_year: number | null;
+    total_programs: number;
+    targeted_programs: number;
+    rivals_fixed: boolean;
+    universities: { university_id: string; university_name: string; university_type: string }[];
+  };
+  population_id: string | null;
+  osym_verified: boolean;
+  coefficients_calibrated: boolean;
+  blockers: { code: string; message: string }[];
+  warnings: string[];
+  executable: boolean;
+  disclaimers: string[];
+};
+
+export type UniversityQueryStatisticsSection = {
+  id: string;
+  title: string;
+  type: "tiles" | "table" | "bar_series" | "line_series" | "comparison_set" | "flow_summary" | "text_note";
+  data: Record<string, unknown>;
+  unit?: string | null;
+  caveat?: string | null;
+};
+
+export type UniversityQuerySummary = {
+  title: string;
+  headline: string;
+  direct_answer: string;
+  key_findings: string[];
+  summary_markdown: string;
+  detailed_statistics: UniversityQueryStatisticsSection[];
+  assumptions: UniversityQueryAssumption[];
+  caveats: string[];
+  generated_by: string;
+};
+
+export type UniversityQueryRunResponse = {
+  run_id: string;
+  prompt: string;
+  intent: UniversityIntent;
+  snapshot_id: string | null;
+  focus_university_id: string | null;
+  focus_university_name?: string | null;
+  osym_verified: boolean;
+  coefficients_calibrated: boolean;
+  result_sha256: string;
+  created_at: string;
+  query_spec: UniversityQuerySpec;
+  summary: UniversityQuerySummary;
+  detailed_statistics: UniversityQueryStatisticsSection[];
+  result: Record<string, unknown>;
+  manifest: Record<string, unknown>;
+};
+
+export type UniversityQueryRunListItem = {
+  run_id: string;
+  prompt: string;
+  intent: UniversityIntent;
+  snapshot_id: string | null;
+  focus_university_id: string | null;
+  focus_university_name?: string | null;
+  osym_verified: boolean;
+  coefficients_calibrated: boolean;
+  headline: string;
+  direct_answer: string;
+  created_at: string;
 };
 

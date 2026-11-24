@@ -57,6 +57,7 @@ describe("University Decision & Placement Studio page", () => {
     await waitFor(() => {
       expect(screen.getByText(/SIMPLIFIED HYPOTHETICAL RULES: test disclaimer\./)).toBeInTheDocument();
     });
+    await userEvent.click(screen.getByRole("button", { name: /Customize Parameters/i }));
     expect(screen.getByText("osym_verified: false")).toBeInTheDocument();
 
     const multiTab = screen.getByRole("tab", { name: /2\. Multi-Semester Policy Dynamics/i });
@@ -178,6 +179,7 @@ describe("University Decision & Placement Studio page", () => {
     });
 
     render(<UniversityPage />);
+    await userEvent.click(screen.getByRole("button", { name: /Customize Parameters/i }));
     await userEvent.click(screen.getByRole("button", { name: /Run Counterfactual Placement/i }));
 
     await waitFor(() => {
@@ -256,6 +258,7 @@ describe("University Decision & Placement Studio page", () => {
     });
 
     render(<UniversityPage />);
+    await userEvent.click(screen.getByRole("button", { name: /Customize Parameters/i }));
     await userEvent.click(screen.getByRole("tab", { name: /2\. Multi-Semester Policy Dynamics/i }));
     await waitFor(() => {
       expect(screen.getByText(/Multi-Semester Policy Impact \(univ-nulls\)/)).toBeInTheDocument();

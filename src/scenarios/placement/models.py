@@ -6,6 +6,8 @@ until verified ÖSYM capacity and kılavuz datasets are ingested.
 
 from __future__ import annotations
 
+import math
+import statistics
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -138,11 +140,11 @@ class ProgramOffering(BaseModel):
     """Single selectable university program offering (Milestone 1: general quota only)."""
     model_config = ConfigDict(extra="forbid")
 
-    program_id: str = Field(min_length=1, max_length=64)
-    university_id: str = Field(min_length=1, max_length=64)
+    program_id: str = Field(min_length=1, max_length=128)
+    university_id: str = Field(min_length=1, max_length=128)
     university_name: str = Field(min_length=1, max_length=200)
     university_type: Literal["state", "foundation", "kktc", "other"] = "state"
-    province_code: str = Field(pattern=r"^\d{2}$")
+    province_code: str | None = Field(default=None, pattern=r"^\d{2}$")
     department_name: str = Field(min_length=1, max_length=200)
     degree_level: Literal["associate", "bachelor"] = "bachelor"
     score_type: ScoreType
@@ -151,6 +153,17 @@ class ProgramOffering(BaseModel):
     status: Literal["open", "closed", "suspended"] = "open"
     min_score: float | None = Field(default=None, ge=0.0, le=600.0)
     max_rank_override: int | None = Field(default=None, ge=1)
+    university_rank: int | None = Field(
+        default=None,
+        ge=1,
+        description="Institutional/program baseline rank (1 = highest). Exogenous prestige only; not an ÖSYM baraj.",
+    )
+    prestige_score: float | None = Field(
+        default=None,
+        ge=0.0,
+        le=1.0,
+        description="Normalized exogenous prestige score in [0, 1] (higher = stronger ranking).",
+    )
     tuition_annual: float = Field(default=0.0, ge=0.0)
     scholarship_pct: float = Field(default=0.0, ge=0.0, le=100.0)
     currency: str = Field(default="TL", max_length=10)
@@ -159,6 +172,26 @@ class ProgramOffering(BaseModel):
     def published_net_tuition_before_aid(self) -> float:
         """Tuition after institutional scholarship discount, before need-based grants."""
         return round(self.tuition_annual * (1.0 - self.scholarship_pct / 100.0), 2)
+
+    def effective_prestige_score(self) -> float:
+        """Return normalized rank_score in [0, 1] (higher is better)."""
+        if self.prestige_score is not None:
+            return max(0.0, min(1.0, float(self.prestige_score)))
+        if self.university_rank is not None:
+            return round(1.0 / (1.0 + math.log1p(max(0, self.university_rank - 1)) / 4.0), 6)
+        return 0.5
+
+
+_DEMO_MEDIAN_POSITIVE_FEE_TL = 120_000.0
+
+
+def catalog_fee_scale(programs: list[ProgramOffering]) -> float:
+    """Return nominal TRY tuition scale relative to the 120,000 TL standalone demo median."""
+    pos_fees = [p.published_net_tuition_before_aid() for p in programs if p.published_net_tuition_before_aid() > 0.0]
+    if not pos_fees:
+        return 1.0
+    med = float(statistics.median(pos_fees))
+    return max(1.0, med / _DEMO_MEDIAN_POSITIVE_FEE_TL)
 
 
 class CandidateRecord(BaseModel):
@@ -265,7 +298,7 @@ class ProgramPlacementOutcome(BaseModel):
     program_id: str
     university_name: str
     department_name: str
-    province_code: str
+    province_code: str | None = None
     score_type: ScoreType
     quota_bucket: str = "general"
     initial_capacity: int
@@ -279,7 +312,10 @@ class ProgramPlacementOutcome(BaseModel):
     highest_score: float | None = None
     cutoff_rank: int | None = None
     applicant_count: int = 0
+    listed_anywhere_count: int = 0
+    listed_top_k_count: int = 0
     first_choice_count: int = 0
+    dropped_due_to_affordability: int = 0
     ineligible_attempts_by_reason: dict[str, int] = Field(default_factory=dict)
     tie_breaks_at_cutoff: list[TieBreakEvent] = Field(default_factory=list)
 
@@ -334,7 +370,7 @@ class TransitionBreakdown(BaseModel):
 
 
 class ProgramDelta(BaseModel):
-    """Per-program cutoff, capacity, and fill differences."""
+    """Per-program applicant, capacity, fill, and cutoff differences."""
     model_config = ConfigDict(extra="forbid")
 
     program_id: str
@@ -348,6 +384,26 @@ class ProgramDelta(BaseModel):
     policy_cutoff_score: float | None
     cutoff_score_delta: float | None
     first_choice_delta: int
+    baseline_first_choice: int = 0
+    policy_first_choice: int = 0
+    baseline_applicants: int = 0
+    policy_applicants: int = 0
+    applicant_delta: int = 0
+    applicant_pct_change: float | None = None
+    baseline_listed_anywhere: int = 0
+    policy_listed_anywhere: int = 0
+    listed_anywhere_delta: int = 0
+    listed_anywhere_pct_change: float | None = None
+    baseline_listed_top_k: int = 0
+    policy_listed_top_k: int = 0
+    listed_top_k_delta: int = 0
+    baseline_cutoff_rank: int | None = None
+    policy_cutoff_rank: int | None = None
+    cutoff_rank_delta: int | None = None
+    dropped_due_to_affordability: int = 0
+    baseline_fill_rate: float = 0.0
+    policy_fill_rate: float = 0.0
+    fill_rate_delta: float = 0.0
 
 
 class PlacementComparisonReport(BaseModel):

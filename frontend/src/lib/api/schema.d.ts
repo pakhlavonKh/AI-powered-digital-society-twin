@@ -1263,6 +1263,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/university/query/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * University Query Plan
+         * @description Compile a natural-language university question into a zero-cost reviewable query plan.
+         */
+        post: operations["university_query_plan_api_v2_university_query_plan_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/university/query/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * University Query Runs List
+         * @description List persisted prompt-driven university simulation runs.
+         */
+        get: operations["university_query_runs_list_api_v2_university_query_runs_get"];
+        put?: never;
+        /**
+         * University Query Run Create
+         * @description Execute a compiled/edited university prompt simulation and persist answer + statistics.
+         */
+        post: operations["university_query_run_create_api_v2_university_query_runs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/university/query/runs/{run_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * University Query Run Get
+         * @description Retrieve a persisted prompt-driven university simulation run.
+         */
+        get: operations["university_query_run_get_api_v2_university_query_runs__run_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/university-registry/status": {
         parameters: {
             query?: never;
@@ -1295,6 +1359,26 @@ export interface paths {
          * @description List imported university workbook snapshots from SQLite.
          */
         get: operations["university_registry_snapshots_api_v2_university_registry_snapshots_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/university-registry/snapshots/{snapshot_id}/universities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * University Registry Universities
+         * @description List universities and program counts for an imported SQLite snapshot.
+         */
+        get: operations["university_registry_universities_api_v2_university_registry_snapshots__snapshot_id__universities_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2943,6 +3027,62 @@ export interface components {
              */
             required_attributes?: string[];
         };
+        /**
+         * PreferenceModelConfig
+         * @description Uncalibrated synthetic random-utility parameters for policy-responsive applications.
+         */
+        PreferenceModelConfig: {
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /**
+             * Elasticity Preset
+             * @default medium
+             * @enum {string}
+             */
+            elasticity_preset: "low" | "medium" | "high";
+            /**
+             * Beta Rank
+             * @default 2.2
+             */
+            beta_rank: number;
+            /** Beta Cost By Income */
+            beta_cost_by_income?: {
+                [key: string]: number;
+            };
+            /**
+             * Beta Home
+             * @default 0.65
+             */
+            beta_home: number;
+            /**
+             * Beta Fit
+             * @default 0.85
+             */
+            beta_fit: number;
+            /**
+             * Outside Option Threshold
+             * @default 0.72
+             */
+            outside_option_threshold: number;
+            /**
+             * Top K Definition
+             * @default 3
+             */
+            top_k_definition: number;
+            /**
+             * Coefficients Calibrated
+             * @default false
+             */
+            coefficients_calibrated: boolean;
+            /**
+             * Calibration Note
+             * @default Synthetic uncalibrated behavioral elasticities; low/medium/high sensitivity range reported.
+             */
+            calibration_note: string;
+        };
         /** Preflight */
         Preflight: {
             /** Preflight Hash */
@@ -3085,6 +3225,49 @@ export interface components {
             user_sha256: string;
             /** Source */
             source: string;
+        };
+        /**
+         * QueryAssumption
+         * @description Explicit assumption parsed or defaulted from an NLP university query.
+         */
+        QueryAssumption: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Value */
+            value: unknown;
+            /**
+             * Source
+             * @default default
+             * @enum {string}
+             */
+            source: "user" | "default" | "inferred";
+            /**
+             * Editable
+             * @default true
+             */
+            editable: boolean;
+            /** Unit */
+            unit?: string | null;
+            /** Description */
+            description?: string | null;
+        };
+        /**
+         * QueryVariantSpec
+         * @description Named counterfactual policy variant for directional or multi-scenario comparisons.
+         */
+        QueryVariantSpec: {
+            /** Variant Id */
+            variant_id: string;
+            /** Label */
+            label: string;
+            intervention: components["schemas"]["UniversityPolicyIntervention"];
+            /**
+             * Is Baseline
+             * @default false
+             */
+            is_baseline: boolean;
         };
         /** Question */
         Question: {
@@ -3827,6 +4010,22 @@ export interface components {
              * @enum {string}
              */
             affordability_filter_mode: "none" | "hard_exclude" | "utility_rerank";
+            /** Target University Ids */
+            target_university_ids?: string[];
+            /** Target Program Ids */
+            target_program_ids?: string[];
+            /** Target Department Names */
+            target_department_names?: string[];
+            /**
+             * Ranking Change Pct
+             * @description Exogenous percentage shift in targeted prestige/ranking (>0 improves, <0 worsens).
+             */
+            ranking_change_pct?: number | null;
+            /**
+             * Ranking Rank Delta
+             * @description Exogenous rank-spot shift for targeted programs (>0 improves by N spots, <0 drops N spots).
+             */
+            ranking_rank_delta?: number | null;
             /** Capacity Change Pct */
             capacity_change_pct?: number | null;
             /**
@@ -3839,8 +4038,14 @@ export interface components {
             program_capacity_overrides?: {
                 [key: string]: number;
             };
+            /** Scholarship Tier Mix */
+            scholarship_tier_mix?: {
+                [key: string]: number;
+            };
             /** Closed Programs */
             closed_programs?: string[];
+            /** Opened Programs */
+            opened_programs?: string[];
             /** Rank Threshold Overrides */
             rank_threshold_overrides?: {
                 [key: string]: number;
@@ -3881,6 +4086,140 @@ export interface components {
              * @default false
              */
             osym_verified: boolean;
+        };
+        /** UniversityQueryPlanRequest */
+        UniversityQueryPlanRequest: {
+            /** Prompt */
+            prompt: string;
+            /** Context University Id */
+            context_university_id?: string | null;
+            /** Snapshot Id */
+            snapshot_id?: string | null;
+            /** Admission Year */
+            admission_year?: number | null;
+            /** Population Id */
+            population_id?: string | null;
+            /**
+             * Cohort Size
+             * @default 200
+             */
+            cohort_size: number;
+            /**
+             * Seed
+             * @default 42
+             */
+            seed: number;
+            /**
+             * Elasticity Preset
+             * @default medium
+             * @enum {string}
+             */
+            elasticity_preset: "low" | "medium" | "high";
+            /** Model */
+            model?: string | null;
+        };
+        /** UniversityQueryRunRequest */
+        UniversityQueryRunRequest: {
+            /** Prompt */
+            prompt: string;
+            query_spec?: components["schemas"]["UniversityQuerySpec"] | null;
+            /** Context University Id */
+            context_university_id?: string | null;
+            /** Snapshot Id */
+            snapshot_id?: string | null;
+            /** Admission Year */
+            admission_year?: number | null;
+            /** Population Id */
+            population_id?: string | null;
+            /**
+             * Cohort Size
+             * @default 200
+             */
+            cohort_size: number;
+            /**
+             * Seed
+             * @default 42
+             */
+            seed: number;
+            /**
+             * Elasticity Preset
+             * @default medium
+             * @enum {string}
+             */
+            elasticity_preset: "low" | "medium" | "high";
+            preference_config?: components["schemas"]["PreferenceModelConfig"] | null;
+            /** Model */
+            model?: string | null;
+        };
+        /**
+         * UniversityQuerySpec
+         * @description Structured representation of a natural-language university simulation query.
+         */
+        UniversityQuerySpec: {
+            /** Original Prompt */
+            original_prompt: string;
+            /**
+             * Language
+             * @default en
+             * @enum {string}
+             */
+            language: "en" | "tr" | "mixed";
+            /**
+             * Intent
+             * @default application_demand
+             * @enum {string}
+             */
+            intent: "application_demand" | "ranking_sensitivity" | "cutoff_impact" | "placement_fill" | "affordability_equity" | "scholarship_aid" | "quota_capacity" | "revenue_tradeoff" | "retention_impact" | "competitor_flow" | "multi_scenario_compare" | "composite";
+            /** Focus University Id */
+            focus_university_id?: string | null;
+            /** Focus University Name */
+            focus_university_name?: string | null;
+            /** Focus Program Ids */
+            focus_program_ids?: string[];
+            /** Focus Department Names */
+            focus_department_names?: string[];
+            /** Snapshot Id */
+            snapshot_id?: string | null;
+            /** Admission Year */
+            admission_year?: number | null;
+            levers?: components["schemas"]["UniversityPolicyIntervention"];
+            /** Comparison Variants */
+            comparison_variants?: components["schemas"]["QueryVariantSpec"][];
+            /** Sweep Tuition Pcts */
+            sweep_tuition_pcts?: number[];
+            /** Metrics Requested */
+            metrics_requested?: string[];
+            /** Subgroup Dimensions Requested */
+            subgroup_dimensions_requested?: string[];
+            /**
+             * Simulation Mode
+             * @default placement
+             * @enum {string}
+             */
+            simulation_mode: "placement" | "retention" | "both";
+            /**
+             * Cohort Size
+             * @default 200
+             */
+            cohort_size: number;
+            /**
+             * Seed
+             * @default 42
+             */
+            seed: number;
+            /** Assumptions */
+            assumptions?: components["schemas"]["QueryAssumption"][];
+            /** Disclaimers */
+            disclaimers?: string[];
+            /**
+             * Confidence
+             * @default 0.8
+             */
+            confidence: number;
+            /** Unresolved Entities */
+            unresolved_entities?: components["schemas"]["UnresolvedEntity"][];
+            /** Out Of Scope Reasons */
+            out_of_scope_reasons?: string[];
         };
         /**
          * UniversityRuleset
@@ -4018,6 +4357,25 @@ export interface components {
             tuition_pcts?: number[];
             /** Aid Budget Pct */
             aid_budget_pct?: number | null;
+        };
+        /**
+         * UnresolvedEntity
+         * @description Ambiguous or unmatched university/department/lever mention requiring user confirmation.
+         */
+        UnresolvedEntity: {
+            /** Mention */
+            mention: string;
+            /**
+             * Entity Type
+             * @enum {string}
+             */
+            entity_type: "university" | "department" | "program" | "lever";
+            /** Reason */
+            reason: string;
+            /** Candidates */
+            candidates?: {
+                [key: string]: string;
+            }[];
         };
         /** Usage */
         Usage: {
@@ -7515,6 +7873,123 @@ export interface operations {
             };
         };
     };
+    university_query_plan_api_v2_university_query_plan_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UniversityQueryPlanRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    university_query_runs_list_api_v2_university_query_runs_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    university_query_run_create_api_v2_university_query_runs_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UniversityQueryRunRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    university_query_run_get_api_v2_university_query_runs__run_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     university_registry_status_api_v2_university_registry_status_get: {
         parameters: {
             query?: never;
@@ -7551,6 +8026,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+        };
+    };
+    university_registry_universities_api_v2_university_registry_snapshots__snapshot_id__universities_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                snapshot_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

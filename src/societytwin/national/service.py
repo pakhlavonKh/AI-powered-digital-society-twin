@@ -1013,6 +1013,31 @@ class NationalService:
 
         return run_university_sweep_workbench(self, req)
 
+    def plan_university_query(self, req) -> dict:
+        from societytwin.national.university_service import plan_university_query_workbench
+
+        return plan_university_query_workbench(self, req)
+
+    def run_university_query(self, req) -> dict:
+        from societytwin.national.university_service import execute_university_query_workbench
+
+        return execute_university_query_workbench(self, req)
+
+    def list_university_query_runs(self) -> dict:
+        from societytwin.national.university_service import list_university_query_runs_workbench
+
+        return list_university_query_runs_workbench(self)
+
+    def get_university_query_run(self, run_id: str) -> dict:
+        from societytwin.national.university_service import get_university_query_run_workbench
+
+        return get_university_query_run_workbench(self, run_id)
+
+    def list_university_registry_universities(self, snapshot_id: str) -> dict:
+        from societytwin.university.service import list_snapshot_universities
+
+        return list_snapshot_universities(self.settings.university_db_path, snapshot_id)
+
     # ================================================================ read-only university SQLite registry & candidates
     def university_registry_status(self) -> dict:
         from societytwin.university.service import university_registry_status

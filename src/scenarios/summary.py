@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -623,4 +624,714 @@ def summarize_university_comparison(report: Any) -> dict[str, Any]:
         "coefficients_calibrated": report.coefficients_calibrated,
         "disclaimer": report.disclaimer,
         "generated_by": "deterministic",
+    }
+
+
+def _fmt_signed_pct(val: float | None) -> str:
+    if val is None:
+        return "n/a"
+    return f"{val:+.1f}%"
+
+
+def _collect_grounding_numbers(obj: Any, out: set[float]) -> None:
+    if isinstance(obj, bool) or obj is None:
+        return
+    if isinstance(obj, (int, float)):
+        v = float(obj)
+        out.add(v)
+        out.add(abs(v))
+        out.add(round(v, 1))
+        out.add(round(v, 2))
+        out.add(round(abs(v), 1))
+        out.add(round(abs(v), 2))
+        return
+    if isinstance(obj, dict):
+        for v in obj.values():
+            _collect_grounding_numbers(v, out)
+    elif isinstance(obj, list):
+        for item in obj:
+            _collect_grounding_numbers(item, out)
+
+
+def _llm_numbers_grounded(texts: list[str], allowed: set[float]) -> bool:
+    """Reject LLM text if it introduces numbers absent from deterministic results."""
+    for txt in texts:
+        for m in re.finditer(r"(?<![A-Za-z0-9_])([+-]?\d[\d,]*(?:\.\d+)?)(?![A-Za-z])", txt):
+            raw = m.group(1).replace(",", "")
+            try:
+                num = float(raw)
+            except ValueError:
+                continue
+            start = m.start()
+            # Ignore markdown ordered-list markers like "1. " at line start
+            line_prefix = txt[txt.rfind("\n", 0, start) + 1 : m.end() + 1]
+            if re.match(r"^\s*\d+\.\s*$", line_prefix):
+                continue
+            if any(
+                abs(num - a) <= max(0.05, abs(a) * 0.005)
+                or abs(abs(num) - abs(a)) <= max(0.05, abs(a) * 0.005)
+                for a in allowed
+            ):
+                continue
+            return False
+    return True
+
+
+def _build_query_sections(
+    query_spec: Any,
+    analytics: dict[str, Any],
+    *,
+    elasticity_range: dict[str, Any] | None = None,
+    variant_summaries: list[dict[str, Any]] | None = None,
+    sweep_rows: list[dict[str, Any]] | None = None,
+    university_comparison: Any | None = None,
+) -> list[dict[str, Any]]:
+    from .university_analytics import StatisticsSection
+
+    intent = query_spec.intent
+    defs = analytics["application_definitions"]
+    la = defs["listed_anywhere"]
+    tk = defs["listed_top_k"]
+    fc = defs["first_choice"]
+    pl = defs["placed"]
+    cap = analytics["target_capacity"]
+    rev = analytics["target_revenue"]
+    mig = analytics["migration"]
+    cohort_meta = analytics["cohort_metadata"]
+    top_k_n = analytics.get("top_k_definition", 3)
+
+    sections: list[StatisticsSection] = []
+
+    # 1. Headline KPI tiles (adapted to intent)
+    tile_items: list[dict[str, Any]] = []
+    if intent in ("application_demand", "competitor_flow", "composite", "scholarship_aid", "affordability_equity"):
+        range_note = ""
+        if elasticity_range and "listed_anywhere" in elasticity_range:
+            er = elasticity_range["listed_anywhere"]
+            range_note = f"Range across elasticities: {er['min']} to {er['max']}"
+        tile_items = [
+            {
+                "label": "Applicants (listed anywhere)",
+                "value": f"{la['policy']}",
+                "sub": f"Baseline {la['baseline']} ({la['delta']:+d} / {_fmt_signed_pct(la['pct_change'])}){' · ' + range_note if range_note else ''}",
+            },
+            {
+                "label": f"Top-{top_k_n} preference applicants",
+                "value": f"{tk['policy']}",
+                "sub": f"Baseline {tk['baseline']} ({tk['delta']:+d} / {_fmt_signed_pct(tk['pct_change'])})",
+            },
+            {
+                "label": "1st-choice applicants",
+                "value": f"{fc['policy']}",
+                "sub": f"Baseline {fc['baseline']} ({fc['delta']:+d} / {_fmt_signed_pct(fc['pct_change'])})",
+            },
+            {
+                "label": "Placed (admitted)",
+                "value": f"{pl['policy']}",
+                "sub": f"Baseline {pl['baseline']} ({pl['delta']:+d}) · Seats filled {cap['policy_filled']}/{cap['policy']}",
+            },
+        ]
+    elif intent in ("cutoff_impact", "quota_capacity", "placement_fill"):
+        tile_items = [
+            {"label": "Target capacity", "value": f"{cap['policy']}", "sub": f"Baseline {cap['baseline']} ({cap['delta']:+d} seats)"},
+            {"label": "Filled seats", "value": f"{cap['policy_filled']}", "sub": f"Fill rate {cap['policy_fill_rate']*100:.1f}% (was {cap['baseline_fill_rate']*100:.1f}%)"},
+            {"label": "Applicants (listed anywhere)", "value": f"{la['policy']}", "sub": f"Baseline {la['baseline']} ({la['delta']:+d})"},
+            {"label": "1st-choice demand", "value": f"{fc['policy']}", "sub": f"Baseline {fc['baseline']} ({fc['delta']:+d})"},
+        ]
+    elif intent == "revenue_tradeoff":
+        tile_items = [
+            {"label": "Target net tuition revenue", "value": f"{rev['policy']:,.0f} TL", "sub": f"Baseline {rev['baseline']:,.0f} TL ({rev['delta']:+,.0f} TL / {_fmt_signed_pct(rev['pct_change'])})"},
+            {"label": "Fee-paying/admitted", "value": f"{pl['policy']}", "sub": f"Baseline {pl['baseline']} ({pl['delta']:+d})"},
+            {"label": "Applicants (listed anywhere)", "value": f"{la['policy']}", "sub": f"Baseline {la['baseline']} ({la['delta']:+d})"},
+            {"label": "Affordability drops", "value": f"{rev['dropped_due_to_affordability']}", "sub": "Applications dropped due to cost"},
+        ]
+    else:
+        tile_items = [
+            {"label": "Applicants (listed anywhere)", "value": f"{la['policy']}", "sub": f"Baseline {la['baseline']} ({la['delta']:+d})"},
+            {"label": "1st-choice applicants", "value": f"{fc['policy']}", "sub": f"Baseline {fc['baseline']} ({fc['delta']:+d})"},
+            {"label": "Placed (admitted)", "value": f"{pl['policy']}", "sub": f"Baseline {pl['baseline']} ({pl['delta']:+d})"},
+            {"label": "Net revenue", "value": f"{rev['policy']:,.0f} TL", "sub": f"Delta {rev['delta']:+,.0f} TL"},
+        ]
+
+    sections.append(
+        StatisticsSection(
+            id="headline_kpis",
+            title="Key Simulation Outcomes",
+            type="tiles",
+            data={
+                "items": tile_items,
+                "cohort_metadata": cohort_meta,
+            },
+            caveat=(
+                f"Cohort counts (sample_size={cohort_meta['sample_size']}, seed={cohort_meta['seed']}, "
+                f"source={cohort_meta['cohort_source']}, scale_factor={cohort_meta['cohort_scale_factor']})."
+            ),
+        )
+    )
+
+    # 2. Comparison variants (e.g. Lower vs Baseline vs Higher ranking, or multi-scenario compare)
+    if variant_summaries:
+        sections.append(
+            StatisticsSection(
+                id="variant_comparison",
+                title="Scenario Variant Comparison",
+                type="comparison_set",
+                data={"variants": variant_summaries},
+                caveat="All variants share identical Common Random Numbers (CRN) candidate traits and taste draws; rivals stay fixed.",
+            )
+        )
+        sections.append(
+            StatisticsSection(
+                id="variant_bar_chart",
+                title="Applicants & Placed Across Variants",
+                type="bar_series",
+                data={
+                    "x_label": "Variant",
+                    "value_label": "Candidates",
+                    "series": [
+                        {"key": "listed_anywhere", "label": "Applicants (listed anywhere)", "slot": "series-1"},
+                        {"key": "placed", "label": "Placed", "slot": "series-2"},
+                    ],
+                    "rows": [
+                        {
+                            "category": v["variant_id"],
+                            "label": v["label"],
+                            "values": {
+                                "listed_anywhere": v["listed_anywhere"],
+                                "placed": v["placed"],
+                            },
+                        }
+                        for v in variant_summaries
+                    ],
+                },
+            )
+        )
+
+    # 3. Revenue / Tuition Sweep Curve
+    if sweep_rows:
+        sections.append(
+            StatisticsSection(
+                id="tuition_sweep_curve",
+                title="Tuition Sweep: Net Revenue vs. Applicants",
+                type="line_series",
+                data={
+                    "x_key": "label",
+                    "x_label": "Tuition Change %",
+                    "series": [
+                        {"key": "net_revenue_k_tl", "label": "Net Tuition Revenue (k TL)", "slot": "series-1"},
+                        {"key": "listed_anywhere", "label": "Applicants (listed anywhere)", "slot": "series-2"},
+                    ],
+                    "rows": [
+                        {
+                            "label": f"{row['tuition_change_pct']:+g}%",
+                            "tuition_change_pct": row["tuition_change_pct"],
+                            "net_revenue_k_tl": round(row["target_net_revenue"] / 1000.0, 2),
+                            "listed_anywhere": row["listed_anywhere"],
+                            "placed": row["placed"],
+                        }
+                        for row in sweep_rows
+                    ],
+                },
+                unit="k TL / candidates",
+            )
+        )
+
+    # 4. Application definitions breakdown table (always explicit so "apply" is never conflated)
+    fee_def = defs.get("fee_paying_listed")
+    app_rows = [
+        ["Listed anywhere on preference list", la["baseline"], la["policy"], f"{la['delta']:+d}", _fmt_signed_pct(la["pct_change"])],
+    ]
+    if fee_def is not None and not analytics.get("all_target_programs_free", False):
+        app_rows.append(
+            ["Listed fee-paying programs (net tuition > 0)", fee_def["baseline"], fee_def["policy"], f"{fee_def['delta']:+d}", _fmt_signed_pct(fee_def["pct_change"])]
+        )
+    app_rows.extend([
+        [f"Listed in top {top_k_n} choices", tk["baseline"], tk["policy"], f"{tk['delta']:+d}", _fmt_signed_pct(tk["pct_change"])],
+        ["Eligible applicants", defs["eligible_applicants"]["baseline"], defs["eligible_applicants"]["policy"], f"{defs['eligible_applicants']['delta']:+d}", _fmt_signed_pct(defs["eligible_applicants"]["pct_change"])],
+        ["First choice (#1 preference)", fc["baseline"], fc["policy"], f"{fc['delta']:+d}", _fmt_signed_pct(fc["pct_change"])],
+        ["Placed (admitted)", pl["baseline"], pl["policy"], f"{pl['delta']:+d}", _fmt_signed_pct(pl["pct_change"])],
+    ])
+    sections.append(
+        StatisticsSection(
+            id="application_definitions",
+            title="Application & Admission Definitions (Never Conflated)",
+            type="table",
+            data={
+                "columns": ["Definition", "Baseline", "Policy", "Delta", "% Change"],
+                "rows": app_rows,
+            },
+        )
+    )
+
+    # 5. Subgroup bar charts (income band + scholarship tier)
+    income_rows = analytics["subgroups"].get("income_band", [])
+    if income_rows:
+        sections.append(
+            StatisticsSection(
+                id="applicants_by_income",
+                title="Applicants by Household Income Band (Baseline vs. Policy)",
+                type="bar_series",
+                data={
+                    "value_label": "Applicants (listed anywhere)",
+                    "series": [
+                        {"key": "baseline_listed", "label": "Baseline", "slot": "series-1"},
+                        {"key": "policy_listed", "label": "Policy", "slot": "series-2"},
+                    ],
+                    "rows": [
+                        {
+                            "category": r["group"],
+                            "label": str(r["group"]).title(),
+                            "values": {"baseline_listed": r["baseline_listed"], "policy_listed": r["policy_listed"]},
+                        }
+                        for r in income_rows
+                    ],
+                },
+            )
+        )
+
+    tier_rows = analytics.get("scholarship_tiers", [])
+    if tier_rows:
+        sections.append(
+            StatisticsSection(
+                id="scholarship_tier_breakdown",
+                title="Demand & Fill by Scholarship Tier",
+                type="table",
+                data={
+                    "columns": ["Tier", "Programs", "Base Listed", "Policy Listed", "Δ Listed", "Base Filled", "Policy Filled", "Affordability Drops"],
+                    "rows": [
+                        [
+                            t["tier"],
+                            t["programs"],
+                            t["baseline_listed"],
+                            t["policy_listed"],
+                            f"{t['listed_delta']:+d}",
+                            t["baseline_filled"],
+                            t["policy_filled"],
+                            t["dropped_due_to_affordability"],
+                        ]
+                        for t in tier_rows
+                    ],
+                },
+            )
+        )
+
+    # 6. Program-level table
+    if analytics["programs"]:
+        sections.append(
+            StatisticsSection(
+                id="program_deltas_table",
+                title="Targeted Program Breakdown (Applications, Fill & Cutoffs)",
+                type="table",
+                data={
+                    "columns": ["Program", "Tier", "Base Apps", "Policy Apps", "Δ Apps", "1st Choice Δ", "Filled / Cap", "Base Cutoff", "Policy Cutoff", "Cutoff Δ"],
+                    "rows": [
+                        [
+                            f"{p['department_name']} ({p['program_id']})",
+                            p["scholarship_tier"],
+                            p["baseline_listed_anywhere"],
+                            p["policy_listed_anywhere"],
+                            f"{p['listed_anywhere_delta']:+d}",
+                            f"{p['first_choice_delta']:+d}",
+                            f"{p['policy_filled']} / {p['policy_capacity']}",
+                            f"{p['baseline_cutoff_score']:.2f}" if p["baseline_cutoff_score"] is not None else "—",
+                            f"{p['policy_cutoff_score']:.2f}" if p["policy_cutoff_score"] is not None else "—",
+                            f"{p['cutoff_score_delta']:+.2f}" if p["cutoff_score_delta"] is not None else "—",
+                        ]
+                        for p in analytics["programs"]
+                    ],
+                },
+            )
+        )
+
+    # 7. Migration flow summary
+    sections.append(
+        StatisticsSection(
+            id="applicant_migration",
+            title="Applicant Migration & Competitor Flow",
+            type="flow_summary",
+            data={
+                "stayed_at_target": mig["stayed_at_target"],
+                "shifted_within_target": mig["shifted_within_target"],
+                "shifted_to_rival_uni": mig["shifted_to_rival_uni"],
+                "primary_or_placed_shifted_to_rival": mig.get("primary_or_placed_shifted_to_rival", 0),
+                "dropped_out_of_applying": mig["dropped_out_of_applying"],
+                "newly_attracted": mig["newly_attracted"],
+                "top_rival_destinations": mig["top_rival_destinations"],
+                "top_primary_rival_destinations": mig.get("top_primary_rival_destinations", []),
+            },
+            caveat="Rival universities remain completely fixed outside options.",
+        )
+    )
+
+    # 8. Optional Milestone 2 Retention Trajectory
+    if university_comparison is not None:
+        base_traj = getattr(university_comparison, "baseline_trajectory", None) or (
+            university_comparison.get("baseline_trajectory") if isinstance(university_comparison, dict) else None
+        )
+        pol_traj = getattr(university_comparison, "policy_trajectory", None) or (
+            university_comparison.get("policy_trajectory") if isinstance(university_comparison, dict) else None
+        )
+        if base_traj and pol_traj:
+            sections.append(
+                StatisticsSection(
+                    id="retention_trajectory",
+                    title="Multi-Semester Retention Trajectory (CRN Mean)",
+                    type="line_series",
+                    data={
+                        "x_key": "label",
+                        "x_label": "Semester",
+                        "series": [
+                            {"key": "baseline_active", "label": "Baseline Active Students", "slot": "series-1"},
+                            {"key": "policy_active", "label": "Policy Active Students", "slot": "series-2"},
+                        ],
+                        "rows": [
+                            {
+                                "label": f"Term {b['semester']}",
+                                "semester": b["semester"],
+                                "baseline_active": b["mean_active_students"],
+                                "policy_active": p["mean_active_students"],
+                            }
+                            for b, p in zip(base_traj, pol_traj)
+                        ],
+                        "baseline_trajectory": base_traj,
+                        "policy_trajectory": pol_traj,
+                    },
+                    unit="students",
+                )
+            )
+
+    return [s.model_dump(mode="json") for s in sections]
+
+
+def summarize_university_query(
+    query_spec: Any,
+    analytics: dict[str, Any],
+    *,
+    elasticity_range: dict[str, Any] | None = None,
+    variant_summaries: list[dict[str, Any]] | None = None,
+    sweep_rows: list[dict[str, Any]] | None = None,
+    university_comparison: Any | None = None,
+    allow_llm: bool = False,
+) -> dict[str, Any]:
+    """Build a question-aware executive answer and generic typed detailed statistics."""
+    intent = query_spec.intent
+    uni_label = query_spec.focus_university_name or "targeted programs"
+    if getattr(query_spec, "focus_department_names", None):
+        uni_label = f"{uni_label} ({', '.join(query_spec.focus_department_names)})"
+    defs = analytics["application_definitions"]
+    la = defs["listed_anywhere"]
+    fee_la = defs.get("fee_paying_listed")
+    tk = defs["listed_top_k"]
+    fc = defs["first_choice"]
+    pl = defs["placed"]
+    cap = analytics["target_capacity"]
+    rev = analytics["target_revenue"]
+    mig = analytics["migration"]
+    cohort_meta = analytics["cohort_metadata"]
+    top_k_n = analytics.get("top_k_definition", 3)
+    all_free = bool(analytics.get("all_target_programs_free", False))
+    fee_lever_active = bool(
+        getattr(query_spec.levers, "tuition_change_pct", None)
+        or getattr(query_spec.levers, "aid_budget_change_pct", None)
+    )
+
+    range_text = ""
+    if elasticity_range and "listed_anywhere" in elasticity_range:
+        er = elasticity_range["listed_anywhere"]
+        range_text = f" (about {er['min']} to {er['max']} across Low/Medium/High price & prestige sensitivities, central {er['central']})"
+
+    fee_range_text = ""
+    if elasticity_range and "fee_paying_listed" in elasticity_range:
+        fer = elasticity_range["fee_paying_listed"]
+        fee_range_text = f" (fee-paying Low/Med/High sensitivity range: {fer['min']} to {fer['max']}, central {fer['central']})"
+
+    ret_note = ""
+    if university_comparison is not None:
+        pe_ret = university_comparison.policy_effects if hasattr(university_comparison, "policy_effects") else university_comparison["policy_effects"]
+        ret_pp_note = round(pe_ret["cumulative_retention_rate"]["mean"] * 100.0, 2)
+        drop_d_note = pe_ret["final_withdrawn_dropout"]["mean"]
+        ret_note = (
+            f" Over {getattr(query_spec.levers, 'semester_count', 4)} semesters on the enrolled target cohort, "
+            f"cumulative retention changes by {ret_pp_note:+.2f} pp ({pe_ret['cumulative_retention_rate']['baseline_mean']*100:.2f}% -> "
+            f"{pe_ret['cumulative_retention_rate']['policy_mean']*100:.2f}%) with {drop_d_note:+.2f} final dropouts."
+        )
+
+    # Intent-specific headline & direct answer
+    if intent == "ranking_sensitivity" and variant_summaries:
+        parts = [f"{v['label']}: {v['listed_anywhere']} listed ({v['first_choice']} 1st-choice, {v['placed']} placed)" for v in variant_summaries]
+        headline = f"Exogenous ranking sensitivity for {uni_label}: " + " | ".join(parts) + "."
+        direct_answer = (
+            f"Using 'listed anywhere' on the preference list as the application metric (out of {cohort_meta['sample_size']} synthetic candidates), "
+            + "; ".join(parts)
+            + ". Higher ranking increases applicant demand and post-placement cutoffs, while lower ranking reduces both."
+        )
+    elif intent == "multi_scenario_compare" and variant_summaries:
+        parts = [
+            f"{v['label']}: {v['listed_anywhere']} total"
+            + (f" ({v['fee_paying_listed']} fee-paying" if not all_free and "fee_paying_listed" in v else " (")
+            + (", " if not all_free and "fee_paying_listed" in v else "")
+            + f"{v['placed']} placed, {v['target_net_revenue']:,.0f} TL net rev)"
+            for v in variant_summaries
+        ]
+        headline = f"Multi-scenario comparison for {uni_label}: " + " | ".join(parts) + "."
+        direct_answer = (
+            f"Comparing variants for {uni_label} across {cohort_meta['sample_size']} CRN-matched candidates: "
+            + "; ".join(parts)
+            + "."
+        )
+        if fee_la is not None and not all_free:
+            direct_answer += f" Fee-paying program applications in the primary evaluated variant move {fee_la['baseline']} -> {fee_la['policy']} ({fee_la['delta']:+d})."
+    elif intent == "revenue_tradeoff":
+        best_row = max(sweep_rows, key=lambda r: r["target_net_revenue"]) if sweep_rows else None
+        if best_row is not None:
+            headline = (
+                f"Tuition revenue trade-off for {uni_label}: net revenue moves from {rev['baseline']:,.0f} TL to {rev['policy']:,.0f} TL "
+                f"({rev['delta']:+,.0f} TL / {_fmt_signed_pct(rev['pct_change'])}); sweep peak is {best_row['target_net_revenue']:,.0f} TL at {best_row['tuition_change_pct']:+g}%."
+            )
+            direct_answer = (
+                f"At {uni_label}, the evaluated policy changes net tuition revenue by {rev['delta']:+,.0f} TL ({_fmt_signed_pct(rev['pct_change'])}) "
+                f"as total applicants move {la['baseline']} -> {la['policy']}"
+                + (
+                    f" (fee-paying applicants {fee_la['baseline']} -> {fee_la['policy']})"
+                    if fee_la is not None and not all_free
+                    else ""
+                )
+                + f" and admitted students move {pl['baseline']} -> {pl['policy']}. "
+                f"Across the tested tuition grid, net revenue peaks at {best_row['tuition_change_pct']:+g}% ({best_row['target_net_revenue']:,.0f} TL)."
+            )
+        else:
+            headline = f"Net tuition revenue at {uni_label} changes from {rev['baseline']:,.0f} TL to {rev['policy']:,.0f} TL ({rev['delta']:+,.0f} TL)."
+            direct_answer = headline
+    elif intent == "retention_impact" and university_comparison is not None:
+        pe = university_comparison.policy_effects if hasattr(university_comparison, "policy_effects") else university_comparison["policy_effects"]
+        ret_pp = round(pe["cumulative_retention_rate"]["mean"] * 100.0, 2)
+        drop_d = pe["final_withdrawn_dropout"]["mean"]
+        headline = (
+            f"Multi-semester retention impact for {uni_label}: retention changes by {ret_pp:+.2f} pp "
+            f"with {drop_d:+.2f} final dropouts."
+        )
+        direct_answer = (
+            f"Across {pe['cumulative_retention_rate']['policy_mean']*100:.2f}% policy vs {pe['cumulative_retention_rate']['baseline_mean']*100:.2f}% baseline retention "
+            f"for {uni_label}'s enrolled students, cumulative retention changes by {ret_pp:+.2f} percentage points and final dropout changes by {drop_d:+.2f} students."
+        )
+    elif intent in ("cutoff_impact", "quota_capacity", "placement_fill"):
+        cut_diffs = [p["cutoff_score_delta"] for p in analytics["programs"] if p["cutoff_score_delta"] is not None]
+        avg_cut = round(sum(cut_diffs) / len(cut_diffs), 2) if cut_diffs else 0.0
+        headline = (
+            f"{uni_label}: filled seats move {cap['baseline_filled']} -> {cap['policy_filled']} "
+            f"(fill rate {cap['baseline_fill_rate']*100:.1f}% -> {cap['policy_fill_rate']*100:.1f}%), "
+            f"with mean cutoff score shift {avg_cut:+.2f}."
+        )
+        direct_answer = (
+            f"Under this scenario at {uni_label}, total capacity shifts from {cap['baseline']} to {cap['policy']} seats and filled seats shift from "
+            f"{cap['baseline_filled']} to {cap['policy_filled']} ({cap['policy_fill_rate']*100:.1f}% utilization). "
+            f"Applicants (listed anywhere) move from {la['baseline']} to {la['policy']} ({la['delta']:+d})."
+        )
+    elif intent == "competitor_flow":
+        top_r = mig["top_rival_destinations"][0] if mig["top_rival_destinations"] else None
+        top_p_r_list = mig.get("top_primary_rival_destinations") or []
+        top_p_r = top_p_r_list[0] if top_p_r_list else None
+        top_r_txt = f" Top rival destination: {top_r['university_name']} ({top_r['count']} applicants)." if top_r else (
+            f" Top rival gaining shifted #1/admitted choices: {top_p_r['university_name']} ({top_p_r['count']} candidates)."
+            if top_p_r
+            else ""
+        )
+        prim_shift = mig.get("primary_or_placed_shifted_to_rival", 0)
+        headline = (
+            f"Applicant migration at {uni_label}: {mig['shifted_to_rival_uni']} left {uni_label} entirely for rivals, "
+            f"{prim_shift} shifted primary/admitted choice to rivals, "
+            f"{mig['dropped_out_of_applying']} dropped out of applying."
+        )
+        direct_answer = (
+            f"Of baseline applicants to {uni_label}, {mig['stayed_at_target']} kept the same application pattern, "
+            f"{mig['shifted_within_target']} shifted within {uni_label}, {mig['shifted_to_rival_uni']} moved completely to fixed rival universities, "
+            f"{prim_shift} shifted their #1 or placed destination to rivals, and {mig['dropped_out_of_applying']} dropped out.{top_r_txt}"
+        )
+    elif all_free and fee_lever_active:
+        headline = (
+            f"All targeted programs at {uni_label} are tuition-free (0 TL baseline); applicants remain {la['baseline']} -> {la['policy']} (+0)."
+        )
+        direct_answer = (
+            f"Note: All targeted programs at {uni_label} currently have 0 TL annual tuition (state or 100% scholarship), so percentage tuition/aid scaling leaves net tuition at 0 TL. "
+            f"Defining 'apply' as listing {uni_label} anywhere on the preference list (out of {cohort_meta['sample_size']} candidates), total applicants remain {la['policy']}."
+        )
+    elif fee_la is not None and not all_free and la["delta"] == 0 and fee_la["delta"] != 0:
+        headline = (
+            f"Fee-paying applicants to {uni_label} move {fee_la['baseline']} -> {fee_la['policy']} ({fee_la['delta']:+d} / {_fmt_signed_pct(fee_la['pct_change'])}); "
+            f"total unique applicants (including 100% Burslu) stay {la['baseline']} -> {la['policy']}."
+        )
+        direct_answer = (
+            f"Defining 'apply' as listing {uni_label} anywhere in the preference list (out of {cohort_meta['sample_size']} synthetic candidates), "
+            f"candidates continue listing the tuition-exempt 100% Burslu program so overall 'listed anywhere' stays at {la['policy']}; "
+            f"however, applicants to fee-paying programs (net tuition > 0 TL) shift from {fee_la['baseline']} to {fee_la['policy']} ({fee_la['delta']:+d}, {_fmt_signed_pct(fee_la['pct_change'])}){fee_range_text}. "
+            f"Top-{top_k_n} preferences move {tk['baseline']} -> {tk['policy']}, 1st-choice applications move {fc['baseline']} -> {fc['policy']}, and placed students move {pl['baseline']} -> {pl['policy']}."
+        )
+    else:
+        headline = (
+            f"Estimated applicants to {uni_label} (listed anywhere): {la['baseline']} -> {la['policy']} "
+            f"({la['delta']:+d} / {_fmt_signed_pct(la['pct_change'])}){range_text}."
+        )
+        direct_answer = (
+            f"Defining 'apply' as listing {uni_label} anywhere in the candidate's preference list (out of {cohort_meta['sample_size']} synthetic candidates), "
+            f"applications change from {la['baseline']} to {la['policy']} ({la['delta']:+d}, {_fmt_signed_pct(la['pct_change'])}){range_text}. "
+            + (
+                f"Fee-paying program applicants move {fee_la['baseline']} -> {fee_la['policy']} ({fee_la['delta']:+d}). "
+                if fee_la is not None and not all_free
+                else ""
+            )
+            + f"Top-{top_k_n} preferences move {tk['baseline']} -> {tk['policy']}, 1st-choice applications move {fc['baseline']} -> {fc['policy']}, "
+            f"and placed (admitted) students move {pl['baseline']} -> {pl['policy']}."
+        )
+
+    if ret_note and intent != "retention_impact":
+        direct_answer = direct_answer.rstrip() + ret_note
+
+    # Key findings tailored to drivers
+    income_rows = analytics["subgroups"].get("income_band", [])
+    income_driver = ""
+    if income_rows:
+        worst = min(income_rows, key=lambda r: r["listed_delta"])
+        income_driver = (
+            f"Largest income-group shift: {worst['group']} income band ({worst['baseline_listed']} -> {worst['policy_listed']}, "
+            f"{worst['listed_delta']:+d} listed)."
+        )
+
+    tier_rows = analytics.get("scholarship_tiers", [])
+    tier_driver = ""
+    if tier_rows:
+        burslu = next((t for t in tier_rows if "100%" in t["tier"]), None)
+        paid = next((t for t in tier_rows if "Full Fee" in t["tier"]), None)
+        disc = next((t for t in tier_rows if "50%" in t["tier"]), None)
+        if burslu and (paid or disc):
+            parts_t = [f"100% Burslu {burslu['baseline_listed']} -> {burslu['policy_listed']} ({burslu['listed_delta']:+d})"]
+            if disc:
+                parts_t.append(f"50% Discount {disc['baseline_listed']} -> {disc['policy_listed']} ({disc['listed_delta']:+d})")
+            if paid:
+                parts_t.append(f"Full-Fee (Ücretli) {paid['baseline_listed']} -> {paid['policy_listed']} ({paid['listed_delta']:+d})")
+            tier_driver = "Scholarship tier contrast: " + " vs ".join(parts_t) + "."
+
+    key_findings = [
+        f"Listed anywhere: {la['baseline']} -> {la['policy']} ({la['delta']:+d}); "
+        + (f"Fee-paying programs: {fee_la['baseline']} -> {fee_la['policy']} ({fee_la['delta']:+d}); " if fee_la is not None and not all_free else "")
+        + f"Top-{top_k_n}: {tk['baseline']} -> {tk['policy']} ({tk['delta']:+d}); 1st choice: {fc['baseline']} -> {fc['policy']} ({fc['delta']:+d}); Placed: {pl['baseline']} -> {pl['policy']} ({pl['delta']:+d}).",
+    ]
+    if elasticity_range and "listed_anywhere" in elasticity_range:
+        er = elasticity_range["listed_anywhere"]
+        fer = elasticity_range.get("fee_paying_listed")
+        fer_txt = f"; fee-paying range {fer['min']} to {fer['max']} (central {fer['central']})" if (fer and not all_free) else ""
+        key_findings.append(
+            f"Elasticity sensitivity range (uncalibrated Low/Medium/High presets): total listed range from {er['min']} to {er['max']} (central {er['central']}){fer_txt}. Result depends strongly on assumed price/prestige sensitivity."
+        )
+    if ret_note and intent != "retention_impact":
+        key_findings.append(ret_note.strip())
+    if income_driver:
+        key_findings.append(income_driver)
+    if tier_driver:
+        key_findings.append(tier_driver)
+    key_findings.append(
+        f"Migration: {mig['shifted_to_rival_uni']} shifted to fixed rivals, {mig['dropped_out_of_applying']} dropped out, {mig['newly_attracted']} newly attracted."
+    )
+
+    caveats = [
+        "Uncalibrated behavioral elasticities (coefficients_calibrated=false): price and prestige responses are synthetic assumptions, not fitted to empirical applicant microdata.",
+        "Rivals stay fixed: rival universities do not change tuition, quotas, or rankings in response.",
+        f"Simplified/hypothetical placement rules (osym_verified=false): Cohort size={cohort_meta['sample_size']}, seed={cohort_meta['seed']}, reporting_basis={cohort_meta['reporting_basis']} (scale_factor={cohort_meta['cohort_scale_factor']}).",
+        "Application definitions are reported separately ('listed anywhere', 'top-k', '1st choice', 'placed') and never conflated.",
+    ]
+
+    sections = _build_query_sections(
+        query_spec,
+        analytics,
+        elasticity_range=elasticity_range,
+        variant_summaries=variant_summaries,
+        sweep_rows=sweep_rows,
+        university_comparison=university_comparison,
+    )
+
+    md_lines = [
+        f"# University Query Summary: {uni_label}",
+        "",
+        f"**Question:** {query_spec.original_prompt}",
+        f"**Intent:** `{intent}` | **Simulation Mode:** `{query_spec.simulation_mode}`",
+        "",
+        "## Direct Answer",
+        direct_answer,
+        "",
+        "## Key Findings",
+        *[f"- {kf}" for kf in key_findings],
+        "",
+        "## Caveats & Methodological Disclosures",
+        *[f"- {cv}" for cv in caveats],
+    ]
+
+    assumptions_out = [a.model_dump(mode="json") for a in getattr(query_spec, "assumptions", [])]
+    generated_by = "deterministic"
+
+    # Optional gated LLM narrative enhancement strictly verified against computed numbers
+    if allow_llm and os.environ.get("OPENAI_API_KEY"):
+        try:
+            from openai import OpenAI  # type: ignore
+
+            grounding_payload = {
+                "question": query_spec.original_prompt,
+                "intent": intent,
+                "levers": query_spec.levers.model_dump(mode="json", exclude_none=True),
+                "application_definitions": defs,
+                "elasticity_range": elasticity_range,
+                "target_capacity": cap,
+                "target_revenue": rev,
+                "migration": mig,
+                "cohort_metadata": cohort_meta,
+            }
+            allowed_nums: set[float] = {1.0, float(top_k_n)}
+            _collect_grounding_numbers(grounding_payload, allowed_nums)
+            for pm in re.findall(r"([+-]?\d+(?:\.\d+)?)", query_spec.original_prompt):
+                try:
+                    allowed_nums.add(float(pm))
+                except ValueError:
+                    pass
+            client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+            resp = client.chat.completions.create(
+                model=os.environ.get("SOCIETYTWIN_SUMMARY_MODEL", "gpt-4o-mini").split("/")[-1],
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "Summarize the verified simulation JSON into a concise JSON with keys "
+                            "'headline', 'direct_answer', 'key_findings' (list of strings). "
+                            "CRITICAL: Use ONLY exact numbers present in the JSON. Never invent, extrapolate, or alter any number."
+                        ),
+                    },
+                    {"role": "user", "content": json.dumps(grounding_payload, ensure_ascii=False)},
+                ],
+                response_format={"type": "json_object"},
+                temperature=0.1,
+            )
+            raw_content = resp.choices[0].message.content
+            if raw_content:
+                parsed = json.loads(raw_content)
+                cand_texts = [
+                    str(parsed.get("headline", "")),
+                    str(parsed.get("direct_answer", "")),
+                    *[str(x) for x in parsed.get("key_findings", [])],
+                ]
+                if parsed.get("headline") and parsed.get("direct_answer") and _llm_numbers_grounded(cand_texts, allowed_nums):
+                    headline = str(parsed["headline"])
+                    direct_answer = str(parsed["direct_answer"])
+                    if parsed.get("key_findings"):
+                        key_findings = [str(x) for x in parsed["key_findings"]]
+                    generated_by = "llm_grounded"
+        except Exception as exc:
+            logger.debug("University LLM summary skipped/rejected: %s", exc)
+
+    return {
+        "title": f"University Simulation: {uni_label}",
+        "headline": headline,
+        "direct_answer": direct_answer,
+        "key_findings": key_findings,
+        "summary_markdown": "\n".join(md_lines),
+        "detailed_statistics": sections,
+        "assumptions": assumptions_out,
+        "caveats": caveats,
+        "generated_by": generated_by,
     }

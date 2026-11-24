@@ -90,7 +90,7 @@ class UniversityPolicyIntervention(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     # Economic levers (UNI-001, UNI-002, UNI-006)
-    tuition_change_pct: float | None = Field(default=None, gt=-100.0, le=1000.0)
+    tuition_change_pct: float | None = Field(default=None, ge=-100.0, le=1000.0)
     tuition_overrides: dict[str, float] = Field(default_factory=dict)
     aid_budget_change_pct: float | None = Field(default=None, gt=-100.0, le=1000.0)
     base_aid_budget: float | None = Field(default=None, ge=0.0)
@@ -100,11 +100,32 @@ class UniversityPolicyIntervention(BaseModel):
     installment_upfront_share: float | None = Field(default=None, gt=0.0, le=1.0)
     affordability_filter_mode: AffordabilityFilterMode = "none"
 
-    # Placement & capacity levers (UNI-005, OSYM-BARAJ, OBP penalty)
+    # Target institution/program scoping (empty = legacy global behavior)
+    target_university_ids: list[str] = Field(default_factory=list)
+    target_program_ids: list[str] = Field(default_factory=list)
+    target_department_names: list[str] = Field(default_factory=list)
+
+    # Exogenous ranking/prestige levers (unrelated to ÖSYM baraj max_rank_override)
+    ranking_change_pct: float | None = Field(
+        default=None,
+        gt=-100.0,
+        le=500.0,
+        description="Exogenous percentage shift in targeted prestige/ranking (>0 improves, <0 worsens).",
+    )
+    ranking_rank_delta: int | None = Field(
+        default=None,
+        ge=-100_000,
+        le=100_000,
+        description="Exogenous rank-spot shift for targeted programs (>0 improves by N spots, <0 drops N spots).",
+    )
+
+    # Placement & capacity levers (UNI-005, OSYM-BARAJ, OBP penalty, scholarship mix)
     capacity_change_pct: float | None = Field(default=None, ge=-100.0, le=1000.0)
     capacity_rounding: CapacityRoundingMode = "floor"
     program_capacity_overrides: dict[str, int] = Field(default_factory=dict)
+    scholarship_tier_mix: dict[str, float] = Field(default_factory=dict)
     closed_programs: list[str] = Field(default_factory=list)
+    opened_programs: list[str] = Field(default_factory=list)
     rank_threshold_overrides: dict[str, int] = Field(default_factory=dict)
     min_score_overrides: dict[str, float] = Field(default_factory=dict)
     apply_prior_placement_obp_penalty: bool = False
@@ -134,6 +155,9 @@ class UniversityPolicyIntervention(BaseModel):
         for pid, score in self.min_score_overrides.items():
             if score < 0:
                 raise ValueError(f"min_score_overrides[{pid!r}] cannot be negative ({score})")
+        for tier, mult in self.scholarship_tier_mix.items():
+            if mult < 0:
+                raise ValueError(f"scholarship_tier_mix[{tier!r}] cannot be negative ({mult})")
         if self.osym_verified and self.rule_fidelity != "verified_osym":
             raise ValueError("osym_verified=True requires rule_fidelity='verified_osym'")
         if self.rule_fidelity == "verified_osym" and not self.osym_verified:

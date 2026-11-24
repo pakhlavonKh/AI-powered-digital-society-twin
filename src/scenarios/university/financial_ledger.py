@@ -27,10 +27,29 @@ except ImportError:
 def apply_university_economic_policy(
     students: list[StudentAgentRecord],
     intervention: UniversityPolicyIntervention | None = None,
+    *,
+    program_university_map: dict[str, str] | None = None,
 ) -> tuple[list[StudentAgentRecord], dict[str, Any]]:
-    """Return deep-copied students with tuition and aid-budget interventions applied."""
+    """Return deep-copied students with tuition and aid-budget interventions applied (scoped if targeted)."""
     if intervention is None:
         return [s.model_copy(deep=True) for s in students], {"aid_pool": 0.0, "aid_allocated": 0.0}
+
+    has_target = bool(
+        intervention.target_university_ids
+        or intervention.target_program_ids
+        or intervention.target_department_names
+    )
+
+    def _student_targeted(s: StudentAgentRecord) -> bool:
+        if not has_target:
+            return True
+        if intervention.target_program_ids and s.program_id not in intervention.target_program_ids:
+            return False
+        if intervention.target_university_ids:
+            uid = (program_university_map or {}).get(s.program_id)
+            if uid not in intervention.target_university_ids:
+                return False
+        return True
 
     tuition_factor = (
         max(0.0, 1.0 + intervention.tuition_change_pct / 100.0)
@@ -55,17 +74,20 @@ def apply_university_economic_policy(
         eligible = [
             s
             for s in students
-            if (
-                intervention.aid_income_eligibility_max is not None
-                and s.liquid_budget <= intervention.aid_income_eligibility_max
+            if _student_targeted(s)
+            and (
+                (
+                    intervention.aid_income_eligibility_max is not None
+                    and s.liquid_budget <= intervention.aid_income_eligibility_max
+                )
+                or (intervention.aid_income_eligibility_max is None and s.income_band != "high")
             )
-            or (intervention.aid_income_eligibility_max is None and s.income_band != "high")
         ]
         ordered = sorted(
             eligible,
             key=lambda s: (income_rank.get(s.income_band, 2), s.liquid_budget, s.student_id),
         )
-        grants = {s.student_id: 0.0 for s in students}
+        grants = {s.student_id: (0.0 if (not has_target or _student_targeted(s)) else s.need_aid_grant) for s in students}
         remaining = pool
         if ordered and remaining > 0.0:
             eligible_existing = math.fsum(max(0.0, s.need_aid_grant) for s in ordered)
@@ -92,7 +114,7 @@ def apply_university_economic_policy(
         new_tuition = s.tuition_per_semester
         if s.program_id in intervention.tuition_overrides:
             new_tuition = round(float(intervention.tuition_overrides[s.program_id]) / 2.0, 2)
-        elif intervention.tuition_change_pct is not None and new_tuition > 0.0:
+        elif _student_targeted(s) and intervention.tuition_change_pct is not None and new_tuition > 0.0:
             new_tuition = round(new_tuition * tuition_factor, 2)
 
         out.append(

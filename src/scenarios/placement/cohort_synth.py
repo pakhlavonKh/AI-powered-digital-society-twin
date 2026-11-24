@@ -20,6 +20,7 @@ try:
         PlacementRuleset,
         ProgramOffering,
         ScoreType,
+        catalog_fee_scale,
     )
 except ImportError:
     from scenarios.placement.models import (  # type: ignore
@@ -28,6 +29,7 @@ except ImportError:
         PlacementRuleset,
         ProgramOffering,
         ScoreType,
+        catalog_fee_scale,
     )
 
 from societytwin.national.cohorts import simple_random, weighted_pps
@@ -50,6 +52,8 @@ def build_standalone_demo_programs() -> list[ProgramOffering]:
             score_type="SAY",
             baraj_group="medicine",
             capacity=12,
+            university_rank=12,
+            prestige_score=0.82,
             tuition_annual=0.0,
         ),
         ProgramOffering(
@@ -63,6 +67,8 @@ def build_standalone_demo_programs() -> list[ProgramOffering]:
             score_type="SAY",
             baraj_group="engineering",
             capacity=20,
+            university_rank=12,
+            prestige_score=0.78,
             tuition_annual=0.0,
         ),
         ProgramOffering(
@@ -76,6 +82,8 @@ def build_standalone_demo_programs() -> list[ProgramOffering]:
             score_type="SAY",
             baraj_group="engineering",
             capacity=8,
+            university_rank=28,
+            prestige_score=0.66,
             tuition_annual=240_000.0,
             scholarship_pct=100.0,
         ),
@@ -90,6 +98,8 @@ def build_standalone_demo_programs() -> list[ProgramOffering]:
             score_type="SAY",
             baraj_group="engineering",
             capacity=16,
+            university_rank=28,
+            prestige_score=0.62,
             tuition_annual=240_000.0,
             scholarship_pct=50.0,
         ),
@@ -104,6 +114,8 @@ def build_standalone_demo_programs() -> list[ProgramOffering]:
             score_type="SAY",
             baraj_group="engineering",
             capacity=16,
+            university_rank=28,
+            prestige_score=0.58,
             tuition_annual=240_000.0,
             scholarship_pct=0.0,
         ),
@@ -118,6 +130,8 @@ def build_standalone_demo_programs() -> list[ProgramOffering]:
             score_type="EA",
             baraj_group="law",
             capacity=20,
+            university_rank=8,
+            prestige_score=0.84,
             tuition_annual=0.0,
         ),
         ProgramOffering(
@@ -131,6 +145,8 @@ def build_standalone_demo_programs() -> list[ProgramOffering]:
             score_type="EA",
             baraj_group=None,
             capacity=20,
+            university_rank=35,
+            prestige_score=0.56,
             tuition_annual=200_000.0,
             scholarship_pct=50.0,
         ),
@@ -145,6 +161,8 @@ def build_standalone_demo_programs() -> list[ProgramOffering]:
             score_type="SÖZ",
             baraj_group="teaching",
             capacity=20,
+            university_rank=22,
+            prestige_score=0.68,
             tuition_annual=0.0,
         ),
         ProgramOffering(
@@ -158,6 +176,8 @@ def build_standalone_demo_programs() -> list[ProgramOffering]:
             score_type="DİL",
             baraj_group=None,
             capacity=14,
+            university_rank=12,
+            prestige_score=0.72,
             tuition_annual=0.0,
         ),
         ProgramOffering(
@@ -171,6 +191,8 @@ def build_standalone_demo_programs() -> list[ProgramOffering]:
             score_type="TYT",
             baraj_group=None,
             capacity=24,
+            university_rank=12,
+            prestige_score=0.60,
             tuition_annual=0.0,
         ),
     ]
@@ -184,6 +206,7 @@ def _synthesize_candidate_from_resident(
     inherited_provenance: dict[str, str],
     source_population_id: str | None = None,
     max_preferences: int = 10,
+    fee_scale: float | None = None,
 ) -> CandidateRecord:
     """Attach strictly ASSUMED synthetic scores, preferences, and financials to a demographic anchor."""
     # Draw primary academic track deterministically
@@ -212,18 +235,19 @@ def _synthesize_candidate_from_resident(
         primary_track: raw_primary,
     }
 
+    eff_fee_scale = fee_scale if fee_scale is not None else catalog_fee_scale(programs)
     income_roll = stream.random()
     if income_roll < 0.40:
         income_band = "low"
-        liquid_budget = round(15_000.0 + stream.random() * 35_000.0, 2)
+        liquid_budget = round((15_000.0 + stream.random() * 35_000.0) * eff_fee_scale, 2)
         max_affordable = round(liquid_budget * 1.4, 2)
     elif income_roll < 0.80:
         income_band = "middle"
-        liquid_budget = round(65_000.0 + stream.random() * 90_000.0, 2)
+        liquid_budget = round((65_000.0 + stream.random() * 90_000.0) * eff_fee_scale, 2)
         max_affordable = round(liquid_budget * 1.5, 2)
     else:
         income_band = "high"
-        liquid_budget = round(200_000.0 + stream.random() * 250_000.0, 2)
+        liquid_budget = round((200_000.0 + stream.random() * 250_000.0) * eff_fee_scale, 2)
         max_affordable = round(liquid_budget * 2.0, 2)
 
     prov = resident.get("province_code")
@@ -318,6 +342,7 @@ def build_tuik_anchored_candidates(
     records_by_id = {row["synthetic_id"]: row for row in filtered.to_pylist()}
     profiles = loaded_population.manifest.get("profiles", {})
     stream = Stream("placement:tuik_anchored_synth", seed)
+    fee_scale = catalog_fee_scale(prog_list)
 
     candidates: list[CandidateRecord] = []
     for idx, member in enumerate(sorted(members, key=lambda m: m.synthetic_id), start=1):
@@ -338,6 +363,7 @@ def build_tuik_anchored_candidates(
                 inherited_provenance=inherited_prov,
                 source_population_id=loaded_population.population_id,
                 max_preferences=max_preferences,
+                fee_scale=fee_scale,
             )
         )
 
@@ -348,7 +374,12 @@ def build_tuik_anchored_candidates(
         "education_level": {"source": "tuik_population", "evidence": "inherited_from_population_profile"},
         "scores": {"source": "synthetic_generator", "evidence": Evidence.ASSUMED, "note": "Hypothetical YKS-style scores"},
         "preferences": {"source": "synthetic_generator", "evidence": Evidence.ASSUMED, "note": "Hypothetical preference order"},
-        "liquid_budget": {"source": "synthetic_generator", "evidence": Evidence.ASSUMED, "note": "Hypothetical liquid budget"},
+        "liquid_budget": {
+            "source": "synthetic_generator",
+            "evidence": Evidence.ASSUMED,
+            "note": "Hypothetical liquid budget scaled to catalog positive-tuition median",
+            **({"catalog_fee_scale": round(fee_scale, 4)} if fee_scale > 1.0 else {}),
+        },
     }
 
     return CandidateCohort(
@@ -374,6 +405,7 @@ def build_standalone_test_cohort(
     stream = Stream("placement:standalone_fixture", seed)
     provinces = ("06", "34", "35")
     sexes = ("female", "male")
+    fee_scale = catalog_fee_scale(prog_list)
 
     candidates: list[CandidateRecord] = []
     for idx in range(1, size + 1):
@@ -395,6 +427,7 @@ def build_standalone_test_cohort(
                 inherited_provenance=inherited_prov,
                 source_population_id=None,
                 max_preferences=max_preferences,
+                fee_scale=fee_scale,
             )
         )
 

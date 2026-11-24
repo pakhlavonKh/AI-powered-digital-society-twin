@@ -1,7 +1,6 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { describeDetails, toApiError } from "@/lib/api/client";
 import { Notice } from "@/components/Notices";
@@ -12,10 +11,13 @@ import {
   RetentionTrajectoryChart,
   TuitionSweepChart,
 } from "@/components/university/UniversityCharts";
+import { UniversityQueryStudio } from "@/components/university/UniversityQueryStudio";
 import {
   v2,
   type PlacementProgramsCatalog,
   type PlacementRunResponse,
+  type UniversityQueryRunListItem,
+  type UniversityQuerySpec,
   type UniversityRegistryStatus,
   type UniversityRunResponse,
   type UniversitySweepResponse,
@@ -155,24 +157,64 @@ function UniversitySimulatorWorkspace() {
   const [runningSweep, setRunningSweep] = useState(false);
   const [inspectingId, setInspectingId] = useState<string | null>(null);
   const [regStatus, setRegStatus] = useState<UniversityRegistryStatus | null>(null);
+  const [queryRuns, setQueryRuns] = useState<UniversityQueryRunListItem[]>([]);
+  const [showNumericStudio, setShowNumericStudio] = useState<boolean>(() => Boolean(initialScenario));
 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const applyQuerySpecToNumericStudio = (spec: UniversityQuerySpec) => {
+    const lev = spec.levers ?? {};
+    if (typeof lev.capacity_change_pct === "number") {
+      setPlaceQuotaPct(lev.capacity_change_pct);
+      setUniCapacityPct(lev.capacity_change_pct);
+    }
+    if (typeof lev.tuition_change_pct === "number") {
+      setPlaceTuitionPct(lev.tuition_change_pct);
+      setUniTuitionPct(lev.tuition_change_pct);
+    }
+    if (typeof lev.aid_budget_change_pct === "number") {
+      setPlaceAidPct(lev.aid_budget_change_pct);
+      setUniAidPct(lev.aid_budget_change_pct);
+    }
+    if (typeof lev.installment_count === "number") {
+      setPlaceInstallments(lev.installment_count);
+      setUniInstallments(lev.installment_count);
+    }
+    if (typeof lev.attendance_min_pct === "number") setUniAttendanceMin(lev.attendance_min_pct);
+    if (typeof lev.grading_difficulty_shift === "number") setUniGradingShift(lev.grading_difficulty_shift);
+    if (typeof lev.semester_count === "number") setUniSemesters(lev.semester_count);
+    if (typeof lev.replications === "number") setUniReplications(lev.replications);
+    if (typeof spec.cohort_size === "number") {
+      setPlaceSize(spec.cohort_size);
+      setUniSize(spec.cohort_size);
+    }
+    if (spec.simulation_mode === "retention") {
+      setTab("multiterm");
+    } else if (spec.simulation_mode === "placement") {
+      setTab("placement");
+    }
+  };
 
   useEffect(() => {
     setActiveScenarioId(initialScenario);
     setInterventionDirty(false);
-    if (!initialScenario) setLinkedScenario(null);
+    if (initialScenario) {
+      setShowNumericStudio(true);
+    } else {
+      setLinkedScenario(null);
+    }
   }, [initialScenario]);
 
   useEffect(() => {
     let cancelled = false;
     async function loadInitial() {
       try {
-        const [cat, pList, uList, reg, sc] = await Promise.all([
+        const [cat, pList, uList, reg, qList, sc] = await Promise.all([
           v2<PlacementProgramsCatalog>("/placement/programs"),
           v2<{ items: PlacementRunResponse[] }>("/placement/runs"),
           v2<{ items: UniversityRunResponse[] }>("/university/runs"),
           v2<UniversityRegistryStatus>("/university-registry/status").catch(() => null),
+          v2<{ items: UniversityQueryRunListItem[] }>("/university/query/runs").catch(() => null),
           initialScenario
             ? v2<ScenarioDetail>(`/scenarios/${encodeURIComponent(initialScenario)}`).catch(() => null)
             : Promise.resolve(null),
@@ -182,6 +224,7 @@ function UniversitySimulatorWorkspace() {
         setPlacementRuns(pList.items);
         setUniversityRuns(uList.items);
         if (reg && typeof reg.available === "boolean") setRegStatus(reg);
+        if (qList && Array.isArray(qList.items)) setQueryRuns(qList.items);
         if (sc) {
           setLinkedScenario(sc);
           const custom = sc.policy?.parameters?.custom_details;
@@ -395,6 +438,19 @@ function UniversitySimulatorWorkspace() {
         </Notice>
       ) : null}
 
+      <UniversityQueryStudio
+        catalog={catalog}
+        regStatus={regStatus}
+        populationId={population?.population_id ?? null}
+        populationLabel={population?.label ?? null}
+        initialRuns={queryRuns}
+        onApplyLeversToNumericStudio={applyQuerySpecToNumericStudio}
+        showNumericStudio={showNumericStudio}
+        onToggleNumericStudio={() => setShowNumericStudio((v) => !v)}
+      />
+
+      {showNumericStudio ? (
+        <>
       <div className="row" role="tablist" aria-label="University simulation modules">
         <button
           type="button"
@@ -873,30 +929,8 @@ function UniversitySimulatorWorkspace() {
           </div>
         </section>
       ) : null}
-
-      <section className="card stack" aria-labelledby="uni-explorer-links">
-        <div className="card-head" style={{ marginBottom: 0 }}>
-          <h3 id="uni-explorer-links" style={{ margin: 0 }}>University Simulation Explorer &amp; SQLite Registry</h3>
-          <Badge tone={regStatus?.available ? "good" : "neutral"}>
-            {regStatus?.available
-              ? `SQLite registry: ${regStatus.snapshots.length} snapshot(s)`
-              : "SQLite registry: optional / not imported"}
-          </Badge>
-        </div>
-        <p className="small muted" style={{ margin: 0 }}>
-          This studio executes live counterfactual placement and multi-semester simulations via{" "}
-          <code>/api/v2/placement/*</code> and <code>/api/v2/university/*</code>. Browse institutional metadata, synthetic
-          candidates, and fixture comparisons in the sibling explorer views (read-only workbook SQLite APIs are at{" "}
-          <code>/api/v2/university-registry/*</code>):
-        </p>
-        <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
-          <Link className="button small" href="/university/programs">Programs</Link>
-          <Link className="button small" href="/university/candidates">Candidates</Link>
-          <Link className="button small" href="/university/scenarios">Scenario Setup</Link>
-          <Link className="button small" href="/university/results">Placement Results</Link>
-          <Link className="button small" href="/university/compare">Compare Scenarios</Link>
-        </div>
-      </section>
+        </>
+      ) : null}
     </div>
   );
 }

@@ -192,11 +192,13 @@ def detect_domain_and_category(text: str) -> tuple[str, str]:
             "ösym", "osym", "yks", "tyt", "ayt", "ydt", "yerleştirme", "tercih",
             "kontenjan", "taban puan", "başarı sırası", "baraj", "placement",
             "burslu", "kırık obp", "seat quota", "admission quota",
+            "cutoff", "cutoffs", "applicant", "applicants", "apply", "applications",
+            "sıralama", "taban", "başvuru",
         ),
-    ):
+    ) or (_has_keyword(text, ("uni", "university", "üniversite")) and _has_keyword(text, ("ranking", "rank", "cutoff", "apply", "applications", "quota", "seats", "sıralama", "başvuru"))):
         if _has_keyword(text, ("kontenjan", "quota", "capacity", "seat", "seats", "kapasite")):
             return "university_placement", "quota_adjustment"
-        if _has_keyword(text, ("baraj", "rank", "sıra", "başarı sırası", "threshold")):
+        if _has_keyword(text, ("baraj", "rank", "ranking", "sıra", "sıralama", "başarı sırası", "threshold")):
             return "university_placement", "rank_threshold_adjustment"
         return "university_placement", "placement_simulation"
 
@@ -205,7 +207,7 @@ def detect_domain_and_category(text: str) -> tuple[str, str]:
         (
             "tuition", "harç", "öğrenim ücreti", "need-based aid", "financial aid",
             "burs bütçesi", "installment", "taksit", "attendance", "devamsızlık",
-            "course seat", "course seats", "grading", "gpa", "stop-out",
+            "course seat", "course seats", "grading", "gpa", "stop-out", "dropout", "retention",
         ),
     ):
         if _has_keyword(text, ("tuition", "harç", "öğrenim ücreti")):
@@ -687,3 +689,34 @@ def compile_scenario_from_prompt(
             return compiled
 
     return compile_scenario_from_prompt_heuristic(clean_prompt)
+
+
+def compile_university_query(
+    prompt: str,
+    *,
+    catalog: list[Any],
+    context_university_id: str | None = None,
+    snapshot_id: str | None = None,
+    admission_year: int | None = None,
+    cohort_size: int = 200,
+    seed: int = 42,
+    model: str | None = None,
+    force_heuristic: bool = False,
+):
+    """Compile a natural-language university question into a UniversityQuerySpec."""
+    try:
+        from .university_compiler import compile_university_query as _compile_uni
+    except ImportError:
+        from scenarios.university_compiler import compile_university_query as _compile_uni  # type: ignore
+
+    return _compile_uni(
+        prompt,
+        catalog=catalog,
+        context_university_id=context_university_id,
+        snapshot_id=snapshot_id,
+        admission_year=admission_year,
+        cohort_size=cohort_size,
+        seed=seed,
+        model=model,
+        force_heuristic=force_heuristic,
+    )

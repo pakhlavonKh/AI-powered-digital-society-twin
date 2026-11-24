@@ -122,6 +122,7 @@ def run_replicated_university_experiment(
     base_seed: int = 42,
     baseline_scenario_id: str | None = "baseline",
     policy_scenario_id: str | None = "policy",
+    program_university_map: dict[str, str] | None = None,
 ) -> UniversityComparisonReport:
     """Run paired Common Random Numbers (CRN) baseline vs policy replications."""
     if replications < 1:
@@ -143,6 +144,7 @@ def run_replicated_university_experiment(
             semester_count=eff_terms,
             seed=rep_seed,
             record_decisions=False,
+            program_university_map=program_university_map,
         )
         pol_res = run_university_simulation(
             students,
@@ -154,6 +156,7 @@ def run_replicated_university_experiment(
             semester_count=eff_terms,
             seed=rep_seed,
             record_decisions=False,
+            program_university_map=program_university_map,
         )
         baseline_runs.append(base_res)
         policy_runs.append(pol_res)

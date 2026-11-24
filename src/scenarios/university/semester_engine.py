@@ -275,6 +275,7 @@ def run_university_simulation(
     seed: int = 42,
     record_decisions: bool = False,
     choice_override_fn: ChoiceOverrideFn | None = None,
+    program_university_map: dict[str, str] | None = None,
 ) -> UniversitySimulationResult:
     """Execute a deterministic multi-semester university policy experiment."""
     base_ruleset = ruleset or UniversityRuleset()
@@ -289,7 +290,11 @@ def run_university_simulation(
     ruleset_sha = canonical_hash(base_ruleset.model_dump(mode="json"))
     intervention_sha = canonical_hash(intervention.model_dump(mode="json")) if intervention is not None else None
 
-    eff_students, _ = apply_university_economic_policy(base_students_sorted, intervention)
+    eff_students, _ = apply_university_economic_policy(
+        base_students_sorted,
+        intervention,
+        program_university_map=program_university_map,
+    )
     eff_courses = _scale_course_capacities(base_courses_sorted, intervention)
     eff_att_min = (
         float(intervention.attendance_min_pct)

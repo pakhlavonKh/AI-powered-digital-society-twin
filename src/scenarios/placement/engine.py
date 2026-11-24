@@ -17,6 +17,7 @@ from typing import Any
 try:
     from ..eligibility import EligibilityStatus
     from ..schema import ScenarioConfig, PlacementScenarioConfig, UniversityPolicyIntervention
+    from ..university_query import PreferenceModelConfig
     from .eligibility import (
         CandidateEligibilityAudit,
         EligibleChoice,
@@ -35,10 +36,13 @@ try:
         ProgramPlacementOutcome,
         TieBreakEvent,
         TieBreakPolicy,
+        catalog_fee_scale,
     )
+    from .preference_model import apply_behavioral_preferences
 except ImportError:
     from scenarios.eligibility import EligibilityStatus  # type: ignore
     from scenarios.schema import ScenarioConfig, PlacementScenarioConfig, UniversityPolicyIntervention  # type: ignore
+    from scenarios.university_query import PreferenceModelConfig  # type: ignore
     from scenarios.placement.eligibility import (  # type: ignore
         CandidateEligibilityAudit,
         EligibleChoice,
@@ -57,7 +61,9 @@ except ImportError:
         ProgramPlacementOutcome,
         TieBreakEvent,
         TieBreakPolicy,
+        catalog_fee_scale,
     )
+    from scenarios.placement.preference_model import apply_behavioral_preferences  # type: ignore
 
 from societytwin.common import canonical_hash
 
@@ -350,16 +356,29 @@ def _build_program_outcomes(
     audits: dict[str, CandidateEligibilityAudit],
     program_heaps: dict[str, list[_WorstFirst]],
     tie_events: list[TieBreakEvent],
+    *,
+    top_k: int = 3,
+    pre_dropped_affordability: dict[str, int] | None = None,
 ) -> list[ProgramPlacementOutcome]:
     program_ties: dict[str, list[TieBreakEvent]] = {}
     for ev in tie_events:
         program_ties.setdefault(ev.program_id, []).append(ev)
 
     eligible_applicants: dict[str, set[str]] = {p.program_id: set() for p in eff_progs_sorted}
+    listed_anywhere: dict[str, set[str]] = {p.program_id: set() for p in eff_progs_sorted}
+    listed_top_k: dict[str, set[str]] = {p.program_id: set() for p in eff_progs_sorted}
     first_choice_counts: dict[str, int] = {p.program_id: 0 for p in eff_progs_sorted}
     ineligible_by_prog: dict[str, dict[str, int]] = {p.program_id: {} for p in eff_progs_sorted}
 
     for cand in eff_cands_sorted:
+        seen_raw: set[str] = set()
+        for rank_idx, pid in enumerate(cand.preferences, start=1):
+            if pid in listed_anywhere and pid not in seen_raw:
+                seen_raw.add(pid)
+                listed_anywhere[pid].add(cand.candidate_id)
+                if rank_idx <= top_k:
+                    listed_top_k[pid].add(cand.candidate_id)
+
         audit = audits[cand.candidate_id]
         if audit.eligible_choices:
             first_pid = audit.eligible_choices[0].program_id
@@ -390,6 +409,10 @@ def _build_program_outcomes(
         else:
             highest = cutoff_score = cutoff_rank = None
 
+        aff_drops = ineligible_by_prog[pid].get("AFFORDABILITY_EXCLUDED", 0)
+        if pre_dropped_affordability and pid in pre_dropped_affordability:
+            aff_drops += int(pre_dropped_affordability[pid])
+
         outcomes.append(
             ProgramPlacementOutcome(
                 program_id=pid,
@@ -409,7 +432,10 @@ def _build_program_outcomes(
                 highest_score=highest,
                 cutoff_rank=cutoff_rank,
                 applicant_count=len(eligible_applicants[pid]),
+                listed_anywhere_count=len(listed_anywhere[pid]),
+                listed_top_k_count=len(listed_top_k[pid]),
                 first_choice_count=first_choice_counts[pid],
+                dropped_due_to_affordability=aff_drops,
                 ineligible_attempts_by_reason=ineligible_by_prog[pid],
                 tie_breaks_at_cutoff=sorted(
                     program_ties.get(pid, []),
@@ -572,6 +598,7 @@ def run_placement(
     scenario: ScenarioConfig | PlacementScenarioConfig | None = None,
     seed: int | None = None,
     min_group: int = 1,
+    preference_config: PreferenceModelConfig | None = None,
 ) -> PlacementResult:
     """Execute deterministic Candidate-Proposing Deferred Acceptance over general quotas."""
     base_ruleset = ruleset or PlacementRuleset()
@@ -606,6 +633,33 @@ def run_placement(
 
     eff_cands_sorted = sorted(eff_cands, key=lambda c: c.candidate_id)
     eff_progs_sorted = sorted(eff_progs, key=lambda p: p.program_id)
+
+    pre_dropped_counts: dict[str, int] | None = None
+    top_k = preference_config.top_k_definition if preference_config is not None else 3
+    if preference_config is not None and preference_config.enabled:
+        # Anchor utility cost denominator and reachability baseline rank to pre-intervention catalog
+        # so policy shifts do not distort their own reference frame.
+        is_multi_major = len(base_progs_sorted) > 30
+        baseline_cost_unit = round(100_000.0 * catalog_fee_scale(base_progs_sorted) * (1.35 if is_multi_major else 1.0), 2)
+        baseline_ranks = {p.program_id: p.university_rank for p in base_progs_sorted}
+        eff_cands_sorted, pre_dropped_counts, _ = apply_behavioral_preferences(
+            eff_cands_sorted,
+            eff_progs_sorted,
+            eff_ruleset,
+            intervention,
+            preference_config,
+            seed=eff_ruleset.tie_break_policy.tie_seed,
+            cost_unit=baseline_cost_unit,
+            baseline_ranks=baseline_ranks,
+        )
+        intervention_meta = {
+            **intervention_meta,
+            "preference_model_enabled": True,
+            "elasticity_preset": preference_config.elasticity_preset,
+            "coefficients_calibrated": preference_config.coefficients_calibrated,
+            "top_k_definition": top_k,
+        }
+
     initial_caps = {p.program_id: p.capacity for p in base_progs_sorted}
     programs_by_id = {p.program_id: p for p in eff_progs_sorted}
     derived_ranks = derive_cohort_ranks(eff_cands_sorted, eff_ruleset)
@@ -637,7 +691,14 @@ def run_placement(
         eff_cands_sorted, audits, held_choice
     )
     program_outcomes = _build_program_outcomes(
-        eff_cands_sorted, eff_progs_sorted, initial_caps, audits, program_heaps, tie_events
+        eff_cands_sorted,
+        eff_progs_sorted,
+        initial_caps,
+        audits,
+        program_heaps,
+        tie_events,
+        top_k=top_k,
+        pre_dropped_affordability=pre_dropped_counts,
     )
     aggregate_metrics = _build_aggregate_metrics(
         candidate_outcomes, program_outcomes, unplaced_reasons, unavailable_reasons, len(tie_events), intervention_meta

@@ -149,8 +149,22 @@ def compare_placement_scenarios(
         b_cut = bp.cutoff_score if bp else None
         p_cut = pp.cutoff_score if pp else None
         cut_delta = round(p_cut - b_cut, 5) if (b_cut is not None and p_cut is not None) else None
+        b_rank = bp.cutoff_rank if bp else None
+        p_rank = pp.cutoff_rank if pp else None
+        rank_delta = (p_rank - b_rank) if (b_rank is not None and p_rank is not None) else None
         b_fc = bp.first_choice_count if bp else 0
         p_fc = pp.first_choice_count if pp else 0
+        b_app = bp.applicant_count if bp else 0
+        p_app = pp.applicant_count if pp else 0
+        b_la = bp.listed_anywhere_count if bp else 0
+        p_la = pp.listed_anywhere_count if pp else 0
+        b_tk = bp.listed_top_k_count if bp else 0
+        p_tk = pp.listed_top_k_count if pp else 0
+        b_fr = bp.fill_rate if bp else 0.0
+        p_fr = pp.fill_rate if pp else 0.0
+        app_pct = round(((p_app - b_app) / b_app) * 100.0, 2) if b_app > 0 else None
+        la_pct = round(((p_la - b_la) / b_la) * 100.0, 2) if b_la > 0 else None
+
         program_deltas.append(
             ProgramDelta(
                 program_id=pid,
@@ -164,6 +178,26 @@ def compare_placement_scenarios(
                 policy_cutoff_score=p_cut,
                 cutoff_score_delta=cut_delta,
                 first_choice_delta=p_fc - b_fc,
+                baseline_first_choice=b_fc,
+                policy_first_choice=p_fc,
+                baseline_applicants=b_app,
+                policy_applicants=p_app,
+                applicant_delta=p_app - b_app,
+                applicant_pct_change=app_pct,
+                baseline_listed_anywhere=b_la,
+                policy_listed_anywhere=p_la,
+                listed_anywhere_delta=p_la - b_la,
+                listed_anywhere_pct_change=la_pct,
+                baseline_listed_top_k=b_tk,
+                policy_listed_top_k=p_tk,
+                listed_top_k_delta=p_tk - b_tk,
+                baseline_cutoff_rank=b_rank,
+                policy_cutoff_rank=p_rank,
+                cutoff_rank_delta=rank_delta,
+                dropped_due_to_affordability=pp.dropped_due_to_affordability if pp else 0,
+                baseline_fill_rate=b_fr,
+                policy_fill_rate=p_fr,
+                fill_rate_delta=round(p_fr - b_fr, 4),
             )
         )
 

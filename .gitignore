@@ -53,6 +53,17 @@ experiments/policy_scenarios/scenarios/*.yml
 *.duckdb
 *.duckdb.wal
 
+# Keep university source workbooks and processed university SQLite registry trackable
+!data/raw/university/
+!data/raw/university/**
+!data/processed/university/
+!data/processed/university/**
+!*.xlsx
+!data/**/*.xlsx
+!university.sqlite3
+!data/processed/university/*.sqlite
+!data/processed/university/*.sqlite3
+
 # Logs
 logs/
 *.log
