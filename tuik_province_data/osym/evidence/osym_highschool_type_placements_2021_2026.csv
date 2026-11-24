@@ -1,0 +1,85 @@
+﻿placement_year,high_school_type,score_calculated,applied_for_placement,application_opt_in_pct,placed_orgun_lisans,placed_orgun_onlisans,placed_aof_lisans,placed_aof_onlisans,placed_total,level,source_file,source_id,verification_status
+2022,Lise (Yabancı Dil Ağırlıklı),6740,4717,69.99,1061,887,322,747,3017,national,yks_yerlestirme_sayisal_bilgiler_2022.pdf,SRC-OSYM-SB-2019-2025,verified
+2022,Özel Lise,36479,25354,69.5,4435,5782,1141,2042,13400,national,yks_yerlestirme_sayisal_bilgiler_2022.pdf,SRC-OSYM-SB-2019-2025,verified
+2022,Anadolu Lisesi,763457,487468,63.85,187818,121325,6279,15163,330585,national,yks_yerlestirme_sayisal_bilgiler_2022.pdf,SRC-OSYM-SB-2019-2025,verified
+2022,Yabancı Dilde Eğitim Veren Özel Lise,203987,143814,70.5,72806,26441,1291,2037,102575,national,yks_yerlestirme_sayisal_bilgiler_2022.pdf,SRC-OSYM-SB-2019-2025,verified
+2022,Özel Fen Lisesi,26752,18304,68.42,14513,795,66,82,15456,national,yks_yerlestirme_sayisal_bilgiler_2022.pdf,SRC-OSYM-SB-2019-2025,verified
+2022,Fen Lisesi,55476,35249,63.54,28467,1601,157,224,30449,national,yks_yerlestirme_sayisal_bilgiler_2022.pdf,SRC-OSYM-SB-2019-2025,verified
+2022,Özel Akşam Lisesi,11923,10452,87.66,193,977,162,299,1631,national,yks_yerlestirme_sayisal_bilgiler_2022.pdf,SRC-OSYM-SB-2019-2025,verified
+2022,Sosyal Bilimler Lisesi,11767,8305,70.58,5646,1108,70,109,6933,national,yks_yerlestirme_sayisal_bilgiler_2022.pdf,SRC-OSYM-SB-2019-2025,verified
+2022,Spor Lisesi,9485,4312,45.46,195,1141,18,86,1440,national,yks_yerlestirme_sayisal_bilgiler_2022.pdf,SRC-OSYM-SB-2019-2025,verified
+2022,Güzel Sanatlar Liseleri,8807,3240,36.79,358,952,32,124,1466,national,yks_yerlestirme_sayisal_bilgiler_2022.pdf,SRC-OSYM-SB-2019-2025,verified
+2022,Öğretmen Liseleri,8912,5607,62.92,2442,1188,290,475,4395,national,yks_yerlestirme_sayisal_bilgiler_2022.pdf,SRC-OSYM-SB-2019-2025,verified
+2022,İmam Hatip Liseleri,271703,206729,76.09,49232,33746,3228,19229,105435,national,yks_yerlestirme_sayisal_bilgiler_2022.pdf,SRC-OSYM-SB-2019-2025,verified
+2022,Ticaret Meslek Liseleri,44013,37696,85.65,1049,3378,1226,5197,10850,national,yks_yerlestirme_sayisal_bilgiler_2022.pdf,SRC-OSYM-SB-2019-2025,verified
+2022,Teknik Liseler,25610,19313,75.41,1595,4048,895,1940,8478,national,yks_yerlestirme_sayisal_bilgiler_2022.pdf,SRC-OSYM-SB-2019-2025,verified
+2022,Endüstri Meslek Liseleri,79201,67846,85.66,1311,5158,1953,4215,12637,national,yks_yerlestirme_sayisal_bilgiler_2022.pdf,SRC-OSYM-SB-2019-2025,verified
+2022,Kız Meslek Liseleri,45351,38992,85.98,1079,3477,1680,5706,11942,national,yks_yerlestirme_sayisal_bilgiler_2022.pdf,SRC-OSYM-SB-2019-2025,verified
+2022,Sağlık Meslek Liseleri,27039,20377,75.36,1691,3505,1775,4629,11600,national,yks_yerlestirme_sayisal_bilgiler_2022.pdf,SRC-OSYM-SB-2019-2025,verified
+2022,Otelcilik ve Turizm Meslek Liseleri,3696,3072,83.12,128,358,156,401,1043,national,yks_yerlestirme_sayisal_bilgiler_2022.pdf,SRC-OSYM-SB-2019-2025,verified
+2022,Diğer Meslek Liseleri,580642,448071,77.17,29505,128235,4654,20764,183158,national,yks_yerlestirme_sayisal_bilgiler_2022.pdf,SRC-OSYM-SB-2019-2025,verified
+2022,Diğer,1265,892,70.51,327,132,31,43,533,national,yks_yerlestirme_sayisal_bilgiler_2022.pdf,SRC-OSYM-SB-2019-2025,verified
+2022,Lise,689206,548240,79.55,50076,52470,14867,31054,148467,national,yks_yerlestirme_sayisal_bilgiler_2022.pdf,SRC-OSYM-SB-2019-2025,verified
+2023,Lise (Yabancı Dil Ağırlıklı),7022,4542,64.68,1242,940,320,619,3121,national,sayisalbilgileryd21082023.pdf,SRC-OSYM-SB-2019-2025,verified
+2023,Özel Lise,33846,20648,61.01,3593,5158,1233,2697,12681,national,sayisalbilgileryd21082023.pdf,SRC-OSYM-SB-2019-2025,verified
+2023,Anadolu Lisesi,822813,502334,61.05,184701,140734,9440,26518,361393,national,sayisalbilgileryd21082023.pdf,SRC-OSYM-SB-2019-2025,verified
+2023,Yabancı Dilde Eğitim Veren Özel Lise,195093,126613,64.9,69789,24975,1884,3511,100159,national,sayisalbilgileryd21082023.pdf,SRC-OSYM-SB-2019-2025,verified
+2023,Özel Fen Lisesi,30132,19902,66.05,16066,1116,115,151,17448,national,sayisalbilgileryd21082023.pdf,SRC-OSYM-SB-2019-2025,verified
+2023,Fen Lisesi,56470,36075,63.88,28963,2109,319,549,31940,national,sayisalbilgileryd21082023.pdf,SRC-OSYM-SB-2019-2025,verified
+2023,Özel Akşam Lisesi,8684,6564,75.59,200,828,83,208,1319,national,sayisalbilgileryd21082023.pdf,SRC-OSYM-SB-2019-2025,verified
+2023,Sosyal Bilimler Lisesi,12438,8990,72.28,6135,1265,156,255,7811,national,sayisalbilgileryd21082023.pdf,SRC-OSYM-SB-2019-2025,verified
+2023,Spor Lisesi,9388,3943,42.0,216,1132,27,130,1505,national,sayisalbilgileryd21082023.pdf,SRC-OSYM-SB-2019-2025,verified
+2023,Güzel Sanatlar Liseleri,8496,3009,35.42,418,975,52,153,1598,national,sayisalbilgileryd21082023.pdf,SRC-OSYM-SB-2019-2025,verified
+2023,Öğretmen Liseleri,11936,7203,60.35,2826,1721,436,734,5717,national,sayisalbilgileryd21082023.pdf,SRC-OSYM-SB-2019-2025,verified
+2023,İmam Hatip Liseleri,266828,183959,68.94,48431,32388,3279,20074,104172,national,sayisalbilgileryd21082023.pdf,SRC-OSYM-SB-2019-2025,verified
+2023,Ticaret Meslek Liseleri,31497,23707,75.27,1116,3034,855,3360,8365,national,sayisalbilgileryd21082023.pdf,SRC-OSYM-SB-2019-2025,verified
+2023,Teknik Liseler,26021,17234,66.23,1853,4416,659,1869,8797,national,sayisalbilgileryd21082023.pdf,SRC-OSYM-SB-2019-2025,verified
+2023,Endüstri Meslek Liseleri,53051,39811,75.04,1302,3864,1248,2674,9088,national,sayisalbilgileryd21082023.pdf,SRC-OSYM-SB-2019-2025,verified
+2023,Kız Meslek Liseleri,37597,28339,75.38,1493,3285,1174,4335,10287,national,sayisalbilgileryd21082023.pdf,SRC-OSYM-SB-2019-2025,verified
+2023,Sağlık Meslek Liseleri,26296,18494,70.33,1890,3289,1515,4785,11479,national,sayisalbilgileryd21082023.pdf,SRC-OSYM-SB-2019-2025,verified
+2023,Otelcilik ve Turizm Meslek Liseleri,2957,2273,76.87,121,309,115,302,847,national,sayisalbilgileryd21082023.pdf,SRC-OSYM-SB-2019-2025,verified
+2023,Diğer Meslek Liseleri,534765,348942,65.25,22433,104587,5039,22675,154734,national,sayisalbilgileryd21082023.pdf,SRC-OSYM-SB-2019-2025,verified
+2023,Diğer,1071,685,63.96,252,114,38,41,445,national,sayisalbilgileryd21082023.pdf,SRC-OSYM-SB-2019-2025,verified
+2023,Lise,718727,477430,66.43,87993,80752,13274,28882,210901,national,sayisalbilgileryd21082023.pdf,SRC-OSYM-SB-2019-2025,verified
+2024,Lise (Yabancı Dil Ağırlıklı),5319,3448,64.82,872,754,175,682,2483,national,sayisalbilgiler_sd27082024.pdf,SRC-OSYM-SB-2019-2025,verified
+2024,Özel Lise,19972,11896,59.56,2117,2957,699,2105,7878,national,sayisalbilgiler_sd27082024.pdf,SRC-OSYM-SB-2019-2025,verified
+2024,Anadolu Lisesi,930010,506281,54.44,171265,142799,7095,28903,350062,national,sayisalbilgiler_sd27082024.pdf,SRC-OSYM-SB-2019-2025,verified
+2024,Yabancı Dilde Eğitim Veren Özel Lise,198337,121434,61.23,66973,22158,1974,4151,95256,national,sayisalbilgiler_sd27082024.pdf,SRC-OSYM-SB-2019-2025,verified
+2024,Özel Fen Lisesi,33124,20151,60.84,15804,1253,106,156,17319,national,sayisalbilgiler_sd27082024.pdf,SRC-OSYM-SB-2019-2025,verified
+2024,Fen Lisesi,60434,35992,59.56,28438,1915,228,404,30985,national,sayisalbilgiler_sd27082024.pdf,SRC-OSYM-SB-2019-2025,verified
+2024,Özel Akşam Lisesi,7671,5472,71.33,237,849,137,528,1751,national,sayisalbilgiler_sd27082024.pdf,SRC-OSYM-SB-2019-2025,verified
+2024,Sosyal Bilimler Lisesi,10374,7546,72.74,5268,1066,86,224,6644,national,sayisalbilgiler_sd27082024.pdf,SRC-OSYM-SB-2019-2025,verified
+2024,Spor Lisesi,9692,3705,38.23,172,1058,28,234,1492,national,sayisalbilgiler_sd27082024.pdf,SRC-OSYM-SB-2019-2025,verified
+2024,Güzel Sanatlar Liseleri,8825,2719,30.81,322,967,52,242,1583,national,sayisalbilgiler_sd27082024.pdf,SRC-OSYM-SB-2019-2025,verified
+2024,Öğretmen Liseleri,7589,4345,57.25,1651,1081,240,445,3417,national,sayisalbilgiler_sd27082024.pdf,SRC-OSYM-SB-2019-2025,verified
+2024,İmam Hatip Liseleri,252377,162716,64.47,41511,29510,2221,22856,96098,national,sayisalbilgiler_sd27082024.pdf,SRC-OSYM-SB-2019-2025,verified
+2024,Ticaret Meslek Liseleri,24789,18612,75.08,814,2250,736,4245,8045,national,sayisalbilgiler_sd27082024.pdf,SRC-OSYM-SB-2019-2025,verified
+2024,Teknik Liseler,26436,15692,59.36,1543,4445,572,2151,8711,national,sayisalbilgiler_sd27082024.pdf,SRC-OSYM-SB-2019-2025,verified
+2024,Endüstri Meslek Liseleri,40948,30333,74.08,873,2912,1169,4440,9394,national,sayisalbilgiler_sd27082024.pdf,SRC-OSYM-SB-2019-2025,verified
+2024,Kız Meslek Liseleri,26540,19933,75.11,893,2307,982,4582,8764,national,sayisalbilgiler_sd27082024.pdf,SRC-OSYM-SB-2019-2025,verified
+2024,Sağlık Meslek Liseleri,19592,13669,69.77,1422,2112,642,4157,8333,national,sayisalbilgiler_sd27082024.pdf,SRC-OSYM-SB-2019-2025,verified
+2024,Otelcilik ve Turizm Meslek Liseleri,2145,1628,75.9,73,210,89,424,796,national,sayisalbilgiler_sd27082024.pdf,SRC-OSYM-SB-2019-2025,verified
+2024,Diğer Meslek Liseleri,515180,313832,60.92,17344,93360,4453,29845,145002,national,sayisalbilgiler_sd27082024.pdf,SRC-OSYM-SB-2019-2025,verified
+2024,Diğer,894,571,63.87,173,119,41,49,382,national,sayisalbilgiler_sd27082024.pdf,SRC-OSYM-SB-2019-2025,verified
+2024,Lise,555053,370230,66.7,64451,65872,10532,42138,182993,national,sayisalbilgiler_sd27082024.pdf,SRC-OSYM-SB-2019-2025,verified
+2026,Lise (Yabancı Dil Ağırlıklı),2958,1766,59.7,384,419,75,165,1043,national,2026_placement_sayisal_bilgiler.pdf,SRC-OSYM-PLACE-PDF-2026,verified
+2026,Özel Lise,10216,5661,55.41,934,1247,324,627,3132,national,2026_placement_sayisal_bilgiler.pdf,SRC-OSYM-PLACE-PDF-2026,verified
+2026,Anadolu Lisesi,928075,514605,55.45,171347,137566,7252,18412,334577,national,2026_placement_sayisal_bilgiler.pdf,SRC-OSYM-PLACE-PDF-2026,verified
+2026,Yabancı Dilde Eğitim Veren Özel Lise,168532,103363,61.33,54694,19073,1798,2821,78386,national,2026_placement_sayisal_bilgiler.pdf,SRC-OSYM-PLACE-PDF-2026,verified
+2026,Özel Fen Lisesi,33360,19651,58.91,14337,1646,121,167,16271,national,2026_placement_sayisal_bilgiler.pdf,SRC-OSYM-PLACE-PDF-2026,verified
+2026,Fen Lisesi,66967,37898,56.59,28387,2440,200,289,31316,national,2026_placement_sayisal_bilgiler.pdf,SRC-OSYM-PLACE-PDF-2026,verified
+2026,Özel Akşam Lisesi,3754,2767,73.71,124,398,63,151,736,national,2026_placement_sayisal_bilgiler.pdf,SRC-OSYM-PLACE-PDF-2026,verified
+2026,Sosyal Bilimler Lisesi,14855,10098,67.98,6726,1657,108,166,8657,national,2026_placement_sayisal_bilgiler.pdf,SRC-OSYM-PLACE-PDF-2026,verified
+2026,Spor Lisesi,8921,3315,37.16,152,771,45,122,1090,national,2026_placement_sayisal_bilgiler.pdf,SRC-OSYM-PLACE-PDF-2026,verified
+2026,Güzel Sanatlar Liseleri,7959,2287,28.73,390,671,42,114,1217,national,2026_placement_sayisal_bilgiler.pdf,SRC-OSYM-PLACE-PDF-2026,verified
+2026,Öğretmen Liseleri,3789,1853,48.9,597,457,117,119,1290,national,2026_placement_sayisal_bilgiler.pdf,SRC-OSYM-PLACE-PDF-2026,verified
+2026,İmam Hatip Liseleri,193571,120441,62.22,34834,22167,1688,12941,71630,national,2026_placement_sayisal_bilgiler.pdf,SRC-OSYM-PLACE-PDF-2026,verified
+2026,Ticaret Meslek Liseleri,11484,8430,73.41,421,932,322,748,2423,national,2026_placement_sayisal_bilgiler.pdf,SRC-OSYM-PLACE-PDF-2026,verified
+2026,Teknik Liseler,20420,11850,58.03,1615,3623,283,630,6151,national,2026_placement_sayisal_bilgiler.pdf,SRC-OSYM-PLACE-PDF-2026,verified
+2026,Endüstri Meslek Liseleri,17549,12820,73.05,404,1143,446,835,2828,national,2026_placement_sayisal_bilgiler.pdf,SRC-OSYM-PLACE-PDF-2026,verified
+2026,Kız Meslek Liseleri,12120,8824,72.81,593,1060,378,810,2841,national,2026_placement_sayisal_bilgiler.pdf,SRC-OSYM-PLACE-PDF-2026,verified
+2026,Sağlık Meslek Liseleri,10416,6943,66.66,567,782,291,1045,2685,national,2026_placement_sayisal_bilgiler.pdf,SRC-OSYM-PLACE-PDF-2026,verified
+2026,Otelcilik ve Turizm Meslek Liseleri,1070,799,74.67,30,92,40,101,263,national,2026_placement_sayisal_bilgiler.pdf,SRC-OSYM-PLACE-PDF-2026,verified
+2026,Diğer Meslek Liseleri,399872,229342,57.35,13176,62587,3516,12040,91319,national,2026_placement_sayisal_bilgiler.pdf,SRC-OSYM-PLACE-PDF-2026,verified
+2026,Diğer,518,331,63.9,96,81,14,23,214,national,2026_placement_sayisal_bilgiler.pdf,SRC-OSYM-PLACE-PDF-2026,verified
+2026,Lise,271341,176395,65.01,23516,29322,5780,14167,72785,national,2026_placement_sayisal_bilgiler.pdf,SRC-OSYM-PLACE-PDF-2026,verified
