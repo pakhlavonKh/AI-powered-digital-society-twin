@@ -10,7 +10,7 @@ import { useApi } from "@/lib/useApi";
 import { CopyId } from "../CopyId";
 import { ErrorState, Loading } from "../States";
 import { KeyValues } from "../StatTile";
-import { DataKindBadge, Missing, ProvenancePanel, SourceBadge, Value, ValidationList } from "./common";
+import { DataKindBadge, Missing, ProvenancePanel, SourceBadge, SourceTerm, Value, ValidationList } from "./common";
 
 function feeNote(basis: string | null): string | null {
   if (!basis) return null;
@@ -85,12 +85,13 @@ function DetailBody({ d, catalogue }: { d: ProgramDetail; catalogue: RegistryCat
           <h3>Program identity</h3>
           <KeyValues items={[
             ["University", d.university.name_original],
-            ["Institution type", <Value key="t" value={d.university.university_type} />],
+            ["Institution type", <SourceTerm key="t" value={d.university.university_type} showSource />],
             ["Faculty", <Value key="f" value={d.program.faculty} />],
             ["Degree level", <Value key="dl" value={d.program.degree_level} />],
             ["Score type", <Value key="s" value={d.program.score_type} />],
-            ["Scholarship", <Value key="sc" value={d.program.scholarship_original} />],
-            ["Teaching language", d.program.teaching_language ?? <span key="l" className="missing" title="The source did not specify a teaching language; it is not presumed Turkish.">Not specified in source</span>],
+            ["Scholarship", <SourceTerm key="sc" value={d.program.scholarship_original} showSource />],
+            ["Teaching language", d.program.teaching_language ? <SourceTerm key="l" value={d.program.teaching_language} showSource />
+              : <span key="l" className="missing" title="The source did not specify a teaching language; it is not presumed Turkish.">Not specified in source</span>],
             ["City", <Value key="c" value={d.university.city} reason="not_available" />],
             ["Official university code", <Value key="o" value={d.university.official_university_code} reason="not_available" />],
           ]} />

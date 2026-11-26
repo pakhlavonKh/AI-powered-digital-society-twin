@@ -36,7 +36,7 @@ export function ResultsOverview({ s }: { s: RunSummary }) {
           ? <Badge tone="good" glyph="✓" title="placed + not placed + ineligible = total, and program placements sum to the placed count">Totals reconcile</Badge>
           : <Badge tone="crit" glyph="×">Totals do not reconcile</Badge>}
       </div>
-      <div className="tiles">
+      <div className="tiles tiles-4">
         <StatTile label="Total synthetic candidates" value={fmtInt(s.total)} sub={`${fmtInt(s.eligible)} eligible · ${fmtInt(s.ineligible)} ineligible`} />
         <StatTile label="Placed" value={fmtInt(s.placed)} sub="Candidates assigned a program" />
         <StatTile label="Not placed (eligible)" value={fmtInt(s.unplaced)} sub="Eligible but not assigned a program" />

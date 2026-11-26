@@ -5,6 +5,7 @@ import { useState } from "react";
 import { fmtInt, fmtPct, fmtPp } from "@/lib/format";
 import { uniHref } from "@/lib/university/context";
 import { compareRuns, TRANSITION_LABELS, type RunComparison, type TransitionKind } from "@/lib/university/metrics";
+import { englishLabel } from "@/lib/university/labels";
 import type { RegistryCatalogue, SimulationRun } from "@/lib/university/types";
 import { fmtSignedInt, fmtSignedPct, ordinal } from "@/lib/university/util";
 import { BarChartCard } from "../charts/BarChartCard";
@@ -24,7 +25,7 @@ function Delta({ value, kind }: { value: number | null; kind: "int" | "pp" | "pc
 function codeLabel(catalogue: RegistryCatalogue, code: string | null): string {
   if (!code) return "–";
   const p = catalogue.programs.find((x) => x.program_code === code);
-  return p ? `${p.name_original} · ${p.scholarship_original ?? "?"}` : code;
+  return p ? `${p.name_original} · ${p.scholarship_original ? englishLabel(p.scholarship_original) : "?"}` : code;
 }
 
 /** Comparison of two compatible runs. A = reference, B = modified scenario; every difference is B − A. */
@@ -44,7 +45,7 @@ export function ScenarioComparison({ runA, runB, catalogue, scoreTypes, snapshot
     <div className="stack">
       <section className="card stack" aria-labelledby="diff-h">
         <div className="card-head"><h2 id="diff-h">What changed (B − A)</h2><span className="small muted">pp = percentage points; % = relative change</span></div>
-        <div className="tiles">
+        <div className="tiles tiles-4 lead-wide">
           <StatTile label="Placement rate A → B" value={<>{fmtPct(a.placement_rate, 1)} → {fmtPct(b.placement_rate, 1)}</>}
             sub={<>Difference <Delta value={cmp.placement_rate_pp} kind="pp" /> · relative <Delta value={cmp.placement_rate_rel_pct} kind="pct" /></>} />
           <StatTile label="Placed candidates" value={<Delta value={cmp.placed_diff} kind="int" />} sub={`${fmtInt(a.placed)} → ${fmtInt(b.placed)}`} />
@@ -65,7 +66,7 @@ export function ScenarioComparison({ runA, runB, catalogue, scoreTypes, snapshot
       <div className="uni-charts">
         <ChartPanel title="Scenario comparison by institution" origin={origin} units="seats" wide axes={{ value: "Simulated placements", category: "Institution" }}
           empty={cmp.universities.length === 0} explanation="Simulated placements per institution in Scenario A and Scenario B.">
-          <BarChartCard title="Placements by institution: A vs B" valueLabel="seats" format={(v) => fmtInt(v)} valueAxisLabel="Placements (count)"
+          <BarChartCard title="Placements by institution: A vs B" valueLabel="seats" format={(v) => fmtInt(v)} valueAxisLabel="Placements (count)" maxCategoryWidth={240}
             series={[{ key: "a", label: `A · ${runA.config.name}`, slot: "series-2" }, { key: "b", label: `B · ${runB.config.name}`, slot: "series-1" }]}
             rows={cmp.universities.map((u) => ({ category: u.key, label: u.label, values: { a: u.a, b: u.b } }))}
             tableExtra={[{ header: "B − A", render: (r) => fmtSignedInt((r.values.b ?? 0) - (r.values.a ?? 0)) },

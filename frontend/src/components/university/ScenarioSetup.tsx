@@ -6,6 +6,7 @@ import { useUniversitySource } from "@/lib/university/context";
 import { cohortId as fixtureCohortId } from "@/lib/university/fixtures/candidates";
 import { defaultScenario, hasBlocking, presetSupport, PRESETS, serializeScenario, validateScenario } from "@/lib/university/scenario";
 import type { CohortManifest, Finding, PresetId, RegistryCatalogue, RegistrySnapshot, ScenarioConfig, UniversityCapabilities } from "@/lib/university/types";
+import { englishLabel } from "@/lib/university/labels";
 import { compareText } from "@/lib/university/util";
 import { fmtInt } from "@/lib/format";
 import { Badge } from "../StatusBadge";
@@ -74,7 +75,7 @@ export function ScenarioSetup({ catalogue, snapshots, caps, cohortBase, initialP
   const uniName = new Map(catalogue.universities.map((u) => [u.university_id, u.name_original]));
   const programLabel = (code: string) => {
     const p = catalogue.programs.find((x) => x.program_code === code);
-    return p ? `${p.name_original} · ${p.scholarship_original ?? "?"} · ${uniName.get(p.university_id) ?? "?"} (${code})` : code;
+    return p ? `${p.name_original} · ${p.scholarship_original ? englishLabel(p.scholarship_original) : "?"} · ${uniName.get(p.university_id) ?? "?"} (${code})` : code;
   };
   const toggleUni = (key: string) => {
     const next = includedKeys.includes(key) ? includedKeys.filter((k) => k !== key) : [...includedKeys, key];

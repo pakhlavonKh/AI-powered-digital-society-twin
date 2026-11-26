@@ -10,7 +10,7 @@ import { CopyId } from "../CopyId";
 import { ErrorState, Loading } from "../States";
 import { KeyValues } from "../StatTile";
 import { Badge } from "../StatusBadge";
-import { DataKindBadge, Missing, ProvenancePanel, Value, ValidationList } from "./common";
+import { DataKindBadge, Missing, ProvenancePanel, SourceTerm, Value, ValidationList } from "./common";
 import { PlacementBadge } from "./RunPicker";
 
 /** Ordered preference list. Order is the handoff's `position`; outcomes are shown only when the run supplied them. */
@@ -24,7 +24,7 @@ export function CandidatePreferenceList({ views, runSelected }: { views: Prefere
           <li key={v.position} className={`pref-item${v.outcome === "assigned" ? " is-assigned" : ""}`} aria-label={`Preference ${v.position}: ${v.program ?? "unknown program"}`}>
             <span className="pref-pos" aria-hidden="true">{v.position}</span>
             <div className="pref-main">
-              <strong>{v.program ?? <span className="missing">Unknown program</span>} <span className="muted small">· {v.scholarship ?? "scholarship missing"}</span></strong>
+              <strong>{v.program ?? <span className="missing">Unknown program</span>} <span className="muted small">· {v.scholarship ? <SourceTerm value={v.scholarship} /> : "scholarship missing"}</span></strong>
               <span>{v.university ?? <span className="missing">No such program in the registry snapshot</span>}</span>
               <span className="muted">Code <code>{v.program_code}</code> · Program score type: {v.reference_valid ? <Value value={v.program_score_type} /> : <Missing reason="not_applicable" />}</span>
             </div>
@@ -79,7 +79,7 @@ function placementText(a: Assignment | null, catalogue: RegistryCatalogue) {
   if (a.status !== "placed") return <><PlacementBadge status={a.status} /> {a.reason ? <span className="small">{a.reason}</span> : <span className="missing small">The simulation gave no reason.</span>}</>;
   const p = catalogue.programs.find((x) => x.program_code === a.program_code);
   const u = p ? catalogue.universities.find((x) => x.university_id === p.university_id) : undefined;
-  return <><PlacementBadge status="placed" /> {p ? `${p.name_original} · ${p.scholarship_original ?? ""} · ${u?.name_original ?? ""}` : <code>{a.program_code}</code>} {a.preference_position ? <span className="muted small">(preference {a.preference_position})</span> : null}</>;
+  return <><PlacementBadge status="placed" /> {p ? <>{p.name_original} · <SourceTerm value={p.scholarship_original} /> · {u?.name_original ?? ""}</> : <code>{a.program_code}</code>} {a.preference_position ? <span className="muted small">(preference {a.preference_position})</span> : null}</>;
 }
 
 function Body({ d, catalogue, runSelected }: { d: CandidateDetail; catalogue: RegistryCatalogue; runSelected: boolean }) {

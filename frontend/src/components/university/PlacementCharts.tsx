@@ -43,7 +43,7 @@ export function PlacementCharts({ s, origin }: { s: RunSummary; origin: DataOrig
       <ChartPanel title="University distribution" origin={origin} units="seats" wide axes={{ value: "Seats", category: "Institution" }}
         empty={s.by_university.length === 0}
         explanation="Simulated placements by institution next to the institution's known scenario capacity (programs with unknown capacity are not counted in capacity).">
-        <BarChartCard title="Placements by institution" valueLabel="seats" format={count} valueAxisLabel="Seats (count)"
+        <BarChartCard title="Placements by institution" valueLabel="seats" format={count} valueAxisLabel="Seats (count)" maxCategoryWidth={240}
           series={[{ key: "placed", label: "Simulated placements", slot: "series-1" }, { key: "capacity", label: "Known capacity", slot: "series-2" }]}
           rows={s.by_university.map((u) => ({ category: u.key, label: u.label, values: { placed: u.placed, capacity: u.capacity } }))}
           tableExtra={[{ header: "Programs with unknown capacity", render: (r) => fmtInt(s.by_university.find((u) => u.key === r.category)?.unknown_capacity_programs ?? 0) }]} />
@@ -59,7 +59,7 @@ export function PlacementCharts({ s, origin }: { s: RunSummary; origin: DataOrig
           </select>
         </div>
         {known.length ? (
-          <BarChartCard title={`Program capacity · ${uni}`} valueLabel="seats" format={count} valueAxisLabel="Seats (count)"
+          <BarChartCard title={`Program capacity · ${uni}`} valueLabel="seats" format={count} valueAxisLabel="Seats (count)" maxCategoryWidth={300}
             series={[{ key: "placed", label: "Simulated placements", slot: "series-1" }, { key: "capacity", label: "Scenario capacity", slot: "series-2" }]}
             rows={known.map((p) => ({ category: p.program_code, label: p.label, values: { placed: p.placed, capacity: p.capacity } }))}
             tableExtra={[
@@ -82,13 +82,16 @@ export function PlacementCharts({ s, origin }: { s: RunSummary; origin: DataOrig
           ]} />
       </ChartPanel>
 
-      <ChartPanel title="Scholarship category" origin={origin} units="seats" axes={{ value: "Seats", category: "Scholarship label (as in source)" }}
+      <ChartPanel title="Scholarship category" origin={origin} units="seats" axes={{ value: "Seats", category: "Scholarship category (English label; source label in the table view)" }}
         empty={s.by_scholarship.length === 0}
         explanation="Simulated placements by the program's scholarship label next to the known capacity in that category.">
         <BarChartCard title="Placements by scholarship category" valueLabel="seats" format={count} valueAxisLabel="Seats (count)"
           series={[{ key: "placed", label: "Simulated placements", slot: "series-1" }, { key: "capacity", label: "Known capacity", slot: "series-2" }]}
           rows={s.by_scholarship.map((b) => ({ category: b.key, label: b.label, values: { placed: b.placed, capacity: b.capacity } }))}
-          tableExtra={[{ header: "Utilization", render: (r) => fmtPct(r.values.capacity ? (r.values.placed ?? 0) / r.values.capacity : null) }]} />
+          tableExtra={[
+            { header: "Source label", render: (r) => r.category === "__missing__" ? <Missing reason="missing_from_source" /> : r.category },
+            { header: "Utilization", render: (r) => fmtPct(r.values.capacity ? (r.values.placed ?? 0) / r.values.capacity : null) },
+          ]} />
       </ChartPanel>
     </div>
   );

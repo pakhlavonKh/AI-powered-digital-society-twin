@@ -9,6 +9,7 @@
  * Percentage-point differences (pp) and relative percentage changes (%) are always reported separately.
  */
 import type { Finding, ProgramCapacity, RegistryCatalogue, SimulationRun } from "./types";
+import { englishLabel } from "./labels";
 import { compareText } from "./util";
 
 export type Breakdown = { key: string; label: string; placed: number; capacity: number | null; programs: number; unknown_capacity_programs: number };
@@ -82,7 +83,7 @@ export function summarizeRun(run: SimulationRun, catalogue: RegistryCatalogue, c
       if (n > c.capacity) over.push({ program_code: c.program_code, capacity: c.capacity, placed: n });
     }
     byProgram.push({
-      key: c.program_code, program_code: c.program_code, label: p ? `${p.name_original} · ${p.scholarship_original ?? "scholarship missing"}` : `Unknown program ${c.program_code}`,
+      key: c.program_code, program_code: c.program_code, label: p ? `${p.name_original} · ${p.scholarship_original ? englishLabel(p.scholarship_original) : "scholarship missing"}` : `Unknown program ${c.program_code}`,
       university: u?.name_original ?? "Unknown university", scholarship: p?.scholarship_original ?? null, score_type: p?.score_type ?? null,
       placed: n, capacity: c.capacity, base_quota: c.base_quota, programs: 1, unknown_capacity_programs: c.capacity === null ? 1 : 0,
     });
@@ -127,7 +128,8 @@ export function summarizeRun(run: SimulationRun, catalogue: RegistryCatalogue, c
     by_university: group((p) => p.university, (p) => p.university),
     by_program: byProgram,
     by_score_type: [...types.values()].sort((a, b) => (a.key === "__missing__" ? 1 : b.key === "__missing__" ? -1 : compareText(a.label, b.label))),
-    by_scholarship: group((p) => p.scholarship ?? "__missing__", (p) => p.scholarship ?? "Missing from source"),
+    // Grouped by the exact source label; only the displayed label is English.
+    by_scholarship: group((p) => p.scholarship ?? "__missing__", (p) => (p.scholarship ? englishLabel(p.scholarship) : "Missing from source")),
     preference_rank: Array.from({ length: maxPos }, (_, i) => ({ position: i + 1, count: ranks.get(i + 1) ?? 0 })),
     first_choice_share: placed > 0 ? (ranks.get(1) ?? 0) / placed : null,
     reconciles: placed + unplaced + ineligible === total && sumByProgram === placed,

@@ -1,25 +1,30 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { englishLabel, isTranslated } from "@/lib/university/labels";
 import { defaultProgramState, type ProgramUrlState } from "@/lib/university/programs";
 import { MISSING_VALUE, type FacetValue, type ProgramFacets } from "@/lib/university/types";
 import { fmtInt } from "@/lib/format";
 
 type ListKey = "score_types" | "scholarships" | "university_keys" | "university_types" | "teaching_languages";
 
-function CheckGroup({ legend, field, options, selected, onToggle, hint }: {
-  legend: string; field: string; options: FacetValue[]; selected: string[]; onToggle: (v: string) => void; hint?: string;
+/** `translate` shows Turkish source vocabulary in English; the checkbox value (and URL state) stays the source label. */
+function CheckGroup({ legend, field, options, selected, onToggle, hint, translate = false }: {
+  legend: string; field: string; options: FacetValue[]; selected: string[]; onToggle: (v: string) => void; hint?: string; translate?: boolean;
 }) {
   return (
     <fieldset>
       <legend>{legend}{selected.length ? ` (${selected.length})` : ""}</legend>
       <div className="checks">
-        {options.map((o) => (
-          <label className="check" key={o.value}>
-            <input type="checkbox" name={field} value={o.value} checked={selected.includes(o.value)} onChange={() => onToggle(o.value)} />
-            <span className={o.value === MISSING_VALUE ? "missing" : undefined}>{o.label}</span> <span className="muted small">({fmtInt(o.count)})</span>
-          </label>
-        ))}
+        {options.map((o) => {
+          const shown = translate && o.value !== MISSING_VALUE && isTranslated(o.label);
+          return (
+            <label className="check" key={o.value} title={shown ? `Source label: ${o.label}` : undefined}>
+              <input type="checkbox" name={field} value={o.value} checked={selected.includes(o.value)} onChange={() => onToggle(o.value)} />
+              <span className={o.value === MISSING_VALUE ? "missing" : undefined}>{shown ? englishLabel(o.label) : o.label}</span> <span className="muted small">({fmtInt(o.count)})</span>
+            </label>
+          );
+        })}
       </div>
       {hint ? <p className="field-hint" style={{ margin: "4px 0 0" }}>{hint}</p> : null}
     </fieldset>
@@ -58,9 +63,9 @@ export function ProgramFilters({ state, facets, onChange, latestYear }: {
       </div>
       <form className="field" role="search" onSubmit={(e) => { e.preventDefault(); applied.current = text; onChange({ ...state, search: text, page: 0 }); }}>
         <label htmlFor="program-search">Search university or program</label>
-        <input id="program-search" type="search" value={text} onChange={(e) => setText(e.target.value)} placeholder="e.g. Hukuk, mühendislik, 001010101"
+        <input id="program-search" type="search" value={text} onChange={(e) => setText(e.target.value)} placeholder="Name or code, e.g. Hukuk or 001010101"
           aria-describedby="program-search-hint" />
-        <span className="field-hint" id="program-search-hint">Matches university, program, faculty or code; ignores case and Turkish accents.</span>
+        <span className="field-hint" id="program-search-hint">Matches university, program, faculty or code as written in the source (program names are in Turkish); ignores case and Turkish accents.</span>
       </form>
       <div className="field">
         <label htmlFor="program-year">Admission year</label>
@@ -74,10 +79,11 @@ export function ProgramFilters({ state, facets, onChange, latestYear }: {
         <>
           <CheckGroup legend="Score type" field="score" options={facets.score_types} selected={state.score_types} onToggle={(v) => toggle("score_types", v)}
             hint="Labels exactly as the registry source writes them." />
-          <CheckGroup legend="Scholarship" field="scholarship" options={facets.scholarships} selected={state.scholarships} onToggle={(v) => toggle("scholarships", v)} />
+          <CheckGroup legend="Scholarship" field="scholarship" options={facets.scholarships} selected={state.scholarships} onToggle={(v) => toggle("scholarships", v)} translate
+            hint="English labels; hover an option for the source label." />
           <CheckGroup legend="Institution" field="university" options={facets.universities} selected={state.university_keys} onToggle={(v) => toggle("university_keys", v)} />
-          {hasTypes ? <CheckGroup legend="Institution type" field="type" options={facets.university_types} selected={state.university_types} onToggle={(v) => toggle("university_types", v)} /> : null}
-          {hasLanguages ? <CheckGroup legend="Teaching language" field="lang" options={facets.teaching_languages} selected={state.teaching_languages}
+          {hasTypes ? <CheckGroup legend="Institution type" field="type" options={facets.university_types} selected={state.university_types} onToggle={(v) => toggle("university_types", v)} translate /> : null}
+          {hasLanguages ? <CheckGroup legend="Teaching language" field="lang" options={facets.teaching_languages} selected={state.teaching_languages} translate
             onToggle={(v) => toggle("teaching_languages", v)} hint="Not specified means the source gave no language; it is not presumed Turkish." /> : null}
           {facets.cities.length === 0 ? <p className="field-hint" style={{ margin: 0 }}>City filter not offered: the registry records no cities (the importer infers none).</p> : null}
         </>

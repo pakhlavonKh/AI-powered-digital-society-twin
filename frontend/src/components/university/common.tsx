@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { englishLabel, isTranslated } from "@/lib/university/labels";
 import { countBySeverity, ISSUE_LABELS } from "@/lib/university/quality";
 import type { DataOrigin, Finding, IssueSeverity, MissingReason } from "@/lib/university/types";
 import { MISSING_DESCRIPTIONS, MISSING_LABELS } from "@/lib/university/util";
@@ -17,6 +18,18 @@ export function Missing({ reason = "not_available" }: { reason?: MissingReason }
 export function Value<T>({ value, reason = "missing_from_source", format }: { value: T | null | undefined; reason?: MissingReason; format?: (v: T) => React.ReactNode }) {
   if (value === null || value === undefined || (typeof value === "string" && value === "")) return <Missing reason={reason} />;
   return <>{format ? format(value) : String(value)}</>;
+}
+
+/**
+ * A Turkish source label (scholarship, institution type, teaching language) shown in English. The exact source
+ * wording stays in the tooltip, or inline when `showSource` is set (detail views); the stored value is unchanged.
+ */
+export function SourceTerm({ value, reason = "missing_from_source", showSource = false }: { value: string | null | undefined; reason?: MissingReason; showSource?: boolean }) {
+  if (value === null || value === undefined || value === "") return <Missing reason={reason} />;
+  if (!isTranslated(value)) return <>{value}</>;
+  return showSource
+    ? <>{englishLabel(value)} <span className="muted small">(source label: {value})</span></>
+    : <span title={`Source label: ${value}`}>{englishLabel(value)}</span>;
 }
 
 export function SourceBadge({ origin }: { origin: DataOrigin }) {
@@ -184,12 +197,12 @@ export function ChartPanel({ title, explanation, units, origin, empty, emptyText
   );
 }
 
-export function SortHeader<K extends string>({ label, sortKey, current, direction, onSort, numeric }: {
-  label: string; sortKey: K; current: K; direction: "asc" | "desc"; onSort: (key: K) => void; numeric?: boolean;
+export function SortHeader<K extends string>({ label, sortKey, current, direction, onSort, numeric, className }: {
+  label: string; sortKey: K; current: K; direction: "asc" | "desc"; onSort: (key: K) => void; numeric?: boolean; className?: string;
 }) {
   const active = current === sortKey;
   return (
-    <th scope="col" className={numeric ? "num" : undefined} aria-sort={active ? (direction === "asc" ? "ascending" : "descending") : "none"}>
+    <th scope="col" className={[numeric ? "num" : "", className ?? ""].join(" ").trim() || undefined} aria-sort={active ? (direction === "asc" ? "ascending" : "descending") : "none"}>
       <button type="button" className="sort-button" onClick={() => onSort(sortKey)}>
         {label}{active ? (direction === "asc" ? " ↑" : " ↓") : ""}
       </button>

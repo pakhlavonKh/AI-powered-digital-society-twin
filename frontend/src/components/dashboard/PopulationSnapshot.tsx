@@ -40,16 +40,22 @@ function SexSplit({ dist }: { dist: Distribution }) {
   );
 }
 
+/** Categories drawn as bars (structural ones are reported in text instead). */
+function shownCategories(dist: Distribution): Category[] {
+  return uniqueCategories(dist).filter((c) => !OUTSIDE.has(c.value));
+}
+
 /** Compact horizontal share bars on a fixed 0–100% scale; structural categories are reported in text, not drawn. */
 function MiniShares({ dist }: { dist: Distribution }) {
   const title = fieldTitle(dist.field);
   const cats = uniqueCategories(dist);
-  const shown = cats.filter((c) => !OUTSIDE.has(c.value));
+  const shown = shownCategories(dist);
   const outside = cats.filter((c) => OUTSIDE.has(c.value) && c.records > 0);
   return (
     <figure className="chart-figure mini-figure">
       <figcaption><span><span className="chart-title">{title}</span><span className="muted small"> · weighted share of residents</span></span></figcaption>
-      <div className="mini-shares" role="table" aria-label={`${title}, weighted share of residents`}>
+      {/* --rows lets a wide cell flow long lists into two columns, top to bottom, keeping the category order readable. */}
+      <div className="mini-shares" role="table" aria-label={`${title}, weighted share of residents`} style={{ "--rows": Math.ceil(shown.length / 2) } as React.CSSProperties}>
         {shown.map((c) => (
           <div className="mini-share" role="row" key={c.value} title={`${c.label}: ${fmtPct(c.weighted_share)} weighted · ${fmtInt(c.records)} records`}>
             <span role="rowheader">{c.label}</span>
@@ -71,8 +77,12 @@ export function PopulationSnapshot({ populationId, exploreHref }: { populationId
   const sex = s?.distributions.find((d) => d.field === "sex" && d.available);
   const extra = (s?.distributions ?? []).filter((d) => d.available && d.field !== "sex" && d.field !== "age_group").slice(0, MAX_EXTRA_FIELDS);
   const missing = (s?.distributions ?? []).filter((d) => !d.available);
+  // Balance the columns: the field with the most categories (education, typically) gets its own column; the rest stay
+  // in API order beside the pyramid. Nothing is dropped, only arranged.
+  const longest = extra.length > 1 ? extra.reduce((a, b) => (shownCategories(b).length > shownCategories(a).length ? b : a)) : null;
+  const beside = extra.filter((d) => d !== longest);
   return (
-    <section className="card stack" aria-labelledby="snapshot-h">
+    <section className="card stack snapshot-card" aria-labelledby="snapshot-h">
       <div className="card-head" style={{ marginBottom: 0 }}>
         <h2 id="snapshot-h">Population snapshot</h2>
         <Link className="button small" href={exploreHref}>Explore population <Icon name="arrow" size={13} /></Link>
@@ -83,16 +93,17 @@ export function PopulationSnapshot({ populationId, exploreHref }: { populationId
         <>
           <p className="small muted" style={{ margin: 0 }}>{s.scope.label} · {fmtInt(s.records)} synthetic records representing {fmtInt(s.represented_population)} residents
             · reference year {s.reference_year}. Weighted by population_weight.</p>
-          <div className="snapshot-grid">
-            <div className="snapshot-cell"><PopulationPyramid rows={s.pyramid} height={270} /></div>
-            <div className="snapshot-cell stack">
+          <div className={`snapshot-grid${longest ? "" : " no-wide"}`}>
+            <div className="snapshot-cell snap-pyramid"><PopulationPyramid rows={s.pyramid} height={300} /></div>
+            <div className="snapshot-cell snap-shares stack">
               {sex ? <SexSplit dist={sex} /> : null}
-              {extra.map((d) => <MiniShares key={d.field} dist={d} />)}
+              {beside.map((d) => <MiniShares key={d.field} dist={d} />)}
               {missing.length ? (
                 <p className="small muted" style={{ margin: 0 }}>Not loaded for this population: {missing.map((d) => fieldTitle(d.field)).join(", ")}.
                   These fields fill in when their official tables are added.</p>
               ) : null}
             </div>
+            {longest ? <div className="snapshot-cell snap-wide"><MiniShares dist={longest} /></div> : null}
           </div>
         </>
       ) : null}

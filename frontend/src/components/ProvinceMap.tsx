@@ -37,6 +37,10 @@ function bounds(path: string) {
  * All 81 provinces from the geoBoundaries outline (keyed by ISO 3166-2, which uses the plate codes).
  * Fill encodes data availability only; it is not a choropleth of any statistic. Provinces with records are links into the
  * Population Explorer; every other province is a button that pins its coverage tooltip instead of navigating to an empty view.
+ *
+ * Layout: the canvas spans the full card width; the stage inside it keeps the outline's aspect ratio and is centred,
+ * capped by viewport height so the whole map stays visible on a laptop screen. The tooltip is positioned as a fraction
+ * of the stage, which is exactly the SVG box, so it stays aligned at every size.
  */
 export function ProvinceMap({ provinces, selected, hrefFor, referenceYear, note, title = "Türkiye province coverage" }: {
   provinces: ProvinceCoverage[]; selected?: string | null; hrefFor: (code: string) => string; referenceYear?: number | null;
@@ -67,57 +71,61 @@ export function ProvinceMap({ provinces, selected, hrefFor, referenceYear, note,
         <h2>{title}</h2>
         <span className="small muted">{counts.records} with records · {counts.controls} with source data only · {counts.none} without source data</span>
       </div>
-      {note}
-      <div className="map-stage">
-        <svg viewBox={`0 0 ${VIEW.width} ${VIEW.height}`} role="group" aria-label={`${title}. Provinces with records open the Population Explorer.`} className="national-map-svg">
-          {TURKEY_PROVINCES.map((shape) => {
-            const code = shape.iso.slice(3);
-            const status = statusOf(byCode.get(code));
-            const label = announce(code);
-            const path = <path d={shape.path} className={`prov prov-${status}${selected === code || pinned === code ? " prov-selected" : ""}`} />;
-            const events = { onMouseEnter: () => setHover(code), onMouseLeave: () => setHover(null), onFocus: () => setHover(code), onBlur: () => setHover(null) };
-            if (status === "records") {
+      <div className="map-canvas">
+        <div className="map-stage">
+          <svg viewBox={`0 0 ${VIEW.width} ${VIEW.height}`} role="group" aria-label={`${title}. Provinces with records open the Population Explorer.`} className="national-map-svg">
+            {TURKEY_PROVINCES.map((shape) => {
+              const code = shape.iso.slice(3);
+              const status = statusOf(byCode.get(code));
+              const label = announce(code);
+              const path = <path d={shape.path} className={`prov prov-${status}${selected === code || pinned === code ? " prov-selected" : ""}`} />;
+              const events = { onMouseEnter: () => setHover(code), onMouseLeave: () => setHover(null), onFocus: () => setHover(code), onBlur: () => setHover(null) };
+              if (status === "records") {
+                return (
+                  <a key={shape.iso} href={hrefFor(code)} aria-label={label} {...events}
+                     onClick={(e) => { e.preventDefault(); router.push(hrefFor(code)); }}>{path}</a>
+                );
+              }
+              const toggle = () => setPinned((p) => (p === code ? null : code));
               return (
-                <a key={shape.iso} href={hrefFor(code)} aria-label={label} {...events}
-                   onClick={(e) => { e.preventDefault(); router.push(hrefFor(code)); }}>{path}</a>
+                <g key={shape.iso} role="button" tabIndex={0} aria-label={label} aria-pressed={pinned === code} className="prov-button" {...events}
+                   onClick={toggle} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } }}>{path}</g>
               );
-            }
-            const toggle = () => setPinned((p) => (p === code ? null : code));
-            return (
-              <g key={shape.iso} role="button" tabIndex={0} aria-label={label} aria-pressed={pinned === code} className="prov-button" {...events}
-                 onClick={toggle} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } }}>{path}</g>
-            );
-          })}
-        </svg>
-        {activeShape && box ? (
-          <div className={`map-tip${below ? " below" : ""}`} aria-hidden="true"
-               style={{ left: `clamp(115px, ${(box.cx * 100).toFixed(1)}%, calc(100% - 115px))`, top: `${((below ? box.bottom : box.top) * 100).toFixed(1)}%` }}>
-            <strong>{info?.province_name ?? activeShape.name}</strong>
-            <dl>
-              <dt>Source data</dt><dd>{info?.has_population_controls ? "Available" : "Not loaded"}</dd>
-              {activeStatus === "records" ? <>
-                <dt>Synthetic records</dt><dd>{fmtInt(info!.records)}</dd>
-                {info!.represented_population !== null ? <><dt>Residents represented</dt><dd>{fmtInt(info!.represented_population)}</dd></> : null}
-                {referenceYear ? <><dt>Reference year</dt><dd>{referenceYear}</dd></> : null}
-              </> : <>
-                <dt>Synthetic population</dt><dd>{activeStatus === "controls" ? "None in the selected population" : "Not available"}</dd>
-              </>}
-            </dl>
-            {activeStatus === "records" ? <span className="map-tip-action">Explore population →</span>
-              : <span className="map-tip-note">{activeStatus === "none" ? "No source data loaded" : "Generate a population that includes it"}</span>}
-          </div>
-        ) : null}
+            })}
+          </svg>
+          {activeShape && box ? (
+            <div className={`map-tip${below ? " below" : ""}`} aria-hidden="true"
+                 style={{ left: `clamp(115px, ${(box.cx * 100).toFixed(1)}%, calc(100% - 115px))`, top: `${((below ? box.bottom : box.top) * 100).toFixed(1)}%` }}>
+              <strong>{info?.province_name ?? activeShape.name}</strong>
+              <dl>
+                <dt>Source data</dt><dd>{info?.has_population_controls ? "Available" : "Not loaded"}</dd>
+                {activeStatus === "records" ? <>
+                  <dt>Synthetic records</dt><dd>{fmtInt(info!.records)}</dd>
+                  {info!.represented_population !== null ? <><dt>Residents represented</dt><dd>{fmtInt(info!.represented_population)}</dd></> : null}
+                  {referenceYear ? <><dt>Reference year</dt><dd>{referenceYear}</dd></> : null}
+                </> : <>
+                  <dt>Synthetic population</dt><dd>{activeStatus === "controls" ? "None in the selected population" : "Not available"}</dd>
+                </>}
+              </dl>
+              {activeStatus === "records" ? <span className="map-tip-action">Explore population →</span>
+                : <span className="map-tip-note">{activeStatus === "none" ? "No source data loaded" : "Generate a population that includes it"}</span>}
+            </div>
+          ) : null}
+        </div>
       </div>
       <p className="visually-hidden" aria-live="polite">{active ? announce(active) : ""}</p>
-      <p className="map-info small muted">Hover or focus a province for its coverage. Provinces with records open the Population Explorer;
-        the others show their coverage here.</p>
-      <div className="legend" aria-label="Legend">
-        <span><i className="legend-key prov-records-key" />Records in this population</span>
-        <span><i className="legend-key prov-controls-key" />Source data only</span>
-        <span><i className="legend-key prov-none-key" />No source data</span>
-        <span><i className="legend-key prov-selected-key" />Selected</span>
-        <a href="/map-attribution.md" target="_blank" rel="noreferrer">Boundaries: geoBoundaries / OSM (2021), CC BY-SA 2.0</a>
+      <div className="map-foot">
+        <div className="legend" aria-label="Legend">
+          <span><i className="legend-key prov-records-key" />Records in this population</span>
+          <span><i className="legend-key prov-controls-key" />Source data only</span>
+          <span><i className="legend-key prov-none-key" />No source data</span>
+          <span><i className="legend-key prov-selected-key" />Selected</span>
+          <a href="/map-attribution.md" target="_blank" rel="noreferrer">Boundaries: geoBoundaries / OSM (2021), CC BY-SA 2.0</a>
+        </div>
+        <p className="map-info small muted">Hover or focus a province for its coverage. Provinces with records open the Population Explorer;
+          the others show their coverage here.</p>
       </div>
+      {note}
     </section>
   );
 }

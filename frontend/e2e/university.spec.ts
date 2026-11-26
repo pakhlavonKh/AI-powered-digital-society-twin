@@ -26,12 +26,13 @@ test("program filters combine, persist in the URL, reset, and open details", asy
   await page.goto("/university/programs");
   await expect(programTable(page).getByRole("row")).toHaveCount(26);
   await page.getByRole("checkbox", { name: /^EA/ }).check();
-  await page.getByRole("checkbox", { name: /^Burslu/ }).check();
+  // English display label; the URL keeps the exact source value.
+  await page.getByRole("checkbox", { name: /^Full scholarship/ }).check();
   await expect(page).toHaveURL(/score=EA/);
   await expect(page).toHaveURL(/scholarship=Burslu/);
   const rows = programTable(page).getByRole("row");
   await expect(rows.nth(1)).toContainText("EA");
-  for (const text of await rows.allInnerTexts()) if (!text.startsWith("Code")) expect(text).toMatch(/EA[\s\S]*Burslu/);
+  for (const text of await rows.allInnerTexts()) if (!text.startsWith("Code")) expect(text).toMatch(/EA[\s\S]*Full scholarship/);
   await page.reload();
   await expect(page.getByRole("checkbox", { name: /^EA/ })).toBeChecked();
   await page.getByLabel("Search university or program").fill("hukuk");

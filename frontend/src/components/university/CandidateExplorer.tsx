@@ -128,16 +128,16 @@ export function CandidateExplorer({ snapshot, cohorts, runs, cohortId, runId, on
               {p.total_matching === 0 ? <EmptyState title="No candidates match these filters.">Reset the filters or widen the proxy range.</EmptyState> : (
                 <>
                   <div className="table-wrap">
-                    <table className="candidate-table">
+                    <table className="candidate-table data-table">
                       <caption>{fmtInt(p.total_matching)} matching synthetic candidates; cohort rank is derived from the proxy (ties share a rank)</caption>
                       <thead>
                         <tr>
-                          <SortHeader label="Candidate ID" sortKey="id" current={state.sort} direction={state.direction} onSort={onSort} />
+                          <SortHeader label="Candidate ID" sortKey="id" current={state.sort} direction={state.direction} onSort={onSort} className="col-id" />
                           <th scope="col" className="num">Age</th><th scope="col">Score type</th>
                           <SortHeader label="Achievement proxy" sortKey="proxy" current={state.sort} direction={state.direction} onSort={onSort} numeric />
                           <SortHeader label="Cohort rank (derived)" sortKey="rank" current={state.sort} direction={state.direction} onSort={onSort} numeric />
                           <SortHeader label="Preferences" sortKey="preferences" current={state.sort} direction={state.direction} onSort={onSort} numeric />
-                          <th scope="col">Placement</th><th scope="col">Assigned program</th>
+                          <th scope="col">Placement</th><th scope="col" className="col-assigned">Assigned program</th>
                         </tr>
                       </thead>
                       <tbody>
