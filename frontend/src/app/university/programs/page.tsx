@@ -24,9 +24,9 @@ function Explorer({ snapshot }: { snapshot: RegistrySnapshot }) {
 export default function ProgramsPage() {
   return (
     <>
-      <PageHeader title="University & Program Explorer">
-        Browse university programs in the registry snapshot: reported quota indicators, placed counts and last-placed success ranks by admission year.
-        These are historical registry observations, not simulation results. Filters live in the URL, so a view can be shared.
+      <PageHeader title="Programs">
+        Explore university programs and admission details across Türkiye: reported quotas, placed counts and admission ranks by admission year.
+        These are registry observations, not simulation results; filters live in the URL, so a view can be shared.
       </PageHeader>
       <FixtureNotice kind="registry" />
       <SnapshotGate>{(snapshot) => <Explorer snapshot={snapshot} />}</SnapshotGate>

@@ -9,16 +9,19 @@ import {
   type ProgramYearRow,
   type SortDirection,
 } from "./types";
+import { scholarshipKind } from "./labels";
 import { compareText, foldTr } from "./util";
 
 export const PROGRAM_PAGE_SIZE = 25;
+/** Rows-per-page choices offered by the explorers (the URL accepts only these). */
+export const PAGE_SIZES = [10, 25, 50, 100] as const;
 export const PROGRAM_SORTS: { key: ProgramSortKey; label: string }[] = [
   { key: "university", label: "University" },
   { key: "program", label: "Program" },
   { key: "year", label: "Year" },
-  { key: "quota", label: "Reported quota" },
+  { key: "quota", label: "Quota" },
   { key: "placed", label: "Placed" },
-  { key: "success_rank", label: "Success rank" },
+  { key: "success_rank", label: "Admission rank" },
   { key: "code", label: "Program code" },
 ];
 
@@ -143,13 +146,21 @@ export function queryProgramRows(catalogue: RegistryCatalogue, q: ProgramQuery):
   const offset = Math.min(Math.max(0, q.offset), lastOffset);
   let missing = 0;
   let known = 0;
+  let scholarship = 0;
+  const programs = new Set<string>();
+  const universities = new Set<number>();
   for (const r of filtered) {
     if (r.admission?.quota === null || r.admission?.quota === undefined) missing += 1;
     else known += r.admission.quota;
+    const kind = scholarshipKind(r.program.scholarship_original);
+    if (kind === "full" || kind === "discount") scholarship += 1;
+    programs.add(r.program.program_code);
+    universities.add(r.university.university_id);
   }
   return {
     items: filtered.slice(offset, offset + limit), total_matching: filtered.length, matching_missing_quota: missing,
     matching_known_quota: known, offset, limit, facets: programFacets(catalogue),
+    summary: { programs: programs.size, universities: universities.size, scholarship_rows: scholarship, known_quota_rows: filtered.length - missing },
   };
 }
 
@@ -161,11 +172,17 @@ const LIST_PARAMS: [ListKey, string][] = [
   ["university_types", "type"], ["teaching_languages", "lang"],
 ];
 
-export type ProgramUrlState = Omit<ProgramQuery, "snapshot_id" | "limit" | "offset"> & { page: number };
+export type ProgramUrlState = Omit<ProgramQuery, "snapshot_id" | "limit" | "offset"> & { page: number; size: number };
+
+/** `size` from the URL when it is one of PAGE_SIZES; otherwise the default. */
+export function pageSizeFromParam(value: string | null, fallback = PROGRAM_PAGE_SIZE): number {
+  const n = Number(value);
+  return (PAGE_SIZES as readonly number[]).includes(n) ? n : fallback;
+}
 
 export function defaultProgramState(latestYear: number | null): ProgramUrlState {
   return { year: latestYear, score_types: [], scholarships: [], university_keys: [], university_types: [], teaching_languages: [],
-    search: "", sort: "university", direction: "asc", page: 0 };
+    search: "", sort: "university", direction: "asc", page: 0, size: PROGRAM_PAGE_SIZE };
 }
 
 /** `year` absent → latest year; `year=all` → every year. Unknown sort keys fall back to the default. */
@@ -181,12 +198,13 @@ export function programStateFromParams(params: URLSearchParams, latestYear: numb
   if (params.get("dir") === "desc") state.direction = "desc";
   const page = Number(params.get("page") ?? "1");
   state.page = Number.isInteger(page) && page >= 1 ? page - 1 : 0;
+  state.size = pageSizeFromParam(params.get("size"));
   return state;
 }
 
 export function programStateToParams(state: ProgramUrlState, latestYear: number | null, base?: URLSearchParams): URLSearchParams {
   const params = new URLSearchParams(base?.toString() ?? "");
-  for (const p of ["year", "q", "sort", "dir", "page", ...LIST_PARAMS.map(([, p]) => p)]) params.delete(p);
+  for (const p of ["year", "q", "sort", "dir", "page", "size", ...LIST_PARAMS.map(([, p]) => p)]) params.delete(p);
   if (state.year === null) params.set("year", "all");
   else if (state.year !== latestYear) params.set("year", String(state.year));
   for (const [key, param] of LIST_PARAMS) for (const v of state[key]) params.append(param, v);
@@ -194,9 +212,10 @@ export function programStateToParams(state: ProgramUrlState, latestYear: number 
   if (state.sort !== "university") params.set("sort", state.sort);
   if (state.direction === "desc") params.set("dir", "desc");
   if (state.page > 0) params.set("page", String(state.page + 1));
+  if (state.size !== PROGRAM_PAGE_SIZE) params.set("size", String(state.size));
   return params;
 }
 
 export function isFiltered(state: ProgramUrlState, latestYear: number | null): boolean {
-  return programStateToParams({ ...state, sort: "university", direction: "asc", page: 0 }, latestYear).toString() !== "";
+  return programStateToParams({ ...state, sort: "university", direction: "asc", page: 0, size: PROGRAM_PAGE_SIZE }, latestYear).toString() !== "";
 }

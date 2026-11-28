@@ -40,9 +40,9 @@ function Explorer({ snapshot }: { snapshot: RegistrySnapshot }) {
 export default function CandidatesPage() {
   return (
     <>
-      <PageHeader title="Synthetic Candidate Explorer">
-        Fictional applicants used by the placement simulation: score type, synthetic achievement proxy and ranked program preferences, with placement
-        outcomes from a selected simulation run. Not real students.
+      <PageHeader title="Candidates">
+        Explore synthetic candidate profiles, admission scores, preferences, and placement outcomes. These are fictional applicants generated for the
+        placement simulation, not real student records; scores are a synthetic achievement proxy and outcomes come from the selected simulation run.
       </PageHeader>
       <FixtureNotice kind="candidates" />
       <SnapshotGate>{(snapshot) => <Explorer snapshot={snapshot} />}</SnapshotGate>

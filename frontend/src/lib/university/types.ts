@@ -12,7 +12,8 @@
  */
 
 /** Where a record came from. `fixture` data is synthetic and was never imported from a source workbook. */
-export type DataOrigin = "fixture" | "api";
+/** `local_preview`: development-only preview of local, git-ignored records (never committed or published). */
+export type DataOrigin = "fixture" | "api" | "local_preview";
 
 /** Explicit reasons a value is absent. A missing value is never rendered as zero. */
 export type MissingReason =
@@ -206,6 +207,17 @@ export type ProgramPage = {
   matching_missing_quota: number;
   /** Sum of known quotas among matching rows. */
   matching_known_quota: number;
+  /** Counts over every matching row (not just this page), for the summary tiles. */
+  summary: {
+    /** Distinct program codes among matching rows. */
+    programs: number;
+    /** Distinct universities among matching rows. */
+    universities: number;
+    /** Matching rows whose scholarship label is a full scholarship or a tuition discount (see labels.ts). */
+    scholarship_rows: number;
+    /** Matching rows with a known (non-null) reported quota: the denominator of the average quota. */
+    known_quota_rows: number;
+  };
   offset: number;
   limit: number;
   facets: ProgramFacets;
@@ -261,6 +273,8 @@ export type CohortManifest = {
 export type Cohort = { manifest: CohortManifest; candidates: Candidate[]; preferences: Preference[] };
 
 export type CandidateStatusFilter = "placed" | "unplaced" | "ineligible";
+/** Eligibility comes from the selected run: eligible = placed or not placed; ineligible = excluded by the simulation. */
+export type CandidateEligibilityFilter = "eligible" | "ineligible";
 export type CandidateSortKey = "proxy" | "rank" | "id" | "preferences";
 
 export type CandidateQuery = {
@@ -271,6 +285,10 @@ export type CandidateQuery = {
   proxy_max: number | null;
   /** Requires run_id; ignored without a run. */
   status: CandidateStatusFilter | null;
+  /** Requires run_id; ignored without a run. */
+  eligibility: CandidateEligibilityFilter | null;
+  /** Home locations (provinces); only offered when the cohort records any. */
+  provinces: string[];
   run_id: string | null;
   sort: CandidateSortKey;
   direction: SortDirection;
@@ -294,6 +312,8 @@ export type CandidatePage = {
   offset: number;
   limit: number;
   score_types: FacetValue[];
+  /** Home locations present in the cohort; empty when the cohort records none (then no province filter is offered). */
+  provinces: FacetValue[];
   manifest: CohortManifest;
 };
 

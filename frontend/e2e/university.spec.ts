@@ -9,11 +9,13 @@ async function heading(page: Page, name: string | RegExp) {
 }
 
 const programTable = (page: Page) => page.getByRole("table", { name: /matching program-year rows/ });
+/** Multi-select filters are compact dropdowns: open one by its summary (labelled "<Filter>: <current value>"). */
+const openMenu = (page: Page, label: string) => page.locator(`summary[aria-label^="${label}:"]`).click();
 
 test("the sidebar opens the dashboard and the top bar labels fixture data", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("navigation", { name: "Workbench" }).getByRole("link", { name: "Programs" }).click();
-  await heading(page, "University & Program Explorer");
+  await heading(page, "Programs");
   const bar = page.getByRole("region", { name: "University data source" });
   await expect(bar.getByText("Fixture data")).toBeVisible();
   await expect(bar.getByText("Execution: fixture preview only")).toBeVisible();
@@ -25,27 +27,37 @@ test("the sidebar opens the dashboard and the top bar labels fixture data", asyn
 test("program filters combine, persist in the URL, reset, and open details", async ({ page }) => {
   await page.goto("/university/programs");
   await expect(programTable(page).getByRole("row")).toHaveCount(26);
+  await expect(page.getByLabel("Program summary").locator(".tile").filter({ hasText: "Total programs" })).toContainText("76");
+  await openMenu(page, "Score type");
   await page.getByRole("checkbox", { name: /^EA/ }).check();
   // English display label; the URL keeps the exact source value.
+  await openMenu(page, "Scholarship");
   await page.getByRole("checkbox", { name: /^Full scholarship/ }).check();
   await expect(page).toHaveURL(/score=EA/);
   await expect(page).toHaveURL(/scholarship=Burslu/);
-  const rows = programTable(page).getByRole("row");
-  await expect(rows.nth(1)).toContainText("EA");
-  for (const text of await rows.allInnerTexts()) if (!text.startsWith("Code")) expect(text).toMatch(/EA[\s\S]*Full scholarship/);
+  const rows = programTable(page).locator("tbody tr");
+  await expect(rows.first()).toContainText("EA");
+  for (const text of await rows.allInnerTexts()) expect(text).toMatch(/EA[\s\S]*Full scholarship/);
   await page.reload();
-  await expect(page.getByRole("checkbox", { name: /^EA/ })).toBeChecked();
+  await expect(page.getByRole("button", { name: "Remove filter Score type: EA" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Remove filter Scholarship: Full scholarship" })).toBeVisible();
   await page.getByLabel("Search university or program").fill("hukuk");
   await page.getByLabel("Search university or program").press("Enter");
   await expect(page).toHaveURL(/q=hukuk/);
-  await programTable(page).getByRole("button", { name: /Open details for Hukuk/ }).first().click();
+  await programTable(page).getByRole("button", { name: /^View details for Hukuk/ }).first().click();
   const detail = page.getByRole("region", { name: /Hukuk ·/ });
   await expect(detail.getByRole("table", { name: /Admission history/ })).toBeVisible();
   await expect(detail.getByRole("region", { name: "Source metadata" })).toContainText("fixture:university-ui-v1");
   await expect(detail.getByRole("region", { name: "Missing fields" })).toContainText("Degree level");
   await page.getByRole("button", { name: "Reset filters" }).click();
-  await expect(page.getByRole("checkbox", { name: /^EA/ })).not.toBeChecked();
+  await expect(page.getByRole("button", { name: /^Remove filter Score type/ })).toHaveCount(0);
   await expect(page).not.toHaveURL(/score=/);
+  // Rows per page and numbered pages.
+  await page.getByLabel("Rows per page").selectOption("10");
+  await expect(programTable(page).locator("tbody tr")).toHaveCount(10);
+  await page.getByRole("button", { name: "Page 2" }).click();
+  await expect(page).toHaveURL(/page=2/);
+  await expect(page).toHaveURL(/size=10/);
 });
 
 test("a missing quota is shown as missing, and data quality lists warnings", async ({ page }) => {
@@ -60,16 +72,21 @@ test("a missing quota is shown as missing, and data quality lists warnings", asy
 
 test("candidate details list preferences in order with the run's outcome", async ({ page }) => {
   await page.goto("/university/candidates");
-  await heading(page, "Synthetic Candidate Explorer");
-  await expect(page.getByLabel("Placement shown from run")).toHaveValue(/fx-/);
-  await page.getByRole("radio", { name: "Placed", exact: true }).check();
+  await heading(page, "Candidates");
+  await expect(page.getByLabel("Simulation run")).toHaveValue(/fx-/);
+  await expect(page.getByLabel("Candidate summary").locator(".tile").filter({ has: page.getByText("Placed candidates", { exact: true }) })).not.toContainText("Select a run");
+  await page.getByLabel("Placement status").selectOption("placed");
   const table = page.getByRole("table", { name: /matching synthetic candidates/ });
-  await expect(table.getByRole("row").nth(1)).toContainText("Placed");
-  await table.getByRole("row").nth(1).getByRole("button").click();
-  const prefs = page.getByRole("list", { name: "Ranked preferences" });
-  await expect(prefs.getByRole("listitem").first()).toHaveAttribute("aria-label", /^Preference 1:/);
+  await expect(table.locator("tbody tr").first()).toContainText("Placed");
+  await table.locator("tbody tr").first().getByRole("button", { name: /^View details/ }).click();
+  const prefs = page.getByRole("table", { name: "Ranked preferences" });
+  await expect(prefs.locator("tbody tr").first()).toHaveAttribute("aria-label", /^Preference 1:/);
   await expect(prefs.getByText("Placed here")).toHaveCount(1);
+  await expect(page.getByRole("region", { name: "Placement outcome" })).toContainText("Placed");
   await expect(page.getByText("Not in schema").first()).toBeVisible();
+  // Without a run, placement figures are unavailable rather than zero.
+  await page.getByLabel("Simulation run").selectOption("");
+  await expect(page.getByLabel("Candidate summary").getByText("Select a run")).toHaveCount(3);
 });
 
 test("scenario setup validates input, runs a labelled fixture preview, and links to results", async ({ page }) => {

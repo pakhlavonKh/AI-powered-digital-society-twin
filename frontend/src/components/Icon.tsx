@@ -20,6 +20,8 @@ export function Icon({ name, size = 18, style }: { name: string; size?: number; 
     university: <><path d="m2 9 10-5 10 5-10 5Z"/><path d="M6 11v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5M22 9v6"/></>,
     compare: <><path d="M4 7h11m0 0-3-3m3 3-3 3M20 17H9m0 0 3-3m-3 3 3 3"/></>,
     archive: <><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4"/></>,
+    search: <><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></>,
+    refresh: <><path d="M20 11a8 8 0 0 0-14.5-4.5L4 8m0-5v5h5"/><path d="M4 13a8 8 0 0 0 14.5 4.5L20 16m0 5v-5h-5"/></>,
   };
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={style}>{paths[name] ?? paths.chart}</svg>;
 }

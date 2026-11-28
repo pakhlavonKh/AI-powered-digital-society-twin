@@ -124,7 +124,7 @@ describe("program filters, search, sorting and pagination", () => {
   });
 
   it("round-trip through the URL and keep unrelated parameters", () => {
-    const state: ProgramUrlState = { ...defaultProgramState(LATEST), year: 2024, score_types: ["SAY", "EA"], scholarships: ["Burslu"], search: "hukuk", sort: "quota", direction: "desc", page: 2 };
+    const state: ProgramUrlState = { ...defaultProgramState(LATEST), year: 2024, score_types: ["SAY", "EA"], scholarships: ["Burslu"], search: "hukuk", sort: "quota", direction: "desc", page: 2, size: 50 };
     const params = programStateToParams(state, LATEST, new URLSearchParams("snapshot=s1&program=001"));
     expect(params.get("snapshot")).toBe("s1");
     expect(params.get("program")).toBe("001");
@@ -132,6 +132,7 @@ describe("program filters, search, sorting and pagination", () => {
     expect(programStateToParams(defaultProgramState(LATEST), LATEST).toString()).toBe("");
     expect(programStateFromParams(new URLSearchParams("year=all"), LATEST).year).toBeNull();
     expect(programStateFromParams(new URLSearchParams("sort=bogus&page=-3"), LATEST)).toMatchObject({ sort: "university", page: 0 });
+    expect(programStateFromParams(new URLSearchParams("size=37"), LATEST).size).toBe(25); // only the offered page sizes
   });
 });
 
@@ -201,7 +202,7 @@ describe("program explorer", () => {
     const program = cat.programs.find((p) => p.program_id === target.program_id)!;
     render(<Harness initial={{ year: null, search: program.program_code }} />);
     await waitFor(() => expect(bodyRows().length).toBeGreaterThan(0));
-    await user.click(within(bodyRows()[0]).getByRole("button", { name: /Open details/ }));
+    await user.click(within(bodyRows()[0]).getByRole("button", { name: /^View details for/ }));
     const detail = await screen.findByRole("region", { name: new RegExp(program.name_original) });
     expect(within(detail).getByRole("table", { name: /Admission history/ })).toBeInTheDocument();
     expect(within(detail).getAllByText(FIXTURE_SNAPSHOT_ID).length).toBeGreaterThan(0);
@@ -219,6 +220,42 @@ describe("program explorer", () => {
     expect(await screen.findByText(/Registry offline/)).toBeInTheDocument();
     await user.click(screen.getAllByRole("button", { name: "Retry" })[0]);
     await waitFor(() => expect(bodyRows().length).toBe(25));
+  });
+
+  it("summarises the whole matching selection, not just the page", async () => {
+    render(<Harness />);
+    const summary = await screen.findByLabelText("Program summary");
+    const rows = filterProgramRows(programRows(cat, LATEST), defaultProgramState(LATEST));
+    const known = rows.filter((r) => r.admission?.quota !== null && r.admission?.quota !== undefined);
+    const avg = known.reduce((s, r) => s + r.admission!.quota!, 0) / known.length;
+    const scholarships = rows.filter((r) => r.program.scholarship_original === "Burslu" || /^%\d+ İndirimli$/.test(r.program.scholarship_original ?? "")).length;
+    const tile = (label: string) => within(summary).getByText(label).closest(".tile") as HTMLElement;
+    expect(tile("Total programs")).toHaveTextContent(String(new Set(rows.map((r) => r.program.program_code)).size));
+    expect(tile("Universities")).toHaveTextContent(String(new Set(rows.map((r) => r.university.university_id)).size));
+    expect(tile("Scholarship programs")).toHaveTextContent(String(scholarships));
+    expect(tile("Average program quota")).toHaveTextContent(avg.toLocaleString("en-GB", { maximumFractionDigits: 1 }));
+  });
+
+  it("changes rows per page and jumps to a numbered page", async () => {
+    const user = userEvent.setup();
+    render(<Harness initial={{ year: null }} />);
+    await waitFor(() => expect(bodyRows().length).toBe(25));
+    await user.selectOptions(screen.getByLabelText("Rows per page"), "10");
+    await waitFor(() => expect(bodyRows().length).toBe(10));
+    await user.click(screen.getByRole("button", { name: "Page 2" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Page 2" })).toHaveAttribute("aria-current", "page"));
+    expect(screen.getByText(/^Showing 11–20 of/)).toBeInTheDocument();
+  });
+
+  it("shows active filters as removable chips, with English labels and source values", async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+    await waitFor(() => expect(bodyRows().length).toBe(25));
+    await user.click(screen.getByRole("checkbox", { name: /^Full scholarship/ }));
+    const chip = await screen.findByRole("button", { name: "Remove filter Scholarship: Full scholarship" });
+    await waitFor(() => expect(bodyRows().every((r) => within(r).queryByText("Full scholarship") !== null)).toBe(true));
+    await user.click(chip);
+    await waitFor(() => expect(screen.queryByRole("button", { name: /^Remove filter Scholarship/ })).toBeNull());
   });
 
   it("lists every data-quality finding with counts", async () => {

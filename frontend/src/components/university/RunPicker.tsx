@@ -30,5 +30,5 @@ export function PlacementBadge({ status }: { status: AssignmentStatus | null | u
   if (status === "placed") return <Badge tone="good" glyph="✓" title="Placed by the selected simulation run">Placed</Badge>;
   if (status === "unplaced") return <Badge tone="warn" glyph="○" title="Eligible but not placed in the selected run">Not placed</Badge>;
   if (status === "ineligible") return <Badge tone="neutral" glyph="–" title="Not eligible for any preference in the selected run; excluded from the placement-rate denominator">Ineligible</Badge>;
-  return <span className="missing" title="Select a simulation run to see placement outcomes.">No run selected</span>;
+  return <Badge tone="neutral" glyph="…" title="Pending: select a simulation run to see placement outcomes.">No run selected</Badge>;
 }

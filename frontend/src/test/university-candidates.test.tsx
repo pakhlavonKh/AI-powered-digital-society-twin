@@ -27,8 +27,8 @@ const source = createFixtureSource({ persist: false });
 const runs = await source.listRuns();
 const baseline = await source.getRun(runs[0].run_id);
 const q = (patch: Partial<CandidateQuery> = {}): CandidateQuery => ({
-  cohort_id: cohort.manifest.cohort_id, search: "", score_types: [], proxy_min: null, proxy_max: null, status: null, run_id: null,
-  sort: "proxy", direction: "desc", offset: 0, limit: 25, ...patch,
+  cohort_id: cohort.manifest.cohort_id, search: "", score_types: [], proxy_min: null, proxy_max: null, status: null, eligibility: null, provinces: [],
+  run_id: null, sort: "proxy", direction: "desc", offset: 0, limit: 25, ...patch,
 });
 
 describe("synthetic candidate fixture", () => {
@@ -99,6 +99,24 @@ describe("candidate listing", () => {
     expect(queryCandidateRows(rows, q({ status: "placed" }), cohort).total_matching).toBe(1000);
   });
 
+  it("filters by eligibility from the run, and combines it with placement status", () => {
+    const by = (s: string) => baseline.assignments.filter((a) => a.status === s).length;
+    const runRows = candidateRows(cohort, cat, baseline);
+    expect(queryCandidateRows(runRows, q({ run_id: baseline.run_id, eligibility: "eligible", limit: 2000 }), cohort).total_matching).toBe(by("placed") + by("unplaced"));
+    expect(queryCandidateRows(runRows, q({ run_id: baseline.run_id, eligibility: "ineligible", limit: 2000 }), cohort).total_matching).toBe(by("ineligible"));
+    expect(queryCandidateRows(runRows, q({ run_id: baseline.run_id, eligibility: "eligible", status: "unplaced", limit: 2000 }), cohort).total_matching).toBe(by("unplaced"));
+    expect(queryCandidateRows(runRows, q({ eligibility: "ineligible" }), cohort).total_matching).toBe(1000);
+  });
+
+  it("offers a province filter only when the cohort records home locations", () => {
+    expect(queryCandidateRows(rows, q(), cohort).provinces).toEqual([]);
+    const located = rows.map((r, i) => ({ ...r, candidate: { ...r.candidate, home_location: i % 2 ? "Ankara" : i % 3 ? "İzmir" : null } }));
+    const page = queryCandidateRows(located, q({ provinces: ["Ankara"], limit: 2000 }), cohort);
+    expect(page.provinces.map((f) => f.value).sort()).toEqual(["Ankara", "İzmir"]);
+    expect(page.total_matching).toBe(500);
+    expect(page.items.every((r) => r.candidate.home_location === "Ankara")).toBe(true);
+  });
+
   it("sorts by proxy or rank deterministically", () => {
     const byProxy = queryCandidateRows(rows, q({ limit: 2000 }), cohort).items.map((r) => r.candidate.achievement!.value);
     expect(byProxy).toEqual([...byProxy].sort((a, b) => b - a));
@@ -116,7 +134,8 @@ describe("candidate listing", () => {
   });
 
   it("round-trips filters through the URL", () => {
-    const s: CandidateUrlState = { search: "x", score_types: ["SAY"], proxy_min: 10, proxy_max: 20, status: "unplaced", sort: "rank", direction: "asc", page: 3 };
+    const s: CandidateUrlState = { search: "x", score_types: ["SAY"], proxy_min: 10, proxy_max: 20, status: "unplaced", eligibility: "eligible", provinces: ["Ankara"],
+      sort: "rank", direction: "asc", page: 3, size: 50 };
     expect(candidateStateFromParams(candidateStateToParams(s, new URLSearchParams("run=r1")))).toEqual(s);
   });
 });
@@ -125,15 +144,19 @@ describe("candidate details", () => {
   it("lists preferences in rank order with the run's outcome and placement", async () => {
     const placed = baseline.assignments.find((a) => a.status === "placed" && (a.preference_position ?? 0) >= 2)!;
     render(<UniversitySourceProvider source={source}><CandidateDetails cohortId={cohortId(42, 1000)} candidateId={placed.candidate_id} runId={baseline.run_id} catalogue={cat} onClose={() => {}} /></UniversitySourceProvider>);
-    const list = await screen.findByRole("list", { name: "Ranked preferences" });
-    const items = within(list).getAllByRole("listitem");
+    const list = await screen.findByRole("table", { name: "Ranked preferences" });
+    const items = within(list).getAllByRole("row").slice(1);
     expect(items.map((li) => li.getAttribute("aria-label")?.split(":")[0])).toEqual(items.map((_, i) => `Preference ${i + 1}`));
     const assigned = items[placed.preference_position! - 1];
     expect(within(assigned).getByText("Placed here")).toBeInTheDocument();
     for (const li of items.slice(placed.preference_position!)) expect(within(li).getByText(/Not evaluated: placed at an earlier preference/)).toBeInTheDocument();
     const program = cat.programs.find((p) => p.program_code === placed.program_code)!;
     expect(screen.getAllByText(new RegExp(program.name_original)).length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Not in schema").length).toBeGreaterThanOrEqual(3);
+    expect(screen.getAllByText("Not in schema").length).toBeGreaterThanOrEqual(1);
+    for (const name of ["Candidate overview", "Admission performance", "Placement outcome"]) expect(screen.getByRole("region", { name })).toBeInTheDocument();
+    const outcome = screen.getByRole("region", { name: "Placement outcome" });
+    expect(within(outcome).getByText(`Preference ${placed.preference_position}`)).toBeInTheDocument();
+    expect(within(screen.getByRole("region", { name: "Candidate overview" })).getByText("Eligible")).toBeInTheDocument();
   });
 
   it("shows the simulation's reason for a candidate who was not placed", async () => {
@@ -168,12 +191,19 @@ describe("candidate explorer", () => {
     render(<Harness />);
     const table = await screen.findByRole("table", { name: /matching synthetic candidates/ });
     await waitFor(() => expect(within(table).getAllByRole("row")).toHaveLength(26));
-    await user.click(screen.getByRole("checkbox", { name: /^SOZ/ }));
-    await waitFor(() => expect(within(table).getAllByRole("row").slice(1).every((r) => within(r).queryByText("SOZ"))).toBe(true));
-    await user.click(screen.getByRole("radio", { name: "Not placed" }));
+    // Summary tiles come from the whole run, not the page.
+    const summary = screen.getByLabelText("Candidate summary");
+    await waitFor(() => expect(within(summary).getByText("Placed candidates").closest(".tile")).toHaveTextContent(String(baseline.assignments.filter((a) => a.status === "placed").length)));
+    // The cohort writes SOZ; the official spelling SÖZ is displayed, the filter value stays SOZ.
+    await user.click(screen.getByRole("checkbox", { name: /^SÖZ/ }));
+    await waitFor(() => expect(within(table).getAllByRole("row").slice(1).every((r) => within(r).queryByText("SÖZ"))).toBe(true));
+    await user.selectOptions(screen.getByLabelText("Placement status"), "unplaced");
     await waitFor(() => expect(within(table).getAllByRole("row").slice(1).every((r) => within(r).queryByText("Not placed"))).toBe(true));
-    await user.selectOptions(screen.getByLabelText("Placement shown from run"), "");
+    expect(screen.getByRole("button", { name: "Remove filter Placement: Not placed" })).toBeInTheDocument();
+    await user.selectOptions(screen.getByLabelText("Simulation run"), "");
     await waitFor(() => expect(screen.getAllByText("No run selected").length).toBeGreaterThan(1));
-    expect(screen.getByRole("radio", { name: "Not placed" })).toBeDisabled();
+    expect(screen.getByLabelText("Placement status")).toBeDisabled();
+    // Without a run, placement figures are unavailable, not zero.
+    expect(within(summary).getAllByText("Select a run")).toHaveLength(3);
   });
 });

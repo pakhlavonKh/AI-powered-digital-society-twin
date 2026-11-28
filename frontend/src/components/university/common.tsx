@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { englishLabel, isTranslated } from "@/lib/university/labels";
+import { useEffect, useRef, useState } from "react";
+import { englishLabel, isTranslated, scoreTypeDisplay } from "@/lib/university/labels";
+import { logoFor, type LogoAsset } from "@/lib/university/logos";
 import { countBySeverity, ISSUE_LABELS } from "@/lib/university/quality";
-import type { DataOrigin, Finding, IssueSeverity, MissingReason } from "@/lib/university/types";
+import { MISSING_VALUE, type DataOrigin, type FacetValue, type Finding, type IssueSeverity, type MissingReason } from "@/lib/university/types";
 import { MISSING_DESCRIPTIONS, MISSING_LABELS } from "@/lib/university/util";
 import { fmtInt } from "@/lib/format";
+import { Icon } from "../Icon";
 import { StatTile } from "../StatTile";
 import { Badge } from "../StatusBadge";
 
@@ -33,6 +35,9 @@ export function SourceTerm({ value, reason = "missing_from_source", showSource =
 }
 
 export function SourceBadge({ origin }: { origin: DataOrigin }) {
+  if (origin === "local_preview") {
+    return <Badge tone="warn" glyph="⌂" title="Read from the git-ignored ÖSYM 2025 Table 4 CSVs on this machine; development only; not committed or published; ÖSYM reuse permission pending.">Local preview data</Badge>;
+  }
   return origin === "fixture"
     ? <Badge tone="fake" glyph="◇" title="Synthetic fixture data generated in the frontend; not from any source workbook or backend.">Fixture data</Badge>
     : <Badge tone="info" glyph="◆" title="Returned by the SocietyTwin API.">API data</Badge>;
@@ -163,9 +168,45 @@ export function ProvenancePanel({ title = "Data provenance", items, origin, chil
   );
 }
 
-export function Pagination({ offset, limit, total, onPage, label }: { offset: number; limit: number; total: number; onPage: (page: number) => void; label: string }) {
+/** Page numbers to show: first, last, and a window around the current page; null marks a gap. */
+function pageWindow(page: number, pages: number): (number | null)[] {
+  const keep = new Set([0, pages - 1, page - 1, page, page + 1].filter((p) => p >= 0 && p < pages));
+  const out: (number | null)[] = [];
+  [...keep].sort((a, b) => a - b).forEach((p, i, all) => { if (i > 0 && p - all[i - 1] > 1) out.push(null); out.push(p); });
+  return out;
+}
+
+/**
+ * Pager. The explorers pass `pageSizes` and `onPageSize`, which add numbered pages and a rows-per-page choice; other
+ * pages keep the compact Previous / Next form.
+ */
+export function Pagination({ offset, limit, total, onPage, label, pageSizes, onPageSize }: {
+  offset: number; limit: number; total: number; onPage: (page: number) => void; label: string;
+  pageSizes?: readonly number[]; onPageSize?: (size: number) => void;
+}) {
   const page = Math.floor(offset / limit);
   const pages = Math.max(1, Math.ceil(total / limit));
+  if (pageSizes && onPageSize) {
+    return (
+      <nav className="pager pager-numbered" aria-label={`${label} pages`}>
+        <span className="small muted">{total === 0 ? "No rows" : `Showing ${fmtInt(offset + 1)}–${fmtInt(Math.min(total, offset + limit))} of ${fmtInt(total)}`}</span>
+        <span className="pager-pages">
+          <button type="button" className="button small pager-step" disabled={page === 0} onClick={() => onPage(page - 1)} aria-label="Previous page">‹</button>
+          {pageWindow(page, pages).map((p, i) => p === null
+            ? <span key={`gap-${i}`} className="pager-gap" aria-hidden="true">…</span>
+            : <button key={p} type="button" className={`button small pager-num${p === page ? " is-current" : ""}`} aria-current={p === page ? "page" : undefined}
+                aria-label={`Page ${p + 1}`} onClick={() => onPage(p)}>{fmtInt(p + 1)}</button>)}
+          <button type="button" className="button small pager-step" disabled={page + 1 >= pages} onClick={() => onPage(page + 1)} aria-label="Next page">›</button>
+        </span>
+        <label className="pager-size small">
+          <span className="muted">Rows per page</span>
+          <select value={limit} onChange={(e) => onPageSize(Number(e.target.value))}>
+            {pageSizes.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </label>
+      </nav>
+    );
+  }
   return (
     <nav className="row pager" aria-label={`${label} pages`}>
       <span className="small muted">{total === 0 ? "No rows" : `Rows ${fmtInt(offset + 1)}–${fmtInt(Math.min(total, offset + limit))} of ${fmtInt(total)}`}</span>
@@ -175,6 +216,77 @@ export function Pagination({ offset, limit, total, onPage, label }: { offset: nu
         <button type="button" className="button small" disabled={page + 1 >= pages} onClick={() => onPage(page + 1)}>Next</button>
       </span>
     </nav>
+  );
+}
+
+/** A score-type code in its official ÖSYM spelling (SAY, EA, SÖZ, DİL); the label as written stays in the tooltip. */
+export function ScoreChip({ value }: { value: string | null | undefined }) {
+  if (value === null || value === undefined || value === "") return <Missing reason="missing_from_source" />;
+  const shown = scoreTypeDisplay(value);
+  return <span className="badge score-chip" title={shown === value ? `Score type ${value}` : `Score type ${shown} (written ${value} in this data)`}>{shown}</span>;
+}
+
+/**
+ * Multi-select filter as a compact dropdown: a summary button that opens a list of checkboxes with counts. Values
+ * are the exact data values (URL state); `display` only changes what is shown. Closes on outside click or Escape.
+ */
+export function FilterMenu({ id, label, options, selected, onToggle, onClear, display, hint }: {
+  id: string; label: string; options: FacetValue[]; selected: string[]; onToggle: (value: string) => void; onClear: () => void;
+  display?: (label: string) => string; hint?: string;
+}) {
+  const ref = useRef<HTMLDetailsElement>(null);
+  const [open, setOpen] = useState(false);
+  const [alignRight, setAlignRight] = useState(false);
+  useEffect(() => {
+    if (!open) return;
+    // Keep the list on screen: menus near the right edge open towards the left.
+    const pop = ref.current?.querySelector<HTMLElement>(".filter-pop");
+    if (pop) setAlignRight(ref.current!.getBoundingClientRect().left + pop.offsetWidth > document.documentElement.clientWidth - 8);
+    const close = (focus: boolean) => { if (ref.current) { ref.current.open = false; if (focus) ref.current.querySelector("summary")?.focus(); } };
+    const onDown = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) close(false); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") close(true); };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => { document.removeEventListener("mousedown", onDown); document.removeEventListener("keydown", onKey); };
+  }, [open]);
+  const shown = (o: FacetValue) => (o.value === MISSING_VALUE || !display ? o.label : display(o.label));
+  const names = options.filter((o) => selected.includes(o.value)).map(shown);
+  const summary = selected.length === 0 ? "All" : names.length && selected.length <= 2 ? names.join(", ") : `${selected.length} selected`;
+  return (
+    <div className="field toolbar-field">
+      <span className="toolbar-label" id={`${id}-label`}>{label}</span>
+      <details ref={ref} className={`filter-menu${selected.length ? " is-active" : ""}${alignRight ? " align-right" : ""}`} onToggle={(e) => setOpen(e.currentTarget.open)}>
+        <summary aria-label={`${label}: ${summary}`}><span className="filter-menu-value">{summary}</span><span className="filter-menu-caret" aria-hidden="true">▾</span></summary>
+        <div className="filter-pop" role="group" aria-labelledby={`${id}-label`}>
+          {options.length === 0 ? <p className="small muted" style={{ margin: 0 }}>No values in this data.</p> : null}
+          {options.map((o) => {
+            const text = shown(o);
+            return (
+              <label className="check" key={o.value} title={text !== o.label && o.value !== MISSING_VALUE ? `Source label: ${o.label}` : undefined}>
+                <input type="checkbox" name={id} value={o.value} checked={selected.includes(o.value)} onChange={() => onToggle(o.value)} />
+                <span className={o.value === MISSING_VALUE ? "missing" : undefined}>{text}</span> <span className="muted small">({fmtInt(o.count)})</span>
+              </label>
+            );
+          })}
+          {hint ? <p className="field-hint" style={{ margin: "4px 0 0" }}>{hint}</p> : null}
+          {selected.length ? <button type="button" className="linkish small" onClick={onClear}>Clear {label.toLowerCase()}</button> : null}
+        </div>
+      </details>
+    </div>
+  );
+}
+
+/** Removable chips for the filters in force, so a combined filter is readable at a glance. */
+export function ActiveFilters({ items, onClearAll }: { items: { key: string; label: string; onRemove: () => void }[]; onClearAll: () => void }) {
+  if (items.length === 0) return null;
+  return (
+    <div className="active-filters" aria-label="Active filters">
+      <span className="small muted">Active filters:</span>
+      {items.map((i) => (
+        <button key={i.key} type="button" className="filter-chip" onClick={i.onRemove} aria-label={`Remove filter ${i.label}`}>{i.label} <span aria-hidden="true">×</span></button>
+      ))}
+      <button type="button" className="linkish small" onClick={onClearAll}>Clear all</button>
+    </div>
   );
 }
 
@@ -207,5 +319,33 @@ export function SortHeader<K extends string>({ label, sortKey, current, directio
         {label}{active ? (direction === "asc" ? " ↑" : " ↓") : ""}
       </button>
     </th>
+  );
+}
+
+/**
+ * Fixed-size logo slot. Shows a verified official logo (proportions kept, dark variant when published) or a neutral
+ * institution mark when no verified logo exists or the image fails to load. Decorative by default because the
+ * university name is always shown beside it.
+ */
+export function UniversityLogo({ code, name, size = 28, registry, decorative = true }: {
+  code: string | null | undefined; name: string; size?: number; registry?: Readonly<Record<string, LogoAsset>>; decorative?: boolean;
+}) {
+  const logo = logoFor(code, registry);
+  const [failed, setFailed] = useState(false);
+  const shown = logo ? logo.srcDark ?? logo.src : null;
+  useEffect(() => { setFailed(false); }, [code, shown]);
+  const a11y = decorative ? { "aria-hidden": true as const } : { role: "img", "aria-label": `${name} logo` };
+  if (!logo || failed) {
+    return (
+      <span className="uni-logo uni-logo-fallback" style={{ width: size, height: size }} data-logo="fallback" {...a11y}>
+        <Icon name="university" size={Math.round(size * 0.6)} />
+      </span>
+    );
+  }
+  return (
+    <span className={`uni-logo${logo.srcDark ? "" : " uni-logo-plate"}`} style={{ width: size, height: size }} data-logo="verified" {...a11y}>
+      {/* eslint-disable-next-line @next/next/no-img-element -- small same-origin static asset; next/image adds nothing here */}
+      <img src={logo.srcDark ?? logo.src} width={logo.width} height={logo.height} alt="" loading="lazy" decoding="async" onError={() => setFailed(true)} />
+    </span>
   );
 }

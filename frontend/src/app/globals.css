@@ -598,7 +598,92 @@ input[aria-invalid="true"], select[aria-invalid="true"] { border-color:var(--cri
 .tiles.tiles-4 { grid-template-columns:repeat(4,minmax(0,1fr)); }
 .tiles.tiles-4.lead-wide > :first-child { grid-column:span 2; }
 
-@media(max-width:1100px) { .tiles.tiles-4 { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+/* ---------------------------------------------------------------- university explorers (Programs, Candidates)
+   One structure for both pages: filter toolbar, summary tiles, (detail panel), full-width table with pagination,
+   data information and quality. The toolbar follows its own width (container queries). */
+.uni-explorer { gap:16px; }
+.filter-toolbar { container:toolbar / inline-size; display:flex; flex-direction:column; gap:10px; padding:14px 16px; }
+.toolbar-grid { display:grid; gap:10px 12px; grid-template-columns:repeat(2,minmax(0,1fr)); align-items:end; }
+.toolbar-field { gap:5px; min-width:0; }
+.toolbar-label { font-size:11px; font-weight:500; color:var(--text-secondary); }
+.toolbar-search, .toolbar-wide { grid-column:span 2; }
+.toolbar-actions { grid-column:1 / -1; display:flex; justify-content:flex-end; align-items:flex-end; }
+.toolbar-actions .button { width:100%; }
+@container toolbar (min-width:620px) { .toolbar-grid { grid-template-columns:repeat(4,minmax(0,1fr)); } .toolbar-actions { grid-column:-2 / -1; } }
+@container toolbar (min-width:960px) { .toolbar-grid { grid-template-columns:repeat(6,minmax(0,1fr)); } }
+.filter-toolbar select, .filter-toolbar input[type="search"], .filter-toolbar input[type="number"] { width:100%; min-height:34px; }
+.search-input { position:relative; display:flex; align-items:center; }
+.search-input svg { position:absolute; left:10px; color:var(--text-muted); pointer-events:none; }
+.search-input input { padding-left:30px; }
+.range-row { display:flex; align-items:center; gap:6px; }
+.range-input { flex:1 1 0; min-width:0; display:flex; flex-direction:column; gap:2px; }
+.filter-menu { position:relative; border:0; background:none; border-radius:0; }
+.filter-menu > summary { list-style:none; display:flex; align-items:center; justify-content:space-between; gap:8px; min-height:34px; padding:6px 9px;
+  border:1px solid #30465c; border-radius:var(--radius); background:#101c27; font-size:12px; font-weight:400; box-shadow:inset 0 2px 5px #00000018; }
+.filter-menu > summary::-webkit-details-marker { display:none; }
+.filter-menu[open] > summary { border-bottom:1px solid var(--accent); border-color:var(--accent); }
+.filter-menu.is-active > summary { border-color:#3c83cd; color:var(--info-ink); }
+.filter-menu-value { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.filter-menu-caret { color:var(--text-muted); font-size:10px; }
+.filter-pop { position:absolute; z-index:20; top:calc(100% + 4px); left:0; width:max(100%, 230px); max-height:320px; overflow:auto; padding:10px 12px;
+  display:flex; flex-direction:column; gap:2px; background:#0f1b26; border:1px solid var(--border-strong); border-radius:8px; box-shadow:0 12px 32px #000a; }
+.filter-menu:not([open]) > .filter-pop { display:none; }
+.filter-menu.align-right .filter-pop { left:auto; right:0; }
+.filter-pop .check { margin:0; font-size:12px; align-items:flex-start; }
+.filter-pop .check input { margin-top:3px; }
+.filter-pop .linkish { align-self:flex-start; margin-top:4px; }
+.active-filters { display:flex; flex-wrap:wrap; align-items:center; gap:6px 8px; }
+.filter-chip { display:inline-flex; align-items:center; gap:6px; padding:2px 10px; border:1px solid #2f5f8f; border-radius:999px; background:var(--info-bg);
+  color:var(--info-ink); font:inherit; font-size:11px; cursor:pointer; }
+.filter-chip:hover { border-color:var(--link); }
+.summary-strip .tile-value { font-size:24px; }
+.tile-share { font-size:14px; font-weight:500; color:var(--text-secondary); letter-spacing:0; }
+.count-pill { display:inline-block; margin-left:8px; padding:1px 9px; border-radius:999px; background:var(--surface-3); color:var(--text-secondary);
+  font-size:12px; font-weight:600; vertical-align:2px; font-variant-numeric:tabular-nums; }
+.table-card .card-head { margin-bottom:12px; }
+/* Contain the visually hidden header labels: without a positioned ancestor they escape the scrolling table box and widen the page. */
+.table-card .table-wrap, .detail-panel .table-wrap { position:relative; }
+.explorer-table tbody td, .explorer-table tbody th { vertical-align:middle; padding-top:9px; padding-bottom:9px; }
+.cell-primary { display:block; font-weight:500; color:var(--text-primary); overflow-wrap:anywhere; }
+.cell-secondary { display:flex; flex-wrap:wrap; align-items:center; gap:3px 6px; margin-top:3px; font-size:10px; font-weight:400; color:var(--text-muted); }
+.cell-secondary code { font-size:10px; }
+.explorer-table .col-actions { width:1%; white-space:nowrap; text-align:right; }
+.program-table.explorer-table .col-university { min-width:180px; }
+.program-table.explorer-table .col-program { min-width:200px; }
+.candidate-table.explorer-table .col-assigned { min-width:220px; }
+.row-action { min-height:28px; padding:3px 10px; font-size:11px; color:var(--info-ink); border-color:#2f5f8f; background:transparent; }
+.row-action:hover:not(:disabled), .row-action[aria-pressed="true"] { background:var(--info-bg); }
+.score-chip { color:var(--info-ink); background:var(--info-bg); border:1px solid #284b74; font-family:var(--mono); letter-spacing:.3px; }
+.pager-numbered { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px 16px; margin-top:12px; }
+.pager-pages { display:flex; align-items:center; gap:4px; }
+.pager-num, .pager-step { min-width:30px; padding:3px 8px; }
+.pager-num.is-current { background:var(--accent); border-color:var(--accent); color:#fff; }
+.pager-gap { padding:0 4px; color:var(--text-muted); }
+.pager-size { display:inline-flex; align-items:center; gap:8px; font-weight:400; }
+.pager-size select { min-height:28px; padding:2px 6px; }
+.detail-panel { border-color:#2f5f8f; box-shadow:0 0 0 1px #2f5f8f40, 0 6px 16px #02070c17; }
+.detail-sections { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; }
+.detail-section { display:flex; flex-direction:column; gap:8px; padding:12px 14px; border:1px solid var(--border); border-radius:8px; background:var(--surface-1); min-width:0; }
+.detail-section h3 { margin:0; }
+.detail-section dl.kv { grid-template-columns:minmax(110px,max-content) minmax(0,1fr); gap:5px 12px; font-size:12px; }
+.pref-table tr.is-assigned { background:#123c2e55; box-shadow:inset 3px 0 0 #3b9c80; }
+.pref-table .pref-pos { width:28px; height:28px; margin-left:auto; }
+.data-info-grid { display:flex; flex-direction:column; gap:16px; }
+.program-detail .grid-2 { align-items:start; }
+/* University logo slot: fixed square, proportions kept (contain). Logos without an official dark variant sit on a light
+   plate so they stay legible on the dark theme; the neutral fallback is the project's institution icon. */
+.uni-logo { flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center; border-radius:6px; overflow:hidden; border:1px solid var(--border); background:var(--surface-2); }
+/* The img keeps its intrinsic width/height attributes (aspect ratio); max-* against the slot's definite size scales the
+   whole mark down to fit, so tall or wide logos are never cropped. */
+.uni-logo img { display:block; width:auto; height:auto; max-width:100%; max-height:100%; object-fit:contain; }
+.uni-logo-plate { background:#eef2f7; padding:2px; }
+.uni-logo-fallback { color:var(--text-muted); }
+.uni-cell { display:flex; align-items:center; gap:8px; min-width:0; }
+.uni-cell > span:last-child { min-width:0; overflow-wrap:anywhere; }
+.detail-title { display:flex; align-items:center; gap:12px; min-width:0; }
+.detail-title h2 { min-width:0; overflow-wrap:anywhere; }
+@media(max-width:480px) { .summary-strip.tiles-4 { grid-template-columns:repeat(2,minmax(0,1fr)); } .summary-strip .tile { padding:12px; } .summary-strip .tile-value { font-size:21px; } }
+@media(max-width:1100px) { .tiles.tiles-4 { grid-template-columns:repeat(2,minmax(0,1fr)); } .detail-sections { grid-template-columns:minmax(0,1fr); } }
 @media(max-width:900px) { .uni-charts, .compare-pickers { grid-template-columns:minmax(0,1fr); } .missing-list { columns:1; } }
 @media(max-width:480px) { .tiles.tiles-4 { grid-template-columns:minmax(0,1fr); } .tiles.tiles-4.lead-wide > :first-child { grid-column:auto; } }
 @media(max-width:560px) { .pref-item { grid-template-columns:36px minmax(0,1fr); } .pref-item .pref-tags { grid-column:1 / -1; align-items:flex-start; } .override-row { grid-template-columns:minmax(0,1fr); } }

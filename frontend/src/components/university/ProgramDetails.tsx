@@ -10,7 +10,7 @@ import { useApi } from "@/lib/useApi";
 import { CopyId } from "../CopyId";
 import { ErrorState, Loading } from "../States";
 import { KeyValues } from "../StatTile";
-import { DataKindBadge, Missing, ProvenancePanel, SourceBadge, SourceTerm, Value, ValidationList } from "./common";
+import { DataKindBadge, Missing, ProvenancePanel, ScoreChip, SourceBadge, SourceTerm, UniversityLogo, Value, ValidationList } from "./common";
 
 function feeNote(basis: string | null): string | null {
   if (!basis) return null;
@@ -57,9 +57,12 @@ export function ProgramDetails({ snapshotId, programCode, catalogue, onClose }: 
   useEffect(() => { heading.current?.focus(); }, [programCode, detail.data]);
   const d = detail.data;
   return (
-    <section className="card stack program-detail" aria-labelledby="program-detail-h">
+    <section className="card stack program-detail detail-panel" aria-labelledby="program-detail-h">
       <div className="card-head">
-        <h2 id="program-detail-h" tabIndex={-1} ref={heading}>{d ? `${d.program.name_original} · ${d.university.name_original}` : `Program ${programCode}`}</h2>
+        <div className="detail-title">
+          {d ? <UniversityLogo code={d.university.official_university_code} name={d.university.name_original} size={40} /> : null}
+          <h2 id="program-detail-h" tabIndex={-1} ref={heading}>{d ? `${d.program.name_original} · ${d.university.name_original}` : `Program ${programCode}`}</h2>
+        </div>
         <button type="button" className="button small" onClick={onClose}>Close details</button>
       </div>
       {detail.error ? <ErrorState error={detail.error} onRetry={detail.reload} what="program details" /> : null}
@@ -73,6 +76,7 @@ function DetailBody({ d, catalogue }: { d: ProgramDetail; catalogue: RegistryCat
   const years = d.snapshot.admission_years;
   const rows = new Map(d.admissions.map((a) => [a.admission_year, a]));
   const missing = detailMissingFields(d, years);
+  const latest = [...d.admissions].sort((a, b) => b.admission_year - a.admission_year)[0] ?? null;
   const findings = [
     ...d.issues.map((i) => issueToFinding(i, d.program.program_code)),
     ...(catalogue ? catalogueChecks(catalogue).filter((f) => f.record?.startsWith(`Program ${d.program.program_code}`)) : []),
@@ -88,12 +92,16 @@ function DetailBody({ d, catalogue }: { d: ProgramDetail; catalogue: RegistryCat
             ["Institution type", <SourceTerm key="t" value={d.university.university_type} showSource />],
             ["Faculty", <Value key="f" value={d.program.faculty} />],
             ["Degree level", <Value key="dl" value={d.program.degree_level} />],
-            ["Score type", <Value key="s" value={d.program.score_type} />],
+            ["Score type", <ScoreChip key="s" value={d.program.score_type} />],
             ["Scholarship", <SourceTerm key="sc" value={d.program.scholarship_original} showSource />],
             ["Teaching language", d.program.teaching_language ? <SourceTerm key="l" value={d.program.teaching_language} showSource />
               : <span key="l" className="missing" title="The source did not specify a teaching language; it is not presumed Turkish.">Not specified in source</span>],
             ["City", <Value key="c" value={d.university.city} reason="not_available" />],
             ["Official university code", <Value key="o" value={d.university.official_university_code} reason="not_available" />],
+            ["Latest admission year", latest ? String(latest.admission_year) : <Missing key="ly" reason="not_available" />],
+            ["Reported quota (latest year)", <Value key="q" value={latest?.quota} reason={latest ? "missing_from_source" : "not_available"} format={fmtInt} />],
+            ["Admission rank (latest year)", <span key="ar"><Value value={latest?.success_rank} reason={latest ? "missing_from_source" : "not_available"} format={fmtInt} /> <span className="muted small">success rank of the last placed candidate</span></span>],
+            ["Minimum admission score", <Missing key="ms" reason="not_in_schema" />],
           ]} />
         </div>
         <ProvenancePanel title="Source metadata" origin={d.snapshot.origin} items={[
@@ -110,7 +118,7 @@ function DetailBody({ d, catalogue }: { d: ProgramDetail; catalogue: RegistryCat
       <div className="table-wrap">
         <table>
           <caption>Admission history: reported quota indicators and placed counts as recorded, never capped</caption>
-          <thead><tr><th scope="col">Year</th><th scope="col" className="num">Reported quota</th><th scope="col" className="num">Placed</th><th scope="col" className="num">Success rank (last placed)</th>
+          <thead><tr><th scope="col">Year</th><th scope="col" className="num">Reported quota</th><th scope="col" className="num">Placed</th><th scope="col" className="num">Admission rank (last placed)</th>
             <th scope="col" className="num">Occupancy <span className="muted">(derived)</span></th><th scope="col">Source row</th></tr></thead>
           <tbody>
             {years.map((y) => {
