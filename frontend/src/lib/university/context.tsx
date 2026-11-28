@@ -6,6 +6,7 @@ import { useApi } from "../useApi";
 import { createPendingApiSource } from "./apiSource";
 import { UNIVERSITY_DATA_SOURCE, type UniversitySourceMode } from "./config";
 import { createFixtureSource } from "./fixtureSource";
+import { createLocalPreviewSource, localPreviewRequested } from "./localPreviewSource";
 import type { UniversityDataSource } from "./source";
 
 let defaultSource: UniversityDataSource | null = null;
@@ -26,8 +27,22 @@ export function UniversitySourceProvider({ source, children }: { source: Univers
   return <SourceContext.Provider value={source}>{children}</SourceContext.Provider>;
 }
 
+const localSources = new Map<string, UniversityDataSource>();
+
+/**
+ * The injected source, else the opt-in local preview (`?source=local-preview`, development builds only), else the
+ * configured source. Logos resolve from each record's official_university_code whichever source supplies it.
+ */
 export function useUniversitySource(): UniversityDataSource {
-  return useContext(SourceContext) ?? getDefaultUniversitySource();
+  const injected = useContext(SourceContext);
+  const params = useSearchParams();
+  if (injected) return injected;
+  if (localPreviewRequested(params)) {
+    const scope = params.get("scope") === "logos" ? "logos" : "all";
+    if (!localSources.has(scope)) localSources.set(scope, createLocalPreviewSource(scope));
+    return localSources.get(scope)!;
+  }
+  return getDefaultUniversitySource();
 }
 
 export function useUniversityCapabilities() {

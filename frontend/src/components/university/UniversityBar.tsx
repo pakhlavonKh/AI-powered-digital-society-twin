@@ -38,6 +38,7 @@ export function UniversityBar() {
             : exec.mode === "api" ? <Badge tone="good" glyph="✓" title={exec.detail}>Execution: placement API</Badge>
               : <Badge tone="warn" glyph="!" title={exec.detail}>Execution unavailable</Badge>
         ) : null}
+        {caps.data?.origin === "local_preview" ? <Badge tone="info" glyph="·" title="Remove ?source=local-preview from the URL to return to the fixtures.">Explorer mode: local preview</Badge> : null}
         {caps.data && caps.data.origin === "fixture" ? (
           <Badge
             tone="info"

@@ -13,6 +13,14 @@ const TEXT = {
 /** Always shown while fixture data is in use, so fixture output is never mistaken for real data. */
 export function FixtureNotice({ kind }: { kind: keyof typeof TEXT }) {
   const caps = useUniversityCapabilities();
+  if (caps.data?.origin === "local_preview") {
+    return (
+      <p className="notice warn" role="note">
+        <strong>Local preview. </strong>Real ÖSYM 2025 Table 4 records (undergraduate, general quota) read from git-ignored files on this machine, in a
+        development build only. Not committed or published; ÖSYM reuse permission is pending. Candidates and simulations are not part of this preview.
+      </p>
+    );
+  }
   if (caps.data && caps.data.origin !== "fixture") return null;
   return (
     <p className="notice synthetic" role="note">
